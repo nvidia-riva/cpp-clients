@@ -63,6 +63,8 @@ DEFINE_bool(
     verbatim_transcripts, true,
     "True returns text exactly as it was said with no normalization.  False applies text inverse "
     "normalization");
+DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
+DEFINE_bool(use_ssl, false, "Boolean to control if SSL/TLS encryption should be used.");
 
 void
 signal_handler(int signal_num)
@@ -99,6 +101,8 @@ main(int argc, char** argv)
   str_usage << "           --print_transcripts=<true|false> " << std::endl;
   str_usage << "           --output_filename=<string>" << std::endl;
   str_usage << "           --verbatim_transcripts=<true|false>" << std::endl;
+  str_usage << "           --ssl_cert=<filename>" << std::endl;
+  str_usage << "           --use_ssl=<true|false>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -128,8 +132,15 @@ main(int argc, char** argv)
     FLAGS_riva_uri = riva_uri;
   }
 
-  auto grpc_channel =
-      riva::clients::CreateChannelBlocking(FLAGS_riva_uri, grpc::InsecureChannelCredentials());
+  std::shared_ptr<grpc::Channel> grpc_channel;
+  try {
+    auto creds = riva::clients::CreateChannelCredentials(FLAGS_use_ssl,FLAGS_ssl_cert);
+    grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
+  } catch (const std::exception& e) {
+    std::cerr << "Error creating GRPC channel: " << e.what() << std::endl;
+    std::cerr << "Exiting." << std::endl;
+    return 1;
+  }
 
   StreamingRecognizeClient recognize_client(
       grpc_channel, FLAGS_num_parallel_requests, "en-US", FLAGS_max_alternatives,
