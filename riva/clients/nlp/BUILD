@@ -11,7 +11,7 @@ cc_library(
     name = "riva_nlp_client",
     hdrs = ["riva_nlp_client.h"],
     deps = [
-        "//riva/proto:riva_grpc_nlp",
+        "@nvriva_common//riva/proto:riva_grpc_nlp",
         "@com_github_gflags_gflags//:gflags",
         "@glog//:glog",
         "@com_github_grpc_grpc//:grpc++"

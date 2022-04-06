@@ -11,7 +11,7 @@ cc_binary(
     name = "riva_tts_client",
     srcs = ["riva_tts_client.cc"],
     deps = [
-        "//riva/proto:riva_grpc_tts",
+        "@nvriva_common//riva/proto:riva_grpc_tts",
         "//riva/utils:stamping",
         "//riva/utils/wav:writer",
         "@glog//:glog",
@@ -26,7 +26,7 @@ cc_binary(
     name = "riva_tts_perf_client",
     srcs = ["riva_tts_perf_client.cc"],
     deps = [
-        "//riva/proto:riva_grpc_tts",
+        "@nvriva_common//riva/proto:riva_grpc_tts",
         "//riva/utils:stamping",
         "//riva/utils/wav:writer",
         "@glog//:glog",

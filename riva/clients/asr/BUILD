@@ -24,7 +24,7 @@ cc_library(
         "@alsa//:libasound",
         "@com_github_grpc_grpc//:grpc++",
         ":asr_client_helper",
-        "//riva/proto:riva_grpc_asr",
+        "@nvriva_common//riva/proto:riva_grpc_asr",
         "//riva/utils/wav:reader",
     ],
 )
@@ -42,7 +42,7 @@ cc_library(
         "@alsa//:libasound",
         "@com_github_grpc_grpc//:grpc++",
         "@com_github_gflags_gflags//:gflags",
-        "//riva/proto:riva_grpc_asr",
+        "@nvriva_common//riva/proto:riva_grpc_asr",
         "//riva/utils:thread_pool",
     ],
 )
@@ -53,7 +53,7 @@ cc_binary(
     deps = [
         ":asr_client_helper",
         ":client_call",
-        "//riva/proto:riva_grpc_asr",
+        "@nvriva_common//riva/proto:riva_grpc_asr",
         "//riva/utils:stamping",
         "//riva/utils/files:files",
         "//riva/utils/wav:reader",
@@ -71,7 +71,7 @@ cc_binary(
         ":asr_client_helper",
         ":client_call",
         ":streaming_recognize_client",
-        "//riva/proto:riva_grpc_asr",
+        "@nvriva_common//riva/proto:riva_grpc_asr",
         "//riva/utils:stamping",
         "//riva/utils/files:files",
         "//riva/utils/wav:reader",
@@ -90,7 +90,7 @@ cc_test(
     deps = [
         ":streaming_recognize_client",
         "@googletest//:gtest_main",
-        "//riva/proto:riva_grpc_asr",
+        "@nvriva_common//riva/proto:riva_grpc_asr",
     ],
     tags = ["needs_alsa"]
 )

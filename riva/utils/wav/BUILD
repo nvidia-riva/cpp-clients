@@ -22,7 +22,7 @@ cc_library(
     srcs = ["wav_reader.cc"],
     hdrs = ["wav_reader.h", "wav_data.h"],
     deps = [
-        "//riva/proto:riva_grpc_asr",
+        "@nvriva_common//riva/proto:riva_grpc_asr",
         "@rapidjson//:rapidjson",
         "@glog//:glog",
     ]
