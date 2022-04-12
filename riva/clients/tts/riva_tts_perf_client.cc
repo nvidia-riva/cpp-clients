@@ -20,10 +20,9 @@
 
 #include "riva/clients/utils/grpc.h"
 #include "riva/proto/riva_tts.grpc.pb.h"
+#include "riva/utils/files/files.h"
 #include "riva/utils/stamping.h"
 #include "riva/utils/wav/wav_writer.h"
-
-#define MAX_SAMPLES 4100 * 256  // for Tacotron2 with 400 character input
 
 using grpc::Status;
 using grpc::StatusCode;
@@ -33,7 +32,7 @@ namespace nr_tts = nvidia::riva::tts;
 DEFINE_string(
     text_file, "", "Text file with list of sentences to be synthesized. Ignored if 'text' is set.");
 DEFINE_string(riva_uri, "localhost:50051", "Riva API server URI and port");
-DEFINE_int32(rate, 22050, "Sample rate for the TTS output");
+DEFINE_int32(rate, 44100, "Sample rate for the TTS output");
 DEFINE_bool(online, false, "Whether synthesis should be online or batch");
 DEFINE_bool(
     write_output_audio, false,
@@ -41,13 +40,12 @@ DEFINE_bool(
 DEFINE_string(
     language, "en-US",
     "Language code as per [BCP-47](https://www.rfc-editor.org/rfc/bcp/bcp47.txt) language tag.");
-DEFINE_string(voice_name, "ljspeech", "Desired voice name");
+DEFINE_string(voice_name, "English-US-Female-1", "Desired voice name");
 DEFINE_int32(num_iterations, 1, "Number of times to loop over audio files");
 DEFINE_int32(num_parallel_requests, 1, "Number of parallel requests to keep in flight");
 DEFINE_int32(throttle_milliseconds, 0, "Number of milliseconds to sleep for between TTS requests");
 DEFINE_int32(offset_milliseconds, 0, "Number of milliseconds to offset each parallel TTS requests");
-DEFINE_bool(use_ssl, false, "Boolean to control if SSL/TLS encryption should be used.");
-DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
+DEFINE_string(ssl_cert, "", "Path to SSL client certificates file");
 
 static const std::string LC_enUS = "en-US";
 
@@ -93,9 +91,10 @@ synthesizeBatch(
   auto audio = response.audio();
   // Write to WAV file
   if (FLAGS_write_output_audio)
-    ::riva::utils::wav::Write(filepath, rate, (float*)audio.data(), audio.length() / sizeof(float));
+    ::riva::utils::wav::Write(
+        filepath, rate, (int16_t*)audio.data(), audio.length() / sizeof(int16_t));
 
-  return audio.length() / sizeof(float);
+  return audio.length() / sizeof(int16_t);
 }
 
 void
@@ -121,14 +120,14 @@ synthesizeOnline(
       tts->SynthesizeOnline(&context, request));
   DLOG(INFO) << "Sending request for input \"" << text << "\".";
 
-  std::vector<float> buffer;
+  std::vector<int16_t> buffer;
   size_t audio_len = 0;
 
   while (reader->Read(&chunk)) {
     // DLOG(INFO) << "Received chunk with " << chunk.audio().length() << " bytes.";
     // Copy chunk to local buffer
-    float* audio_data = (float*)chunk.audio().data();
-    size_t len = chunk.audio().length() / sizeof(float);
+    int16_t* audio_data = (int16_t*)chunk.audio().data();
+    size_t len = chunk.audio().length() / sizeof(int16_t);
     std::copy(audio_data, audio_data + len, std::back_inserter(buffer));
     if (audio_len == 0) {
       auto t_next_audio = std::chrono::steady_clock::now();
@@ -192,9 +191,7 @@ main(int argc, char** argv)
   str_usage << "           --num_iterations=<num-iterations> " << std::endl;
   str_usage << "           --throttle_milliseconds=<throttle-milliseconds> " << std::endl;
   str_usage << "           --offset_milliseconds=<offset-milliseconds> " << std::endl;
-  str_usage << "           --use_ssl=<true|false>" << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
-
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -249,18 +246,26 @@ main(int argc, char** argv)
       count++;
     }
   }
+  std::shared_ptr<grpc::ChannelCredentials> creds;
+  if (FLAGS_ssl_cert.size() > 0) {
+    try {
+      auto cacert = riva::utils::files::ReadFileContentAsString(FLAGS_ssl_cert);
+      grpc::SslCredentialsOptions ssl_opts;
+      ssl_opts.pem_root_certs = cacert;
+      LOG(INFO) << "Using SSL Credentials";
+      creds = grpc::SslCredentials(ssl_opts);
+    }
+    catch (const std::exception& e) {
+      std::cout << "Failed to load SSL certificate: " << e.what() << std::endl;
+      return 1;
+    }
+  } else {
+    LOG(INFO) << "Using Insecure Server Credentials";
+    creds = grpc::InsecureChannelCredentials();
+  }
 
   // Create the GRPC channel before starting timer
-  std::shared_ptr<grpc::Channel> grpc_channel;
-  try {
-    auto creds = riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_cert);
-    grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
-  }
-  catch (const std::exception& e) {
-    std::cerr << "Error creating GRPC channel: " << e.what() << std::endl;
-    std::cerr << "Exiting." << std::endl;
-    return 1;
-  }
+  auto channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
 
   // Create and start worker threads
   std::vector<std::thread> workers;
@@ -301,7 +306,7 @@ main(int argc, char** argv)
             usleep(usecs);
           }
 
-          auto tts = CreateTTS(grpc_channel);
+          auto tts = CreateTTS(channel);
           double time_to_first_chunk = 0.;
           auto time_to_next_chunk = new std::vector<double>();
           size_t num_samples = 0;
@@ -379,7 +384,7 @@ main(int argc, char** argv)
       results_num_samples.push_back(results_num_samples_thread);
       workers.push_back(std::thread([&, i]() {
         for (size_t s = 0; s < sentences[i].size(); s++) {
-          auto tts = CreateTTS(grpc_channel);
+          auto tts = CreateTTS(channel);
           size_t num_samples = synthesizeBatch(
               std::move(tts), sentences[i][s].second, FLAGS_language, FLAGS_rate, FLAGS_voice_name,
               std::to_string(sentences[i][s].first) + ".wav");

@@ -3,11 +3,14 @@
  * SPDX-License-Identifier: MIT
  */
 
+
 #include "wav_writer.h"
 
+#include <algorithm>
 #include <fstream>
 #include <limits>
 #include <stdexcept>
+#include <vector>
 
 namespace riva::utils::wav {
 
@@ -63,11 +66,23 @@ writeToStream(std::ofstream& stream, const int16_t num)
  * PUBLIC STATIC METHODS ******************************************************
  *****************************************************************************/
 
-
 void
 Write(
     const std::string& filename, const int frequency, const float* const data,
-    const size_t numSamples)
+    const size_t num_samples)
+{
+  // transform and write
+  std::vector<int16_t> buffer(num_samples);
+  std::transform(data, data + num_samples, buffer.begin(), [](float f) {
+    return (int16_t)(f * std::numeric_limits<int16_t>::max());
+  });
+  Write(filename, frequency, buffer.data(), num_samples);
+}
+
+void
+Write(
+    const std::string& filename, const int frequency, const int16_t* const data,
+    const size_t num_samples)
 {
   if (!isLittleEndian()) {
     throw std::runtime_error(
@@ -113,9 +128,8 @@ Write(
   const size_t chunkSizePos = fout.tellp();
   writeToStream(fout, static_cast<uint32_t>(0));
 
-  for (size_t i = 0; i < numSamples; ++i) {
-    const int16_t sample = static_cast<int16_t>(data[i] * std::numeric_limits<int16_t>::max());
-    writeToStream(fout, sample);
+  for (size_t i = 0; i < num_samples; ++i) {
+    writeToStream(fout, data[i]);
   }
 
   const size_t fileLength = fout.tellp();
