@@ -22,6 +22,7 @@
 #include <thread>
 
 #include "riva/clients/utils/grpc.h"
+#include "riva/utils/files/files.h"
 #include "riva/utils/stamping.h"
 #include "riva_nlp_client.h"
 
@@ -34,11 +35,10 @@ DEFINE_string(riva_uri, "localhost:50051", "URI to access riva-server");
 DEFINE_string(model_name, "riva_punctuation", "Model name to test");
 DEFINE_string(queries, "", "Path to a file with one input sentence per line");
 DEFINE_string(output, "", "Path to output file");
+DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
 DEFINE_int32(num_iterations, 1, "Number of times to loop over strings");
 DEFINE_int32(parallel_requests, 10, "Number of in-flight requests to send");
 DEFINE_bool(print_results, true, "Print final classification results");
-DEFINE_bool(use_ssl, false, "Boolean to control if SSL/TLS encryption should be used.");
-DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
 
 
 class Query {
@@ -97,7 +97,6 @@ main(int argc, char** argv)
   str_usage << "           --parallel_requests=<integer> " << std::endl;
   str_usage << "           --print_results=<true|false> " << std::endl;
   str_usage << "           --output=<filename> " << std::endl;
-  str_usage << "           --use_ssl=<true|false>" << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
@@ -131,19 +130,27 @@ main(int argc, char** argv)
       outfile.open(FLAGS_output);
     }
   }
-
-  std::shared_ptr<grpc::Channel> grpc_channel;
-  try {
-    auto creds = riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_cert);
-    grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
+  std::shared_ptr<grpc::ChannelCredentials> creds;
+  if (FLAGS_ssl_cert.size() > 0) {
+    try {
+      auto cacert = riva::utils::files::ReadFileContentAsString(FLAGS_ssl_cert);
+      grpc::SslCredentialsOptions ssl_opts;
+      ssl_opts.pem_root_certs = cacert;
+      LOG(INFO) << "Using SSL Credentials";
+      creds = grpc::SslCredentials(ssl_opts);
+    }
+    catch (const std::exception& e) {
+      std::cout << "Failed to load SSL certificate: " << e.what() << std::endl;
+      return 1;
+    }
+  } else {
+    LOG(INFO) << "Using Insecure Server Credentials";
+    creds = grpc::InsecureChannelCredentials();
   }
-  catch (const std::exception& e) {
-    std::cerr << "Error creating GRPC channel: " << e.what() << std::endl;
-    std::cerr << "Exiting." << std::endl;
-    return 1;
-  }
 
-  auto stub = nr_nlp::RivaLanguageUnderstanding::NewStub(grpc_channel);
+  auto channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
+
+  auto stub = nr_nlp::RivaLanguageUnderstanding::NewStub(channel);
 
   auto prepare_func = [&stub](
       grpc::ClientContext * context, const nr_nlp::TextTransformRequest& request,

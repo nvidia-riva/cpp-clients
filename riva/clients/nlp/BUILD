@@ -25,6 +25,7 @@ cc_binary(
         ":riva_nlp_client",
         "//riva/clients/utils:grpc",
         "//riva/utils:stamping",
+        "//riva/utils/files:files"
     ]
 )
 
@@ -35,6 +36,7 @@ cc_binary(
         ":riva_nlp_client",
         "//riva/clients/utils:grpc",
         "//riva/utils:stamping",
+        "//riva/utils/files:files"
     ]
 )
 
@@ -45,6 +47,7 @@ cc_binary(
         ":riva_nlp_client",
         "//riva/clients/utils:grpc",
         "//riva/utils:stamping",
+        "//riva/utils/files:files"
     ]
 )
 
