@@ -87,9 +87,10 @@ main(int argc, char** argv)
 
   std::shared_ptr<grpc::Channel> grpc_channel;
   try {
-    auto creds = riva::clients::CreateChannelCredentials(FLAGS_use_ssl,FLAGS_ssl_cert);
+    auto creds = riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_cert);
     grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
-  } catch (const std::exception& e) {
+  }
+  catch (const std::exception& e) {
     std::cerr << "Error creating GRPC channel: " << e.what() << std::endl;
     std::cerr << "Exiting." << std::endl;
     return 1;
