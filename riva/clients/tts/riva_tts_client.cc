@@ -14,9 +14,9 @@
 #include <iterator>
 #include <string>
 
-#include "absl/time/time.h"
 #include "riva/clients/utils/grpc.h"
 #include "riva/proto/riva_tts.grpc.pb.h"
+#include "riva/utils/files/files.h"
 #include "riva/utils/stamping.h"
 #include "riva/utils/wav/wav_writer.h"
 
@@ -28,14 +28,13 @@ namespace nr_tts = nvidia::riva::tts;
 DEFINE_string(text, "", "Text to be synthesized");
 DEFINE_string(audio_file, "output.wav", "Output file");
 DEFINE_string(riva_uri, "localhost:50051", "Riva API server URI and port");
-DEFINE_int32(rate, 22050, "Sample rate for the TTS output");
+DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
+DEFINE_int32(rate, 44100, "Sample rate for the TTS output");
 DEFINE_bool(online, false, "Whether synthesis should be online or batch");
 DEFINE_string(
     language, "en-US",
     "Language code as per [BCP-47](https://www.rfc-editor.org/rfc/bcp/bcp47.txt) language tag.");
-DEFINE_string(voice_name, "ljspeech", "Desired voice name");
-DEFINE_bool(use_ssl, false, "Boolean to control if SSL/TLS encryption should be used.");
-DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
+DEFINE_string(voice_name, "English-US-Female-1", "Desired voice name");
 
 static const std::string LC_enUS = "en-US";
 
@@ -54,7 +53,6 @@ main(int argc, char** argv)
   str_usage << "           --language=<language-code> " << std::endl;
   str_usage << "           --voice_name=<voice-name> " << std::endl;
   str_usage << "           --online=<true|false> " << std::endl;
-  str_usage << "           --use_ssl=<true|false>" << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
@@ -84,20 +82,28 @@ main(int argc, char** argv)
     std::cout << "Using environment for " << riva_uri << std::endl;
     FLAGS_riva_uri = riva_uri;
   }
+  std::shared_ptr<grpc::ChannelCredentials> creds;
+  if (FLAGS_ssl_cert.size() > 0) {
+    try {
+      auto cacert = riva::utils::files::ReadFileContentAsString(FLAGS_ssl_cert);
+      grpc::SslCredentialsOptions ssl_opts;
+      ssl_opts.pem_root_certs = cacert;
+      LOG(INFO) << "Using SSL Credentials";
+      creds = grpc::SslCredentials(ssl_opts);
+    }
+    catch (const std::exception& e) {
+      std::cout << "Failed to load SSL certificate: " << e.what() << std::endl;
+      return 1;
+    }
+  } else {
+    LOG(INFO) << "Using Insecure Server Credentials";
+    creds = grpc::InsecureChannelCredentials();
+  }
 
-  std::shared_ptr<grpc::Channel> grpc_channel;
-  try {
-    auto creds = riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_cert);
-    grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
-  }
-  catch (const std::exception& e) {
-    std::cerr << "Error creating GRPC channel: " << e.what() << std::endl;
-    std::cerr << "Exiting." << std::endl;
-    return 1;
-  }
+  auto channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
 
   std::unique_ptr<nr_tts::RivaSpeechSynthesis::Stub> tts(
-      nr_tts::RivaSpeechSynthesis::NewStub(grpc_channel));
+      nr_tts::RivaSpeechSynthesis::NewStub(channel));
 
   // Parse command line arguments.
   nr_tts::SynthesizeSpeechRequest request;
@@ -129,9 +135,9 @@ main(int argc, char** argv)
     // Write to WAV file
     std::cerr << "Got " << audio.length() << " bytes back from server" << std::endl;
     ::riva::utils::wav::Write(
-        FLAGS_audio_file, FLAGS_rate, (float*)audio.data(), audio.length() / sizeof(float));
+        FLAGS_audio_file, FLAGS_rate, (int16_t*)audio.data(), audio.length() / sizeof(int16_t));
   } else {  // online inference
-    std::vector<float> buffer;
+    std::vector<int16_t> buffer;
     size_t audio_len = 0;
     nr_tts::SynthesizeSpeechResponse chunk;
     auto start = std::chrono::steady_clock::now();
@@ -144,8 +150,8 @@ main(int argc, char** argv)
         std::chrono::duration<double> elapsed_first_audio = t_first_audio - start;
         std::cerr << "Time to first chunk: " << elapsed_first_audio.count() << " s" << std::endl;
       }
-      float* audio_data = (float*)chunk.audio().data();
-      size_t len = chunk.audio().length() / sizeof(float);
+      int16_t* audio_data = (int16_t*)chunk.audio().data();
+      size_t len = chunk.audio().length() / sizeof(int16_t);
       std::copy(audio_data, audio_data + len, std::back_inserter(buffer));
       audio_len += len;
     }

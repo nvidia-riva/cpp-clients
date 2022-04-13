@@ -68,7 +68,6 @@ DEFINE_bool(
     "True returns text exactly as it was said with no normalization.  False applies text inverse "
     "normalization");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
-DEFINE_bool(use_ssl, false, "Boolean to control if SSL/TLS encryption should be used.");
 
 void
 signal_handler(int signal_num)
@@ -109,7 +108,6 @@ main(int argc, char** argv)
   str_usage << "           --boosted_words_file=<string>" << std::endl;
   str_usage << "           --boosted_words_score=<float>" << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
-  str_usage << "           --use_ssl=<true|false>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -141,7 +139,18 @@ main(int argc, char** argv)
 
   std::shared_ptr<grpc::Channel> grpc_channel;
   try {
-    auto creds = riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_cert);
+    std::shared_ptr<grpc::ChannelCredentials> creds;
+    if (FLAGS_ssl_cert.size() > 0) {
+      auto cacert = riva::utils::files::ReadFileContentAsString(FLAGS_ssl_cert);
+      grpc::SslCredentialsOptions ssl_opts;
+      ssl_opts.pem_root_certs = cacert;
+      LOG(INFO) << "Using SSL Credentials";
+      creds = grpc::SslCredentials(ssl_opts);
+    } else {
+      LOG(INFO) << "Using Insecure Server Credentials";
+      creds = grpc::InsecureChannelCredentials();
+    }
+
     grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
   }
   catch (const std::exception& e) {
