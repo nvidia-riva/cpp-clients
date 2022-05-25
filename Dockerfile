@@ -9,6 +9,7 @@ FROM base AS builddep
 ARG BAZEL_VERSION=5.0.0
 
 RUN apt-get update && apt-get install -y \
+	git \
 	wget \
 	unzip \
 	build-essential \
@@ -28,6 +29,8 @@ WORKDIR /work
 COPY .bazelrc WORKSPACE ./
 COPY ./third_party/ /work/third_party
 COPY ./riva /work/riva
+COPY ./scripts /work/scripts
+COPY ./.git /work/.git
 ARG BAZEL_CACHE_ARG=""
 RUN --mount=type=cache,sharing=locked,target=/root/.cache/bazel bazel build $BAZEL_CACHE_ARG \
         //riva/clients/asr:riva_asr_client \
