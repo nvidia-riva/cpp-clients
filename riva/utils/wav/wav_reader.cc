@@ -30,20 +30,64 @@ GetFileExt(const std::string& s)
   return ("");
 }
 
+/**
+ * Reads WAV header and sets stream position to the first byte of audio, returns this position.
+ * Returns zero if wrong format discovered.
+ *
+ * @param wavfile
+ * @param header
+ */
+void
+SeekToData(std::istream& wavfile, WAVHeader& header)
+{
+  int32_t curr_chunk_size = 0;
+  char curr_chunk_id[4];
+  while (wavfile.good()) {
+    wavfile.read(curr_chunk_id, 4);
+    wavfile.read((char*)&curr_chunk_size, 4);
+    if (strncmp(curr_chunk_id, "RIFF", 4) == 0) {
+      header.file_tag = "RIFF";
+      header.file_size = curr_chunk_size;
+      wavfile.read(curr_chunk_id, 4);
+      if (strncmp(curr_chunk_id, "WAVE", 4) != 0) {
+        break;
+      }
+      header.format = "WAVE";
+    } else if (strncmp(curr_chunk_id, "fmt ", 4) == 0) {
+      wavfile.read((char*)&header.audioformat, 2);
+      wavfile.read((char*)&header.numchannels, 2);
+      wavfile.read((char*)&header.samplerate, 4);
+      wavfile.read((char*)&header.byterate, 4);
+      wavfile.read((char*)&header.blockalign, 2);
+      wavfile.read((char*)&header.bitspersample, 2);
+      // Six values above took 16 bytes, skipping extra params if they exist:
+      if (curr_chunk_size > 16) {
+        wavfile.seekg(curr_chunk_size - 16, std::ios_base::cur);
+      } else if (curr_chunk_size < 16) {
+        break;
+      }
+    } else if (strncmp(curr_chunk_id, "data", 4) == 0) {
+      header.data_size = (std::size_t)curr_chunk_size;
+      break;
+    } else if (strncmp(curr_chunk_id, "fLaC", 4) == 0) {
+      header.file_tag = "fLaC";
+      wavfile.seekg(0, std::ios_base::beg);
+      break;
+    } else {
+      wavfile.seekg(curr_chunk_size, std::ios_base::cur);
+    }
+  }
+}
+
 bool
-ParseHeader(std::string file, nr::AudioEncoding& encoding, int& samplerate, int& channels)
+ParseHeader(
+    std::string file, nr::AudioEncoding& encoding, int& samplerate, int& channels,
+    long& data_offset)
 {
   std::ifstream file_stream(file);
-  FixedWAVHeader header;
-  std::streamsize bytes_read =
-      file_stream.rdbuf()->sgetn(reinterpret_cast<char*>(&header), sizeof(header));
-  if (bytes_read != sizeof(header)) {
-    std::cerr << "Error reading file " << file << std::flush << std::endl;
-    return false;
-  }
-
-  std::string tag(header.chunk_id, 4);
-  if (tag == "RIFF") {
+  WAVHeader header;
+  SeekToData(file_stream, header);
+  if (header.file_tag == "RIFF") {
     if (header.audioformat == WaveFormat::kPCM)
       encoding = nr::LINEAR_PCM;
     else if (header.audioformat == WaveFormat::kMULAW)
@@ -52,20 +96,19 @@ ParseHeader(std::string file, nr::AudioEncoding& encoding, int& samplerate, int&
       encoding = nr::ALAW;
     else
       return false;
+    data_offset = file_stream.tellg();
     samplerate = header.samplerate;
     channels = header.numchannels;
     return true;
-  } else if (tag == "fLaC") {
+  } else if (header.file_tag == "fLaC") {
     // TODO parse sample rate and channels from stream
     encoding = nr::FLAC;
     samplerate = 16000;
     channels = 1;
     return true;
   }
-
   return false;
 }
-
 
 bool
 IsDirectory(const char* path)
@@ -194,6 +237,9 @@ LoadWavData(std::vector<std::shared_ptr<WaveData>>& all_wav, std::string& path)
     // Get the size
     std::cout << "filename: " << filename << std::endl;
     std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
+    if (!in.good()) {
+      throw std::runtime_error(std::string("Failed to open file ") + filename);
+    }
     uint64_t file_size = in.tellg();
     files_size_name.emplace_back(std::make_pair(file_size, filename));
   }
@@ -205,9 +251,9 @@ LoadWavData(std::vector<std::shared_ptr<WaveData>>& all_wav, std::string& path)
     nr::AudioEncoding encoding;
     int samplerate;
     int channels;
-    if (!ParseHeader(filename, encoding, samplerate, channels)) {
-      std::cerr << "Invalid file/format";
-      return;
+    long data_offset;
+    if (!ParseHeader(filename, encoding, samplerate, channels, data_offset)) {
+      throw std::runtime_error(std::string("Invalid file/format ") + filename);
     }
     std::shared_ptr<WaveData> wav_data = std::make_shared<WaveData>();
 
@@ -215,6 +261,7 @@ LoadWavData(std::vector<std::shared_ptr<WaveData>>& all_wav, std::string& path)
     wav_data->filename = filename;
     wav_data->encoding = encoding;
     wav_data->channels = channels;
+    wav_data->data_offset = data_offset;
     wav_data->data.assign(
         std::istreambuf_iterator<char>(std::ifstream(filename).rdbuf()),
         std::istreambuf_iterator<char>());
@@ -224,13 +271,13 @@ LoadWavData(std::vector<std::shared_ptr<WaveData>>& all_wav, std::string& path)
 }
 
 int
-ParseWavHeader(std::stringstream& wavfile, FixedWAVHeader& header, bool read_header)
+ParseWavHeader(std::istream& wavfile, WAVHeader& header, bool read_header)
 {
   if (read_header) {
     bool is_header_valid = false;
-    wavfile.read(reinterpret_cast<char*>(&header), sizeof(header));
+    SeekToData(wavfile, header);
 
-    if (strncmp(header.format, "WAVE", sizeof(header.format)) == 0) {
+    if (header.format == "WAVE") {
       if (header.audioformat == WaveFormat::kPCM && header.bitspersample == 16) {
         is_header_valid = true;
       } else if (
@@ -241,41 +288,20 @@ ParseWavHeader(std::stringstream& wavfile, FixedWAVHeader& header, bool read_hea
     }
 
     if (!is_header_valid) {
-      LOG(INFO) << "error: unsupported format"
-                << " audioformat " << header.audioformat << " channels " << header.numchannels
-                << " rate " << header.samplerate << " bitspersample " << header.bitspersample
-                << std::endl;
+      LOG(INFO) << "error: unsupported format " << header.format << " audioformat "
+                << header.audioformat << " channels " << header.numchannels << " rate "
+                << header.samplerate << " bitspersample " << header.bitspersample << std::endl;
       return -1;
-    }
-
-    // Skip to 'data' chunk
-    if (strncmp(header.subchunk2ID, "data", sizeof(header.subchunk2ID))) {
-      char chunk_id[4];
-      while (wavfile.good()) {
-        wavfile.read(reinterpret_cast<char*>(&chunk_id), sizeof(chunk_id));
-        if (strncmp(chunk_id, "data", sizeof(chunk_id)) == 0) {
-          // read size bytes and break
-          wavfile.read(reinterpret_cast<char*>(&chunk_id), sizeof(chunk_id));
-          break;
-        }
-        wavfile.seekg(-3, std::ios_base::cur);
-      }
     }
   }
 
   if (wavfile) {
-    int wav_size;
-    // move to first sample
-    // wavfile.seekg(4, std::ios_base::cur);
-
     // calculate size of samples
     std::streampos curr_pos = wavfile.tellg();
     wavfile.seekg(0, wavfile.end);
-    wav_size = wavfile.tellg() - curr_pos;
+    int wav_size = wavfile.tellg() - curr_pos;
     wavfile.seekg(curr_pos);
-
     return wav_size;
   }
-
   return -2;
 }

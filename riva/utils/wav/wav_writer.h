@@ -16,10 +16,10 @@ namespace riva::utils::wav {
  *
  * @param filename The file name.
  * @param frequency The sample frequency.
- * @param data The raw data.
+ * @param data The raw data in fp32 scaled <-1, 1>.
  * @param numSamples The number of samples.
  */
-void Write(const std::string& filename, int frequency, const float* data, size_t numSamples);
+void Write(const std::string& filename, int frequency, const float* data, size_t num_samples);
 
 /**
  * @brief Write a mono sample data to a WAV file.

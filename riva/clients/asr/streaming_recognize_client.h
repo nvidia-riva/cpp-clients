@@ -46,7 +46,7 @@ class StreamingRecognizeClient {
       bool automatic_punctuation, bool separate_recognition_per_channel, bool print_transcripts,
       int32_t chunk_duration_ms, bool interim_results, std::string output_filename,
       std::string model_name, bool simulate_realtime, bool verbatim_transcripts,
-      const std::string& boosted_words_file, float boosted_words_score);
+      const std::string& boosted_phrases_file, float boosted_phrases_score);
 
   ~StreamingRecognizeClient();
 
@@ -110,6 +110,6 @@ class StreamingRecognizeClient {
   bool simulate_realtime_;
   bool verbatim_transcripts_;
 
-  std::vector<std::string> boosted_words_;
-  float boosted_words_score_;
+  std::vector<std::string> boosted_phrases_;
+  float boosted_phrases_score_;
 };

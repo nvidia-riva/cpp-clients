@@ -55,7 +55,7 @@ StreamingRecognizeClient::StreamingRecognizeClient(
     bool automatic_punctuation, bool separate_recognition_per_channel, bool print_transcripts,
     int32_t chunk_duration_ms, bool interim_results, std::string output_filename,
     std::string model_name, bool simulate_realtime, bool verbatim_transcripts,
-    const std::string& boosted_words_file, float boosted_words_score)
+    const std::string& boosted_phrases_file, float boosted_phrases_score)
     : print_latency_stats_(true), stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)),
       language_code_(language_code), max_alternatives_(max_alternatives),
       word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
@@ -63,7 +63,7 @@ StreamingRecognizeClient::StreamingRecognizeClient(
       print_transcripts_(print_transcripts), chunk_duration_ms_(chunk_duration_ms),
       interim_results_(interim_results), total_audio_processed_(0.), num_streams_started_(0),
       model_name_(model_name), simulate_realtime_(simulate_realtime),
-      verbatim_transcripts_(verbatim_transcripts), boosted_words_score_(boosted_words_score)
+      verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score)
 {
   num_active_streams_.store(0);
   num_streams_finished_.store(0);
@@ -73,13 +73,7 @@ StreamingRecognizeClient::StreamingRecognizeClient(
     output_file_.open(output_filename);
   }
 
-  if (!boosted_words_file.empty()) {
-    std::ifstream infile(boosted_words_file);
-    std::string boosted_word;
-    while (infile >> boosted_word) {
-      boosted_words_.push_back(boosted_word);
-    }
-  }
+  boosted_phrases_ = ReadBoostedPhrases(boosted_phrases_file);
 }
 
 StreamingRecognizeClient::~StreamingRecognizeClient()
@@ -138,8 +132,8 @@ StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
       }
 
       nr_asr::SpeechContext* speech_context = config->add_speech_contexts();
-      *(speech_context->mutable_phrases()) = {boosted_words_.begin(), boosted_words_.end()};
-      speech_context->set_boost(boosted_words_score_);
+      *(speech_context->mutable_phrases()) = {boosted_phrases_.begin(), boosted_phrases_.end()};
+      speech_context->set_boost(boosted_phrases_score_);
 
       call->streamer->Write(request);
       first_write = false;
@@ -148,12 +142,12 @@ StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
     size_t chunk_size =
         (call->stream->wav->sample_rate * chunk_duration_ms_ / 1000) * sizeof(int16_t);
     size_t& offset = call->stream->offset;
-    size_t header_size = (offset == 0) ? sizeof(FixedWAVHeader) : 0;
+    long header_size = (offset == 0U) ? call->stream->wav->data_offset : 0L;
     size_t bytes_to_send =
         std::min(call->stream->wav->data.size() - offset, chunk_size + header_size);
     double current_wait_time =
-        1000 * (bytes_to_send - header_size) / (sizeof(int16_t) * call->stream->wav->sample_rate);
-    audio_processed += current_wait_time / 1000.;
+        1000. * (bytes_to_send - header_size) / (sizeof(int16_t) * call->stream->wav->sample_rate);
+    audio_processed += current_wait_time / 1000.F;
     request.set_audio_content(&call->stream->wav->data[offset], bytes_to_send);
     offset += bytes_to_send;
 
