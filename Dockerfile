@@ -36,7 +36,7 @@ RUN bazel test $BAZEL_CACHE_ARG //riva/clients/... --test_summary=detailed --tes
 RUN bazel build --stamp --config=release $BAZEL_CACHE_ARG //... && \
     cp -R /work/bazel-bin/riva /opt
 
-RUN ls -lah /work; ls-lah /work/.git; cat /work/.bazelrc
+RUN ls -lah /work; ls -lah /work/.git; cat /work/.bazelrc
 
 FROM base as riva-clients
 
