@@ -9,6 +9,12 @@ new_local_repository(
     build_file = "third_party/BUILD.alsa"
 )
 
+new_local_repository(
+    name = "alsa_aarch64",
+    path = "/usr/lib/aarch64-linux-gnu",
+    build_file = "third_party/BUILD.alsa"
+)
+
 http_archive(
   name = "com_google_absl",
   urls = ["https://github.com/abseil/abseil-cpp/archive/c22c032a353b5dc16d86ddc879e628344e591e77.zip"],
