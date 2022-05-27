@@ -12,5 +12,5 @@
 #include "wav_data.h"
 
 void LoadWavData(std::vector<std::shared_ptr<WaveData>>& all_wav, std::string& path);
-int ParseWavHeader(std::stringstream& wavfile, FixedWAVHeader& header, bool read_header);
+int ParseWavHeader(std::istream& wavfile, WAVHeader& header, bool read_header);
 std::string AudioToString(nr::AudioEncoding& encoding);

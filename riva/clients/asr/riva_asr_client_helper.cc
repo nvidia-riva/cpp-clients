@@ -6,6 +6,26 @@
 
 #include "riva_asr_client_helper.h"
 
+std::vector<std::string>
+ReadBoostedPhrases(const std::string& boosted_phrases_file)
+{
+  std::vector<std::string> boosted_phrases;
+  if (!boosted_phrases_file.empty()) {
+    std::ifstream infile(boosted_phrases_file);
+
+    if (infile.is_open()) {
+      std::string boosted_phrase;
+      while (getline(infile, boosted_phrase)) {
+        boosted_phrases.push_back(boosted_phrase);
+      }
+    } else {
+      std::string err = "Could not open file " + boosted_phrases_file;
+      throw std::runtime_error(err);
+    }
+  }
+  return boosted_phrases;
+}
+
 bool
 WaitUntilReady(
     std::shared_ptr<grpc::Channel> channel, std::chrono::system_clock::time_point& deadline)

@@ -8,10 +8,13 @@
 #include <alsa/asoundlib.h>
 #include <grpcpp/grpcpp.h>
 
+#include <fstream>
 #include <iostream>
 #include <sstream>
 
 #include "absl/strings/str_replace.h"
+
+std::vector<std::string> ReadBoostedPhrases(const std::string& boosted_phrases_file);
 
 bool WaitUntilReady(
     std::shared_ptr<grpc::Channel> channel, std::chrono::system_clock::time_point& deadline);

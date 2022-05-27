@@ -67,7 +67,7 @@ class RecognizeClient {
       int32_t max_alternatives, bool word_time_offsets, bool automatic_punctuation,
       bool separate_recognition_per_channel, bool print_transcripts, std::string output_filename,
       std::string model_name, bool ctm, bool verbatim_transcripts,
-      const std::string& boosted_words_file, float boosted_words_score)
+      const std::string& boosted_phrases_file, float boosted_phrases_score)
       : stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)), language_code_(language_code),
         max_alternatives_(max_alternatives), word_time_offsets_(word_time_offsets),
         automatic_punctuation_(automatic_punctuation),
@@ -75,7 +75,7 @@ class RecognizeClient {
         print_transcripts_(print_transcripts), done_sending_(false), num_requests_(0),
         num_responses_(0), num_failed_requests_(0), total_audio_processed_(0.),
         model_name_(model_name), output_filename_(output_filename),
-        verbatim_transcripts_(verbatim_transcripts), boosted_words_score_(boosted_words_score)
+        verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score)
   {
     if (!output_filename.empty()) {
       output_file_.open(output_filename);
@@ -86,13 +86,7 @@ class RecognizeClient {
       }
     }
 
-    if (!boosted_words_file.empty()) {
-      std::ifstream infile(boosted_words_file);
-      std::string boosted_word;
-      while (infile >> boosted_word) {
-        boosted_words_.push_back(boosted_word);
-      }
-    }
+    boosted_phrases_ = ReadBoostedPhrases(boosted_phrases_file);
   }
 
   ~RecognizeClient()
@@ -231,8 +225,8 @@ class RecognizeClient {
     }
 
     nr_asr::SpeechContext* speech_context = config->add_speech_contexts();
-    *(speech_context->mutable_phrases()) = {boosted_words_.begin(), boosted_words_.end()};
-    speech_context->set_boost(boosted_words_score_);
+    *(speech_context->mutable_phrases()) = {boosted_phrases_.begin(), boosted_phrases_.end()};
+    speech_context->set_boost(boosted_phrases_score_);
 
     request.set_audio(&wav->data[0], wav->data.size());
 
@@ -370,8 +364,8 @@ class RecognizeClient {
   std::string output_filename_;
   bool verbatim_transcripts_;
 
-  std::vector<std::string> boosted_words_;
-  float boosted_words_score_;
+  std::vector<std::string> boosted_phrases_;
+  float boosted_phrases_score_;
   void (RecognizeClient::*write_fn_)(
       const nr_asr::SpeechRecognitionResult& result, const std::string& filename);
 };

@@ -20,21 +20,18 @@ enum WaveFormat : int16_t {
   kMULAW = 0x0007,
 };
 
-typedef struct __attribute__((packed)) {
-  char chunk_id[4];  // should be "RIFF" in ASCII form
-  int32_t chunk_size;
-  char format[4];          // should be "WAVE"
-  char subchunk1_id[4];    // should be "fmt "
-  int32_t subchunk1_size;  // should be 16 for PCM format
+struct WAVHeader {
+  std::string file_tag;
+  std::string format;
+  int32_t file_size;       // this is actually physical file size minus 8 bytes
   WaveFormat audioformat;  // should be 1 for PCM
   int16_t numchannels;
   int32_t samplerate;
   int32_t byterate;       // == samplerate * numchannels * bitspersample/8
   int16_t blockalign;     // == numchannels * bitspersample/8
   int16_t bitspersample;  //    8 bits = 8, 16 bits = 16, etc.
-  char subchunk2ID[4];
-  int32_t subchunk2size;
-} FixedWAVHeader;
+  std::size_t data_size;
+};
 
 struct WaveData {
   std::vector<char> data;
@@ -42,6 +39,7 @@ struct WaveData {
   int sample_rate;
   int channels;
   nr::AudioEncoding encoding;
+  long data_offset;
 };
 
 
