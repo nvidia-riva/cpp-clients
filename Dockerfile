@@ -28,9 +28,9 @@ RUN if [ "$TARGET_ARCH" = "amd64" ]; then \
         rm ./bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh; \
     elif [ "$TARGET_ARCH" = "arm64" ]; then \
         apt-get update && apt-get install -y --no-install-recommends openjdk-11-jdk-headless && \
-        wget https://urm.nvidia.com/artifactory/sw-ai-app-bazel/sw-ai-app-jarvis/tools_aarch64/bazel_aarch64_${BAZEL_VERSION} && \
-        chmod +x bazel_aarch64_${BAZEL_VERSION} && \
-        mv bazel_aarch64_${BAZEL_VERSION} /usr/local/bin/bazel; \
+        wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/bazel-${BAZEL_VERSION}-linux-arm64 && \
+        chmod +x bazel-${BAZEL_VERSION}-linux-arm64 && \
+        mv bazel-${BAZEL_VERSION}-linux-arm64 /usr/local/bin/bazel; \
     fi
 
 ENV PATH="/root/bin:${PATH}"
