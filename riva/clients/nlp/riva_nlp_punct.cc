@@ -32,7 +32,8 @@ namespace nr = nvidia::riva;
 namespace nr_nlp = nvidia::riva::nlp;
 
 DEFINE_string(riva_uri, "localhost:50051", "URI to access riva-server");
-DEFINE_string(model_name, "riva_punctuation", "Model name to test");
+DEFINE_string(model_name, "", "Model name to test");
+DEFINE_string(language_code, "en-US", "Punctuation model language code");
 DEFINE_string(queries, "", "Path to a file with one input sentence per line");
 DEFINE_string(output, "", "Path to output file");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
@@ -52,16 +53,18 @@ class Query {
 
 class PunctQuery : public Query {
  public:
-  PunctQuery(const std::string& text, const std::string& model, uint32_t _corr_id)
-      : Query(_corr_id), text_(text), model_(model)
+  PunctQuery(const std::string& text, const std::string& model, const std::string& language_code, uint32_t _corr_id)
+      : Query(_corr_id), text_(text), model_(model), language_code_(language_code)
   {
   }
-  std::string GetText() { return text_; }
-  std::string GetModel() { return model_; }
+  std::string GetText() const { return text_; }
+  std::string GetModel() const { return model_; }
+  std::string GetLanguageCode() const { return language_code_; }
 
  private:
   std::string text_;
   std::string model_;
+  std::string language_code_;
 };
 
 bool
@@ -164,6 +167,7 @@ main(int argc, char** argv)
     request.set_top_n(1);
     auto model = request.mutable_model();
     model->set_model_name(query.GetModel());
+    model->set_language_code(query.GetLanguageCode());
     return;
   };
 
@@ -209,7 +213,7 @@ main(int argc, char** argv)
     while (client.NumActiveTasks() < (uint32_t)FLAGS_parallel_requests &&
            all_query_i < all_query_max) {
       std::unique_ptr<PunctQuery> query(
-          new PunctQuery(all_queries_repeated[all_query_i], FLAGS_model_name, all_query_i));
+          new PunctQuery(all_queries_repeated[all_query_i], FLAGS_model_name, FLAGS_language_code, all_query_i));
       client.Infer(std::move(query));
       ++all_query_i;
     }
