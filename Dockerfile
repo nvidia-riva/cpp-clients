@@ -44,7 +44,7 @@ COPY scripts /work/scripts
 COPY third_party /work/third_party
 COPY riva /work/riva
 ARG BAZEL_CACHE_ARG=""
-RUN bazel test $BAZEL_CACHE_ARG //riva/clients/... --test_summary=detailed --test_output=all && \
+RUN bazel test $BAZEL_CACHE_ARG --config=${TARGET_ARCH} --config=${TARGET_OS} //riva/clients/... --test_summary=detailed --test_output=all && \
     bazel build --stamp --config=release --config=${TARGET_ARCH} --config=${TARGET_OS} $BAZEL_CACHE_ARG //... && \
     cp -R /work/bazel-bin/riva /opt
 
