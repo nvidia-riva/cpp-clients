@@ -34,4 +34,5 @@ build:msan --copt=-fPIE
 build:msan --linkopt=-pie
 build:msan --copt=-fno-omit-frame-pointer
 
-build:aarch64  --copt=-DBUILD_AARCH64
+build:aarch64 --define aarch64_build=1  --copt=-DBUILD_AARCH64
+build:x86_64 --define aarch64_build=0
