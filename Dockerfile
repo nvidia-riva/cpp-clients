@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     libasound2-dev
 
-RUN if [ "$TARGET_ARCH" = "x86_64" ]; then \
+RUN if [ "$TARGET_ARCH" = "aarch64" ]; then \
         apt-get install -y --no-install-recommends openjdk-11-jdk-headless; \
     fi
 
