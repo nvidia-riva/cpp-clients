@@ -20,8 +20,8 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     libasound2-dev
 
-RUN if [ "$TARGET_ARCH" = "aarch64" ]; then \
-        apt-get install -y --no-install-recommends openjdk-11-jdk-headless; \
+RUN if [ "$TARGET_ARCH" = "aarch64" ] && [ "$TARGET_OS" = "l4t" ]; then \
+        apt-get update && apt-get install -y --no-install-recommends openjdk-11-jdk-headless; \
     fi
 
 # install bazel
