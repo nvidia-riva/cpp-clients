@@ -1,5 +1,5 @@
 # syntax = docker/dockerfile:1.2
-ARG BAZEL_VERSION=3.7.2
+ARG BAZEL_VERSION=5.0.0
 ARG TARGET_ARCH=x86_64 # valid values: x86_64, aarch64
 ARG TARGET_OS=linux    # valid values: linux, l4t
 
