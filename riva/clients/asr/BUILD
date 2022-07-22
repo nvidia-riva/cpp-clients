@@ -15,8 +15,12 @@ cc_library(
     name = "asr_client_helper",
     srcs = ["riva_asr_client_helper.h", "riva_asr_client_helper.cc"],
     deps = select({
-        ":cpu_arch_aarch64": ["@alsa_aarch64//:libasound"],
-        "//conditions:default": ["@alsa//:libasound"],
+        "@platforms//cpu:aarch64": [
+            "@alsa_aarch64//:libasound"
+        ],
+        "//conditions:default": [
+            "@alsa//:libasound"
+        ],
     }) + [
         "@com_github_grpc_grpc//:grpc++",
     ],
@@ -26,8 +30,12 @@ cc_library(
     name = "client_call",
     srcs = ["client_call.h", "client_call.cc"],
     deps = select({
-        ":cpu_arch_aarch64": ["@alsa_aarch64//:libasound"],
-        "//conditions:default": ["@alsa//:libasound"],
+        "@platforms//cpu:aarch64": [
+            "@alsa_aarch64//:libasound"
+        ],
+        "//conditions:default": [
+            "@alsa//:libasound"
+        ],
     }) + [
         ":asr_client_helper",
         "@com_github_grpc_grpc//:grpc++",
@@ -47,8 +55,12 @@ cc_library(
         "//riva/utils/wav:reader",
         "@glog//:glog",
     ] + select({
-        ":cpu_arch_aarch64": ["@alsa_aarch64//:libasound"],
-        "//conditions:default": ["@alsa//:libasound"],
+        "@platforms//cpu:aarch64": [
+            "@alsa_aarch64//:libasound"
+        ],
+        "//conditions:default": [
+            "@alsa//:libasound"
+        ],
     }) + [
         "//riva/utils:stamping",
         "@com_github_grpc_grpc//:grpc++",
@@ -88,8 +100,12 @@ cc_binary(
         "@glog//:glog",
         "//riva/clients/utils:grpc",
     ] + select({
-        ":cpu_arch_aarch64": ["@alsa_aarch64//:libasound"],
-        "//conditions:default": ["@alsa//:libasound"],
+        "@platforms//cpu:aarch64": [
+            "@alsa_aarch64//:libasound"
+        ],
+        "//conditions:default": [
+            "@alsa//:libasound"
+        ],
     }) + [
         "@com_github_grpc_grpc//:grpc++",
         "@com_github_gflags_gflags//:gflags",
@@ -107,9 +123,3 @@ cc_test(
     ],
     tags = ["needs_alsa"]
 )
-
-config_setting(
-    name = "cpu_arch_aarch64",
-    values = {"define": "aarch64_build=1"},
-)
-
