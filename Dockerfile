@@ -1,7 +1,7 @@
 # syntax = docker/dockerfile:1.2
-
-ARG TARGET_ARCH=amd64
 ARG BAZEL_VERSION=5.0.0
+ARG TARGET_ARCH=x86_64 # valid values: x86_64, aarch64
+ARG TARGET_OS=linux    # valid values: linux, l4t
 
 FROM ubuntu:20.04 AS base
 ARG DEBIAN_FRONTEND=noninteractive
@@ -9,8 +9,9 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y libasound2    
 
 FROM base AS builddep
-ARG TARGET_ARCH
 ARG BAZEL_VERSION
+ARG TARGET_ARCH
+ARG TARGET_OS
 
 RUN apt-get update && apt-get install -y \
     git \
@@ -19,23 +20,22 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     libasound2-dev
 
-RUN if [ "$TARGET_ARCH" = "amd64" ]; then \
-        wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh && \
-        chmod +x bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh && \
-        ./bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh --user && \
-        echo "PATH=/root/bin:$PATH\n" >> /root/.bashrc && \
-        echo "source /root/.bazel/bin/bazel-complete.bash" >> /root/.bashrc && \
-        rm ./bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh; \
-    elif [ "$TARGET_ARCH" = "arm64" ]; then \
-        apt-get update && apt-get install -y --no-install-recommends openjdk-11-jdk-headless && \
-        wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/bazel-${BAZEL_VERSION}-linux-arm64 && \
-        chmod +x bazel-${BAZEL_VERSION}-linux-arm64 && \
-        mv bazel-${BAZEL_VERSION}-linux-arm64 /usr/local/bin/bazel; \
+RUN if [ "$TARGET_ARCH" = "aarch64" ] && [ "$TARGET_OS" = "l4t" ]; then \
+        apt-get update && apt-get install -y --no-install-recommends openjdk-11-jdk-headless; \
     fi
+
+# install bazel
+SHELL ["/bin/bash", "-c"]
+RUN wget -nv https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/bazel-${BAZEL_VERSION}-linux-${TARGET_ARCH//aarch64/arm64} && \
+    chmod +x bazel-${BAZEL_VERSION}-linux-${TARGET_ARCH//aarch64/arm64} && \
+    mv bazel-${BAZEL_VERSION}-linux-${TARGET_ARCH//aarch64/arm64} /usr/local/bin/bazel;
+SHELL ["/bin/sh", "-c"]
 
 ENV PATH="/root/bin:${PATH}"
 
 FROM builddep as builder
+ARG TARGET_ARCH
+ARG TARGET_OS
 
 WORKDIR /work
 COPY .bazelrc .gitignore WORKSPACE ./
@@ -44,13 +44,8 @@ COPY scripts /work/scripts
 COPY third_party /work/third_party
 COPY riva /work/riva
 ARG BAZEL_CACHE_ARG=""
-RUN if [ "$TARGET_ARCH" = "amd64" ]; then \
-       bazel test $BAZEL_CACHE_ARG //riva/clients/... --test_summary=detailed --test_output=all && \
-       bazel build --stamp --config=release $BAZEL_CACHE_ARG //...; \
-    elif [ "$TARGET_ARCH" = "arm64" ]; then \
-       bazel test $BAZEL_CACHE_ARG //riva/clients/... --test_summary=detailed --test_output=all --define aarch64_build=1 && \
-       bazel build --stamp --config=aarch64 --action_env BUILD_AARCH64="1" --define aarch64_build=1 $BAZEL_CACHE_ARG //...; \
-    fi && \
+RUN bazel test $BAZEL_CACHE_ARG --config=${TARGET_OS}/${TARGET_ARCH} //riva/clients/... --test_summary=detailed --test_output=all && \
+    bazel build --stamp --config=release --config=${TARGET_OS}/${TARGET_ARCH} $BAZEL_CACHE_ARG //... && \
     cp -R /work/bazel-bin/riva /opt
 
 RUN ls -lah /work; ls -lah /work/.git; cat /work/.bazelrc

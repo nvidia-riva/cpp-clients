@@ -11,6 +11,10 @@ build:release --compilation_mode=opt
 build:release --linkopt=-Wl,--strip-all
 build:release --stamp
 
+build:linux/x86_64 --platforms //riva:linux_x86_64
+build:linux/aarch64 --platforms //riva:linux_aarch64
+build:l4t/aarch64 --platforms //riva:linux_aarch64
+
 build:asan --strip=never
 build:asan --copt=-fsanitize=address
 build:asan --copt=-O0
@@ -33,5 +37,3 @@ build:msan --linkopt=-fsanitize=memory
 build:msan --copt=-fPIE
 build:msan --linkopt=-pie
 build:msan --copt=-fno-omit-frame-pointer
-
-build:aarch64  --copt=-DBUILD_AARCH64

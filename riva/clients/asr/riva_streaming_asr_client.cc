@@ -45,9 +45,6 @@ DEFINE_string(
 DEFINE_int32(
     max_alternatives, 1,
     "Maximum number of alternative transcripts to return (up to limit configured on server)");
-DEFINE_bool(
-    profanity_filter, false,
-    "Flag that controls if generated transcripts should be filtered for the profane words");
 DEFINE_bool(automatic_punctuation, true, "Flag that controls if transcript should be punctuated");
 DEFINE_bool(word_time_offsets, true, "Flag that controls if word time stamps are requested");
 DEFINE_bool(
@@ -97,7 +94,6 @@ main(int argc, char** argv)
   str_usage << "           --audio_device=<device_id (such as hw:5,0)> " << std::endl;
   str_usage << "           --automatic_punctuation=<true|false>" << std::endl;
   str_usage << "           --max_alternatives=<integer>" << std::endl;
-  str_usage << "           --profanity_filter=<true|false>" << std::endl;
   str_usage << "           --word_time_offsets=<true|false>" << std::endl;
   str_usage << "           --riva_uri=<server_name:port> " << std::endl;
   str_usage << "           --chunk_duration_ms=<integer> " << std::endl;
@@ -165,7 +161,7 @@ main(int argc, char** argv)
 
   StreamingRecognizeClient recognize_client(
       grpc_channel, FLAGS_num_parallel_requests, FLAGS_language_code, FLAGS_max_alternatives,
-      FLAGS_profanity_filter, FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
+      FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
       /* separate_recognition_per_channel*/ false, FLAGS_print_transcripts, FLAGS_chunk_duration_ms,
       FLAGS_interim_results, FLAGS_output_filename, FLAGS_model_name, FLAGS_simulate_realtime,
       FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score);
