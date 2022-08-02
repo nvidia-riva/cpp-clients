@@ -179,7 +179,7 @@ main(int argc, char** argv)
   FLAGS_logtostderr = 1;
 
   std::stringstream str_usage;
-  str_usage << "Usage: riva_tts_perf_client " << std::endl;
+  str_usage << "Usage: riva_tts_client " << std::endl;
   str_usage << "           --text_file=<text_file> " << std::endl;
   str_usage << "           --write_output_audio=<true|false> " << std::endl;
   str_usage << "           --riva_uri=<server_name:port> " << std::endl;
