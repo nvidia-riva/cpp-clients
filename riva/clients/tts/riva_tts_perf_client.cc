@@ -40,7 +40,7 @@ DEFINE_bool(
 DEFINE_string(
     language, "en-US",
     "Language code as per [BCP-47](https://www.rfc-editor.org/rfc/bcp/bcp47.txt) language tag.");
-DEFINE_string(voice_name, "English-US-Female-1", "Desired voice name");
+DEFINE_string(voice_name, "", "Desired voice name");
 DEFINE_int32(num_iterations, 1, "Number of times to loop over audio files");
 DEFINE_int32(num_parallel_requests, 1, "Number of parallel requests to keep in flight");
 DEFINE_int32(throttle_milliseconds, 0, "Number of milliseconds to sleep for between TTS requests");
