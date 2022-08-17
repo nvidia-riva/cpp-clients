@@ -34,7 +34,7 @@ DEFINE_bool(online, false, "Whether synthesis should be online or batch");
 DEFINE_string(
     language, "en-US",
     "Language code as per [BCP-47](https://www.rfc-editor.org/rfc/bcp/bcp47.txt) language tag.");
-DEFINE_string(voice_name, "English-US-Female-1", "Desired voice name");
+DEFINE_string(voice_name, "", "Desired voice name");
 
 static const std::string LC_enUS = "en-US";
 
