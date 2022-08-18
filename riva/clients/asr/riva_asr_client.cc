@@ -61,6 +61,7 @@ DEFINE_bool(
     "True returns text exactly as it was said with no normalization.  False applies text inverse "
     "normalization");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
+DEFINE_bool(speaker_diarization, false, "Flag that controls if speaker diarization is requested");
 
 class RecognizeClient {
  public:
@@ -69,7 +70,7 @@ class RecognizeClient {
       int32_t max_alternatives, bool profanity_filter, bool word_time_offsets,
       bool automatic_punctuation, bool separate_recognition_per_channel, bool print_transcripts,
       std::string output_filename, std::string model_name, bool ctm, bool verbatim_transcripts,
-      const std::string& boosted_phrases_file, float boosted_phrases_score)
+      const std::string& boosted_phrases_file, float boosted_phrases_score, bool speaker_diarization)
       : stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)), language_code_(language_code),
         max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
         word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
@@ -77,7 +78,8 @@ class RecognizeClient {
         print_transcripts_(print_transcripts), done_sending_(false), num_requests_(0),
         num_responses_(0), num_failed_requests_(0), total_audio_processed_(0.),
         model_name_(model_name), output_filename_(output_filename),
-        verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score)
+        verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
+        speaker_diarization_(speaker_diarization)
   {
     if (!output_filename.empty()) {
       output_file_.open(output_filename);
@@ -151,23 +153,33 @@ class RecognizeClient {
     if (result.alternatives_size() != 0) {
       for (int a = 0; a < result.alternatives_size(); ++a) {
         std::cout << a << " : " << result.alternatives(a).transcript() << std::endl;
+
         std::cout << std::endl;
 
-        if (word_time_offsets_) {
-          std::cout << "Timestamps: " << std::endl;
+        if (word_time_offsets_ || speaker_diarization_) {
           std::cout << std::setw(40) << std::left << "Word";
-          std::cout << std::setw(16) << std::left << "Start (ms)";
-          std::cout << std::setw(16) << std::left << "End (ms)";
+          if (word_time_offsets_) {
+            std::cout << std::setw(16) << std::left << "Start (ms)";
+            std::cout << std::setw(16) << std::left << "End (ms)";
+          }
           std::cout << std::setw(16) << std::left << "Confidence";
-          std::cout << std::endl;
+          if (a == 0 && speaker_diarization_) {
+            std::cout << std::setw(16) << std::left << "Speaker";
+          }
           std::cout << std::endl;
           for (int w = 0; w < result.alternatives(a).words_size(); ++w) {
             auto& word_info = result.alternatives(a).words(w);
             std::cout << std::setw(40) << std::left << word_info.word();
-            std::cout << std::setw(16) << std::left << word_info.start_time();
-            std::cout << std::setw(16) << std::left << word_info.end_time();
+            if (word_time_offsets_) {
+              std::cout << std::setw(16) << std::left << word_info.start_time();
+              std::cout << std::setw(16) << std::left << word_info.end_time();
+            }
             std::cout << std::setw(16) << std::setprecision(4) << std::scientific
-                      << word_info.confidence() << std::endl;
+                      << word_info.confidence();
+            if (a == 0 && speaker_diarization_) {
+              std::cout << std::setw(16) << std::left << word_info.speaker_tag();
+            }
+            std::cout << std::endl;
           }
         }
       }
@@ -228,6 +240,9 @@ class RecognizeClient {
     config->set_enable_separate_recognition_per_channel(separate_recognition_per_channel_);
     auto custom_config = config->mutable_custom_configuration();
     (*custom_config)["test_key"] = "test_value";
+
+    auto speaker_diarization_config = config->mutable_diarization_config();
+    speaker_diarization_config->set_enable_speaker_diarization(speaker_diarization_);
 
     if (model_name_ != "") {
       config->set_model(model_name_);
@@ -357,6 +372,7 @@ class RecognizeClient {
   bool word_time_offsets_;
   bool automatic_punctuation_;
   bool separate_recognition_per_channel_;
+  bool speaker_diarization_;
   bool print_transcripts_;
 
 
@@ -459,7 +475,7 @@ main(int argc, char** argv)
       FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
       /* separate_recognition_per_channel*/ false, FLAGS_print_transcripts, FLAGS_output_filename,
       FLAGS_model_name, FLAGS_output_ctm, FLAGS_verbatim_transcripts, FLAGS_boosted_words_file,
-      (float)FLAGS_boosted_words_score);
+      (float)FLAGS_boosted_words_score, FLAGS_speaker_diarization);
 
   // Preload all wav files, sort by size to reduce tail effects
   std::vector<std::shared_ptr<WaveData>> all_wav;
