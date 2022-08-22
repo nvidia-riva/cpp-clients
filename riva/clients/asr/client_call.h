@@ -37,8 +37,8 @@ struct Results {
   std::vector<std::string> final_transcripts;
   std::vector<float> final_scores;
   std::string partial_transcript;
-  std::vector<nr_asr::WordInfo> final_time_stamps;
-  std::vector<nr_asr::WordInfo> partial_time_stamps;
+  std::vector<std::vector<nr_asr::WordInfo>> final_time_stamps;
+  std::vector<nr_asr::WordInfo>partial_time_stamps;
   int request_cnt;
   float audio_processed;
 };

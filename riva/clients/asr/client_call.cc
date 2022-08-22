@@ -33,8 +33,11 @@ ClientCall::AppendResult(const nr_asr::StreamingRecognitionResult& result)
     }
     if (word_time_offsets_) {
       if (num_alternatives > 0) {
-        for (int w = 0; w < result.alternatives(0).words_size(); ++w) {
-          latest_result_.final_time_stamps.emplace_back(result.alternatives(0).words(w));
+        for (int a = 0; a < num_alternatives; ++a) {
+          latest_result_.final_time_stamps.emplace_back();
+          for (int w = 0; w < result.alternatives(a).words_size(); ++w) {
+            latest_result_.final_time_stamps.back().push_back(result.alternatives(a).words(w));
+          }
         }
       }
     }
@@ -75,28 +78,37 @@ ClientCall::PrintResult(bool audio_device, std::ofstream& output_file)
       }
       std::cout << a << " : " << latest_result_.final_transcripts[a]
                 << latest_result_.partial_transcript << std::endl;
-    }
-    std::cout << std::endl;
-
-    if (word_time_offsets_) {
-      std::cout << "Timestamps: " << std::endl;
-      std::cout << std::setw(40) << std::left << "Word";
-      std::cout << std::setw(16) << std::left << "Start (ms)";
-      std::cout << std::setw(16) << std::left << "End (ms)" << std::endl;
       std::cout << std::endl;
-      for (uint32_t w = 0; w < latest_result_.final_time_stamps.size(); ++w) {
-        auto& word_info = latest_result_.final_time_stamps[w];
-        std::cout << std::setw(40) << std::left << word_info.word();
-        std::cout << std::setw(16) << std::left << word_info.start_time();
-        std::cout << std::setw(16) << std::left << word_info.end_time() << std::endl;
-      }
 
-      for (uint32_t w = 0; w < latest_result_.partial_time_stamps.size(); ++w) {
-        auto& word_info = latest_result_.partial_time_stamps[w];
-        std::cout << std::setw(40) << std::left << word_info.word();
-        std::cout << std::setw(16) << std::left << word_info.start_time();
-        std::cout << std::setw(16) << std::left << word_info.end_time() << std::endl;
+      if (word_time_offsets_) {
+        std::cout << "Timestamps: " << std::endl;
+        std::cout << std::setw(40) << std::left << "Word";
+        std::cout << std::setw(16) << std::left << "Start (ms)";
+        std::cout << std::setw(16) << std::left << "End (ms)";
+        std::cout << std::setw(16) << std::left << "Confidence";
+        std::cout << std::endl;
+        std::cout << std::endl;
+        for (uint32_t w = 0; a < latest_result_.final_time_stamps.size() &&
+                             w < latest_result_.final_time_stamps[a].size();
+             ++w) {
+          auto& word_info = latest_result_.final_time_stamps[a][w];
+          std::cout << std::setw(40) << std::left << word_info.word();
+          std::cout << std::setw(16) << std::left << word_info.start_time();
+          std::cout << std::setw(16) << std::left << word_info.end_time();
+          std::cout << std::setw(16) << std::setprecision(4) << std::scientific
+                    << word_info.confidence() << std::endl;
+        }
+
+        for (uint32_t w = 0; w < latest_result_.partial_time_stamps.size(); ++w) {
+          auto& word_info = latest_result_.partial_time_stamps[w];
+          std::cout << std::setw(40) << std::left << word_info.word();
+          std::cout << std::setw(16) << std::left << word_info.start_time();
+          std::cout << std::setw(16) << std::left << word_info.end_time() << std::endl;
+          std::cout << std::setw(16) << std::setprecision(4) << std::scientific
+                    << word_info.confidence() << std::endl;
+        }
       }
+      std::cout << std::endl;
     }
   }
   std::cout << std::endl;
