@@ -194,10 +194,14 @@ StreamingRecognizeClient::DoStreamingFromFile(
 {
   // Preload all wav files, sort by size to reduce tail effects
   std::vector<std::shared_ptr<WaveData>> all_wav;
-  LoadWavData(all_wav, audio_file);
-
+  try {
+    LoadWavData(all_wav, audio_file);
+  } catch (const std::exception& e) {
+    std::cerr << "Unable to load audio file(s): " << e.what() << std::endl;
+    return 1;
+  }
   if (all_wav.size() == 0) {
-    std::cout << "Exiting.." << std::endl;
+    std::cout << "No audio files specified. Exiting." << std::endl;
     return 1;
   }
 
