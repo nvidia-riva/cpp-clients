@@ -66,13 +66,13 @@ class RecognizeClient {
  public:
   RecognizeClient(
       std::shared_ptr<grpc::Channel> channel, const std::string& language_code,
-      int32_t max_alternatives, bool profanity_filter, bool word_time_offsets, bool automatic_punctuation,
-      bool separate_recognition_per_channel, bool print_transcripts, std::string output_filename,
-      std::string model_name, bool ctm, bool verbatim_transcripts,
+      int32_t max_alternatives, bool profanity_filter, bool word_time_offsets,
+      bool automatic_punctuation, bool separate_recognition_per_channel, bool print_transcripts,
+      std::string output_filename, std::string model_name, bool ctm, bool verbatim_transcripts,
       const std::string& boosted_phrases_file, float boosted_phrases_score)
       : stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)), language_code_(language_code),
-        max_alternatives_(max_alternatives), profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
-        automatic_punctuation_(automatic_punctuation),
+        max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
+        word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
         separate_recognition_per_channel_(separate_recognition_per_channel),
         print_transcripts_(print_transcripts), done_sending_(false), num_requests_(0),
         num_responses_(0), num_failed_requests_(0), total_audio_processed_(0.),
@@ -151,21 +151,27 @@ class RecognizeClient {
     if (result.alternatives_size() != 0) {
       for (int a = 0; a < result.alternatives_size(); ++a) {
         std::cout << a << " : " << result.alternatives(a).transcript() << std::endl;
-      }
-      std::cout << std::endl;
+        std::cout << std::endl;
 
-      if (word_time_offsets_) {
-        std::cout << "Timestamps: " << std::endl;
-        std::cout << std::setw(40) << std::left << "Word";
-        std::cout << std::setw(16) << std::left << "Start (ms)";
-        std::cout << std::setw(16) << std::left << "End (ms)" << std::endl;
-        for (int w = 0; w < result.alternatives(0).words_size(); ++w) {
-          auto& word_info = result.alternatives(0).words(w);
-          std::cout << std::setw(40) << std::left << word_info.word();
-          std::cout << std::setw(16) << std::left << word_info.start_time();
-          std::cout << std::setw(16) << std::left << word_info.end_time() << std::endl;
+        if (word_time_offsets_) {
+          std::cout << "Timestamps: " << std::endl;
+          std::cout << std::setw(40) << std::left << "Word";
+          std::cout << std::setw(16) << std::left << "Start (ms)";
+          std::cout << std::setw(16) << std::left << "End (ms)";
+          std::cout << std::setw(16) << std::left << "Confidence";
+          std::cout << std::endl;
+          std::cout << std::endl;
+          for (int w = 0; w < result.alternatives(a).words_size(); ++w) {
+            auto& word_info = result.alternatives(a).words(w);
+            std::cout << std::setw(40) << std::left << word_info.word();
+            std::cout << std::setw(16) << std::left << word_info.start_time();
+            std::cout << std::setw(16) << std::left << word_info.end_time();
+            std::cout << std::setw(16) << std::setprecision(4) << std::scientific
+                      << word_info.confidence() << std::endl;
+          }
         }
       }
+      std::cout << std::endl;
     }
     std::cout << "Audio processed: " << result.audio_processed() << " sec." << std::endl;
     std::cout << "-----------------------------------------------------------" << std::endl;
@@ -449,10 +455,11 @@ main(int argc, char** argv)
   }
 
   RecognizeClient recognize_client(
-      grpc_channel, FLAGS_language_code, FLAGS_max_alternatives, FLAGS_profanity_filter, FLAGS_word_time_offsets,
-      FLAGS_automatic_punctuation, /* separate_recognition_per_channel*/ false,
-      FLAGS_print_transcripts, FLAGS_output_filename, FLAGS_model_name, FLAGS_output_ctm,
-      FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, (float)FLAGS_boosted_words_score);
+      grpc_channel, FLAGS_language_code, FLAGS_max_alternatives, FLAGS_profanity_filter,
+      FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
+      /* separate_recognition_per_channel*/ false, FLAGS_print_transcripts, FLAGS_output_filename,
+      FLAGS_model_name, FLAGS_output_ctm, FLAGS_verbatim_transcripts, FLAGS_boosted_words_file,
+      (float)FLAGS_boosted_words_score);
 
   // Preload all wav files, sort by size to reduce tail effects
   std::vector<std::shared_ptr<WaveData>> all_wav;
