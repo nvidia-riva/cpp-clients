@@ -26,6 +26,7 @@ ClientCall::AppendResult(const nr_asr::StreamingRecognitionResult& result)
     int num_alternatives = result.alternatives_size();
     latest_result_.final_transcripts.resize(num_alternatives);
     latest_result_.final_scores.resize(num_alternatives);
+    latest_result_.final_time_stamps.resize(num_alternatives);
     for (int a = 0; a < num_alternatives; ++a) {
       // Append to transcript
       latest_result_.final_transcripts[a] += result.alternatives(a).transcript();
@@ -34,9 +35,8 @@ ClientCall::AppendResult(const nr_asr::StreamingRecognitionResult& result)
     if (word_time_offsets_) {
       if (num_alternatives > 0) {
         for (int a = 0; a < num_alternatives; ++a) {
-          latest_result_.final_time_stamps.emplace_back();
           for (int w = 0; w < result.alternatives(a).words_size(); ++w) {
-            latest_result_.final_time_stamps.back().push_back(result.alternatives(a).words(w));
+            latest_result_.final_time_stamps[a].push_back(result.alternatives(a).words(w));
           }
         }
       }
