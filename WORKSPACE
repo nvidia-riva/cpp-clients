@@ -69,7 +69,7 @@ grpc_extra_deps()
 
 http_archive(
     name = "nvriva_common",
-    urls = ["https://github.com/nvidia-riva/common/archive/2895ad577443c7378c2f5c8a8ab786d8caf80997.zip"],
-    sha256 = "3566dbd19f4feabb4969c87be4d9469acad842c26ef3856c0b346f82fe51389c",
-    strip_prefix = "common-2895ad577443c7378c2f5c8a8ab786d8caf80997"
+    urls = ["https://github.com/nvidia-riva/common/archive/a14eeb43fcb55366a8c571643376bd942fe3e352.zip"],
+    sha256 = "7aaa1ce5beb326e928f530bdcbefa37a1a6767fac7476ec9315caa1aed14647a",
+    strip_prefix = "common-a14eeb43fcb55366a8c571643376bd942fe3e352"
 )
