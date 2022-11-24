@@ -73,6 +73,10 @@ SeekToData(std::istream& wavfile, WAVHeader& header)
       header.file_tag = "fLaC";
       wavfile.seekg(0, std::ios_base::beg);
       break;
+    } else if (strncmp(curr_chunk_id, "OggS", 4) == 0) {
+      header.file_tag = "OggS";
+      wavfile.seekg(0, std::ios_base::beg);
+      break;
     } else {
       wavfile.seekg(curr_chunk_size, std::ios_base::cur);
     }
@@ -105,6 +109,14 @@ ParseHeader(
     encoding = nr::FLAC;
     samplerate = 16000;
     channels = 1;
+    data_offset = file_stream.tellg();
+    return true;
+  } else if (header.file_tag == "OggS") {
+    // TODO parse sample rate and channels from stream
+    encoding = nr::OGGOPUS;
+    samplerate = 16000;
+    channels = 1;
+    data_offset = file_stream.tellg();
     return true;
   }
   return false;
@@ -208,6 +220,8 @@ AudioToString(nr::AudioEncoding& encoding)
     return "LINEAR_PCM";
   } else if (encoding == 2) {
     return "FLAC";
+  } else if (encoding == 4) {
+    return "OPUS";
   } else if (encoding == 20) {
     return "ALAW";
   } else {
