@@ -10,13 +10,10 @@ package(
 cc_binary(
     name = "riva_tts_client",
     srcs = ["riva_tts_client.cc"],
-    copts = ["-I/usr/include/opus"],
-    linkopts = ["-lopus -lopusfile"],
     deps = [
         "@nvriva_common//riva/proto:riva_grpc_tts",
         "//riva/utils:stamping",
         "//riva/utils/wav:writer",
-        "//riva/utils/opus",
         "@glog//:glog",
         "@com_google_absl//absl/time",
         "@com_github_gflags_gflags//:gflags",
@@ -28,12 +25,10 @@ cc_binary(
 cc_binary(
     name = "riva_tts_perf_client",
     srcs = ["riva_tts_perf_client.cc"],
-    copts = ["-I/usr/include/opus"],
     deps = [
         "@nvriva_common//riva/proto:riva_grpc_tts",
         "//riva/utils:stamping",
         "//riva/utils/wav:writer",
-        "//riva/utils/opus",
         "@glog//:glog",
         "@com_github_gflags_gflags//:gflags",
         "@com_github_grpc_grpc//:grpc++",

@@ -20,18 +20,6 @@
 namespace nr = nvidia::riva;
 namespace nr_asr = nvidia::riva::asr;
 
-template <typename T>
-T little_endian_val(const char* str)
-{
-  T val = T();
-  T shift = 0;
-  for (int i = 0; i < sizeof(T); ++i) {
-    val += T(str[i] & 0xFF) << shift;
-    shift += 8;
-  }
-  return val;
-}
-
 inline std::string
 GetFileExt(const std::string& s)
 {
@@ -85,10 +73,6 @@ SeekToData(std::istream& wavfile, WAVHeader& header)
       header.file_tag = "fLaC";
       wavfile.seekg(0, std::ios_base::beg);
       break;
-    } else if (strncmp(curr_chunk_id, "OggS", 4) == 0) {
-      header.file_tag = "OggS";
-      wavfile.seekg(0, std::ios_base::beg);
-      break;
     } else {
       wavfile.seekg(curr_chunk_size, std::ios_base::cur);
     }
@@ -121,21 +105,6 @@ ParseHeader(
     encoding = nr::FLAC;
     samplerate = 16000;
     channels = 1;
-    data_offset = file_stream.tellg();
-    return true;
-  } else if (header.file_tag == "OggS") {
-    encoding = nr::OGGOPUS;
-    char header_buf[OPUS_HEADER_LENGTH];
-    std::size_t read = file_stream.readsome(header_buf, OPUS_HEADER_LENGTH);
-    if (read == OPUS_HEADER_LENGTH) {
-      const std::string head(header_buf, header_buf + OPUS_HEADER_LENGTH);
-      const std::size_t head_pos = head.find("OpusHead");
-      if (head_pos != std::string::npos) {
-        channels = (int) little_endian_val<uint8_t>(head.data() + head_pos + 9);
-        samplerate = (int) little_endian_val<uint16_t>(head.data() + head_pos + 12);
-      }
-    }
-    data_offset = file_stream.tellg();
     return true;
   }
   return false;
@@ -239,8 +208,6 @@ AudioToString(nr::AudioEncoding& encoding)
     return "LINEAR_PCM";
   } else if (encoding == 2) {
     return "FLAC";
-  } else if (encoding == 4) {
-    return "OPUS";
   } else if (encoding == 20) {
     return "ALAW";
   } else {

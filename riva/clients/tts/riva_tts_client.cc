@@ -19,7 +19,6 @@
 #include "riva/utils/files/files.h"
 #include "riva/utils/stamping.h"
 #include "riva/utils/wav/wav_writer.h"
-#include "riva/utils/opus/opus_decoder.h"
 
 using grpc::Status;
 using grpc::StatusCode;
@@ -28,7 +27,6 @@ namespace nr_tts = nvidia::riva::tts;
 
 DEFINE_string(text, "", "Text to be synthesized");
 DEFINE_string(audio_file, "output.wav", "Output file");
-DEFINE_string(audio_encoding, "pcm", "Audio encoding (pcm or opus)");
 DEFINE_string(riva_uri, "localhost:50051", "Riva API server URI and port");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
 DEFINE_int32(rate, 44100, "Sample rate for the TTS output");
@@ -50,7 +48,6 @@ main(int argc, char** argv)
   str_usage << "Usage: riva_tts_client " << std::endl;
   str_usage << "           --text=<text> " << std::endl;
   str_usage << "           --audio_file=<filename> " << std::endl;
-  str_usage << "           --audio_encoding=<pcm|opus> " << std::endl;
   str_usage << "           --riva_uri=<server_name:port> " << std::endl;
   str_usage << "           --rate=<sample_rate> " << std::endl;
   str_usage << "           --language=<language-code> " << std::endl;
@@ -112,14 +109,7 @@ main(int argc, char** argv)
   nr_tts::SynthesizeSpeechRequest request;
   request.set_text(text);
   request.set_language_code(FLAGS_language);
-  if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
-    request.set_encoding(nr::LINEAR_PCM);
-  } else if (FLAGS_audio_encoding == "opus") {
-    request.set_encoding(nr::OGGOPUS);
-  } else {
-    std::cerr << "Unsupported encoding: \'" << FLAGS_audio_encoding << "\'" << std::endl;
-    return -1;
-  }
+  request.set_encoding(nr::LINEAR_PCM);
   request.set_sample_rate_hz(FLAGS_rate);
   request.set_voice_name(FLAGS_voice_name);
 
@@ -142,20 +132,12 @@ main(int argc, char** argv)
     }
 
     auto audio = response.audio();
-    std::cerr << "Got " << audio.length() << " bytes back from server" << std::endl;
     // Write to WAV file
-    if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
-      ::riva::utils::wav::Write(
-          FLAGS_audio_file, FLAGS_rate, (int16_t*)audio.data(), audio.length() / sizeof(int16_t));
-    } else if (FLAGS_audio_encoding == "opus") {
-      riva::utils::opus::Decoder decoder(FLAGS_rate, 1);
-      auto ptr = reinterpret_cast<unsigned char*>(audio.data());
-      auto pcm = decoder.DecodePcm(decoder.DeserializeOpus(std::vector<unsigned char>(ptr, ptr + audio.size())));
-      ::riva::utils::wav::Write(FLAGS_audio_file, FLAGS_rate, pcm.data(), pcm.size());
-    }
+    std::cerr << "Got " << audio.length() << " bytes back from server" << std::endl;
+    ::riva::utils::wav::Write(
+        FLAGS_audio_file, FLAGS_rate, (int16_t*)audio.data(), audio.length() / sizeof(int16_t));
   } else {  // online inference
-    std::vector<int16_t> pcm_buffer;
-    std::vector<unsigned char> opus_buffer;
+    std::vector<int16_t> buffer;
     size_t audio_len = 0;
     nr_tts::SynthesizeSpeechResponse chunk;
     auto start = std::chrono::steady_clock::now();
@@ -168,19 +150,10 @@ main(int argc, char** argv)
         std::chrono::duration<double> elapsed_first_audio = t_first_audio - start;
         std::cerr << "Time to first chunk: " << elapsed_first_audio.count() << " s" << std::endl;
       }
-      std::cerr << "Got chunk: " << chunk.audio().size() << " bytes" << std::endl;
-
-      if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
-        int16_t *audio_data = (int16_t *) chunk.audio().data();
-        size_t len = chunk.audio().length() / sizeof(int16_t);
-        std::copy(audio_data, audio_data + len, std::back_inserter(pcm_buffer));
-        audio_len += len;
-      } else if (FLAGS_audio_encoding == "opus") {
-        const unsigned char* opus_data = (unsigned char*)chunk.audio().data();
-        size_t len = chunk.audio().length();
-        std::copy(opus_data, opus_data + len, std::back_inserter(opus_buffer));
-        audio_len += len;
-      }
+      int16_t* audio_data = (int16_t*)chunk.audio().data();
+      size_t len = chunk.audio().length() / sizeof(int16_t);
+      std::copy(audio_data, audio_data + len, std::back_inserter(buffer));
+      audio_len += len;
     }
     grpc::Status rpc_status = reader->Finish();
     auto end = std::chrono::steady_clock::now();
@@ -194,13 +167,7 @@ main(int argc, char** argv)
       return -1;
     }
 
-    if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
-      ::riva::utils::wav::Write(FLAGS_audio_file, FLAGS_rate, pcm_buffer.data(), pcm_buffer.size());
-    } else if (FLAGS_audio_encoding == "opus") {
-      riva::utils::opus::Decoder decoder(FLAGS_rate, 1);
-      auto pcm = decoder.DecodePcm(decoder.DeserializeOpus(opus_buffer));
-      ::riva::utils::wav::Write(FLAGS_audio_file, FLAGS_rate, pcm.data(), pcm.size());
-    }
+    ::riva::utils::wav::Write(FLAGS_audio_file, FLAGS_rate, buffer.data(), buffer.size());
   }
   return 0;
 }
