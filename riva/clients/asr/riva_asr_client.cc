@@ -119,10 +119,10 @@ class RecognizeClient {
       auto hypothesis = result.alternatives(0);
       for (int w = 0; w < hypothesis.words_size(); ++w) {
         auto& word_info = hypothesis.words(w);
-        output_file_ << bname << " " << side /* channel */ << " "
+        output_file_ << bname << " " << (speaker_diarization_ ? std::string("speaker_") + std::to_string(word_info.speaker_tag()) : side) /* channel */ << " "
                      << (float)word_info.start_time() / 1000. << " "
                      << (float)(word_info.end_time() - word_info.start_time()) / 1000. << " "
-                     << word_info.word() << " " << -1.0 /* confidence */ << std::endl;
+                     << word_info.word() << " " << word_info.confidence() /* confidence */ << std::endl;
       }
     }
   }
