@@ -29,20 +29,3 @@ cc_library(
     linkstatic = False,
     linkopts = ["-lm"]
 )
-
-cc_test(
-    name = "opus_test",
-    srcs = ["opus_test.cc"],
-    copts = ["-I/usr/include/opus"],
-    linkopts = ["-lopus",
-                "-lopusfile" ],
-    linkstatic = True,
-    deps = [
-        ":opus",
-        "@speexdsp//:resample",
-        "@googletest//:gtest_main",
-    ],
-     data = [
-        "//test_files/asr/public:public_wavs",
-    ],
-)
