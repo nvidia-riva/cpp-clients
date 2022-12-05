@@ -49,7 +49,7 @@ Local builds are currently only supported through `bazel 3.7.2`.
 
 First install the dependencies with:
 ```
-sudo apt-get install libasound2-dev
+sudo apt-get install libasound2-dev libopus0 libopus-dev libopusfile0 libopusfile-dev
 ```
 
 Then, to build all clients, from the project's root directory run:
