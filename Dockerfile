@@ -18,7 +18,11 @@ RUN apt-get update && apt-get install -y \
     wget \
     unzip \
     build-essential \
-    libasound2-dev
+    libasound2-dev \
+    libopus0 \
+    libopus-dev \
+    libopusfile0 \
+    libopusfile-dev
 
 RUN if [ "$TARGET_ARCH" = "aarch64" ] && [ "$TARGET_OS" = "l4t" ]; then \
         apt-get update && apt-get install -y --no-install-recommends openjdk-11-jdk-headless; \
