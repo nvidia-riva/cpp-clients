@@ -71,6 +71,7 @@ DEFINE_bool(
     "True returns text exactly as it was said with no normalization.  False applies text inverse "
     "normalization");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
+DEFINE_bool(speaker_diarization, false, "Flag that controls if speaker diarization is requested");
 
 void
 signal_handler(int signal_num)
