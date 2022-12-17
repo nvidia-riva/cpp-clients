@@ -142,7 +142,8 @@ Decoder::DecodePcm(const std::vector<unsigned char>& packet)
       return {};
     }
   }
-  const std::size_t frame_length = FRAME_SIZE * channels_ * sizeof(int16_t);
+  // the longest frame length accepted
+  const std::size_t frame_length = rate_ * 6 / (50 * channels_);
   std::vector<int16_t> ret(frame_length);
   int samples = opus_decode(decoder_, packet.data(), packet.size(), ret.data(), frame_length, 0);
   if (samples < 0) {

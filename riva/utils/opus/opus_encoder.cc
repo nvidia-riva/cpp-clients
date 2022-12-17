@@ -34,28 +34,95 @@ Encoder::~Encoder()
   }
 }
 
+int32_t Encoder::MaxPossibleFrameSize(int32_t ceiling) const
+{
+  //
+  // Note: Opus doc is not very specific about all possible frame lengths.
+  // This is their validation code which we follow (here Fs stands for sample rate):
+  //
+  //  if (400*new_size!=Fs  && 200*new_size!=Fs   && 100*new_size!=Fs   &&
+  //      50*new_size!=Fs   &&  25*new_size!=Fs   &&  50*new_size!=3*Fs &&
+  //      50*new_size!=4*Fs &&  50*new_size!=5*Fs &&  50*new_size!=6*Fs)
+  //      return -1;
+  //
+  // RFC says:
+  // Opus can encode frames of 2.5, 5, 10, 20, 40, or 60 ms.  It can also
+  // combine multiple frames into packets of up to 120 ms.
+  //
+  const int32_t quantum = rate_ / (400 * channels_);
+  const auto mults = {48, 40, 32, 24, 16, 8, 4, 2, 1};
+  for (auto mult : mults) {
+    int32_t ret = quantum * mult;
+    if (ret <= ceiling) {
+      return ret;
+    }
+  }
+  return quantum;
+}
+
+//
+//  int32_t ret = rate_ * 6 / (50 * channels_);
+//  if (ret > ceiling) {
+//    ret = rate_ * 5 / (50 * channels_);
+//    if (ret > ceiling) {
+//      ret = rate_ * 4 / (50 * channels_);
+//      if (ret > ceiling) {
+//        ret = rate_ * 3 / (50 * channels_);
+//        if (ret > ceiling) {
+//          ret = rate_ / (25 * channels_);
+//          if (ret > ceiling) {
+//            ret = rate_ / (50 * channels_);
+//            if (ret > ceiling) {
+//              ret = rate_ / (100 * channels_);
+//              if (ret > ceiling) {
+//                ret = rate_ / (200 * channels_);
+//                if (ret > ceiling) {
+//                  ret = rate_ / (400 * channels_);
+//                }
+//              }
+//            }
+//          }
+//        }
+//      }
+//    }
+//  }
+//  return ret;
+
+
 std::vector<std::vector<unsigned char>>
-Encoder::EncodePcm(const std::vector<int16_t>& pcm) const
+Encoder::EncodePcm(const std::vector<int16_t>& pcm, int32_t* samples_encoded) const
 {
   std::vector<std::vector<unsigned char>> ret;
-  const std::size_t frame = FRAME_SIZE * channels_ * sizeof(int16_t);
-  const std::size_t data_length = pcm.size() * sizeof(int16_t);
-  for (std::size_t i = 0U; i < data_length; i += frame) {
-    std::size_t bytes_to_encode = frame;
-    if (i + frame >= data_length) {
-      bytes_to_encode = data_length - i;
-    }
-    std::vector<unsigned char> encoded_frame(bytes_to_encode);
-    auto bytes_encoded = opus_encode(
-        encoder_, pcm.data() + (i / sizeof(int16_t)), FRAME_SIZE, encoded_frame.data(),
-        (int32_t)bytes_to_encode);
-    if (bytes_encoded < 0) {
-      LOG(ERROR) << "Failed to encode: " << opus_strerror(bytes_encoded) << ", i: " << i
-                 << ", bytes_to_encode: " << bytes_to_encode;
+  auto bytes_to_encode = (int32_t)(pcm.size() * sizeof(int16_t));
+  int32_t pos = 0;
+  if (samples_encoded != nullptr) {
+    *samples_encoded = 0;
+  }
+  while (bytes_to_encode > 0) {
+    const int32_t frame_size = MaxPossibleFrameSize((int32_t)(pcm.size() - pos));
+    const int32_t frame_size_byte = frame_size * (int32_t)sizeof(int16_t);
+    if (frame_size_byte > bytes_to_encode) {
       break;
     }
-    ret.emplace_back(
-        std::vector<unsigned char>{encoded_frame.data(), encoded_frame.data() + bytes_encoded});
+    std::vector<unsigned char> encoded_frame(frame_size_byte);
+    int32_t bytes_encoded = opus_encode(
+        encoder_, &pcm[pos], frame_size, encoded_frame.data(), frame_size_byte);
+    if (bytes_encoded < 0) {
+      LOG(ERROR) << "Failed to encode: " << opus_strerror(bytes_encoded)
+                 << ", bytes_to_encode: " << bytes_to_encode << ", frame_length: " << frame_size;
+      break;
+    }
+    pos += frame_size;
+    if (samples_encoded != nullptr) {
+      *samples_encoded += frame_size;
+    }
+    if (bytes_encoded > 0) {
+      ret.emplace_back(
+          std::vector<unsigned char>{encoded_frame.data(), encoded_frame.data() + bytes_encoded});
+    }
+    if (bytes_to_encode >= frame_size_byte) {
+      bytes_to_encode -= frame_size_byte;
+    }
   }
   return ret;
 }
@@ -76,6 +143,24 @@ Encoder::SerializeOpus(const std::vector<std::vector<unsigned char>>& opus) cons
     pos += frame.size();
   }
   return ret;
+}
+
+int32_t
+Encoder::AdjustRateIfUnsupported(int32_t rate)
+{
+  int32_t adjusted_rate = 0;
+  if (rate > 48000) {
+    adjusted_rate = 48000;
+  } else if (rate > 24000 && rate < 48000) {
+    adjusted_rate = 24000;
+  } else if (rate > 16000 && rate < 24000) {
+    adjusted_rate = 16000;
+  } else if (rate > 8000 && rate < 16000) {
+    adjusted_rate = 8000;
+  } else if (rate < 8000) {
+    adjusted_rate = 8000;
+  }
+  return adjusted_rate;
 }
 
 }  // namespace riva::utils::opus

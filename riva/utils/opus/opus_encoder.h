@@ -30,7 +30,7 @@ class Encoder {
  public:
   /**
    * Constructor
-   * @param rate accepted 48000, 16000,..
+   * @param rate accepted 48000, 24000, 16000, 8000
    * @param channels 1 or 2
    */
   Encoder(int32_t rate, int32_t channels);
@@ -61,13 +61,15 @@ class Encoder {
   }
 
   /**
-   * 16-bit PCM to OPUS encoder. OPUS works with small frames of size FRAME_SIZE.
+   * 16-bit PCM to OPUS encoder. OPUS works with small frames of size 120..5760.
    * Each frame usually gets compressed in 1:10 ratio
-   * @param pcm
+   * @param pcm samples array
+   * @param samples_encoded [out] samples encoded, might be les than pcm.size()
    * @return Array of encoded frames
    */
   [[nodiscard]] std::vector<std::vector<unsigned char>> EncodePcm(
-      const std::vector<int16_t>& pcm) const;
+      const std::vector<int16_t>& pcm, int32_t* samples_encoded = nullptr) const;
+
   /**
    * This function unifies multiple OPUS encoded frames into one container for sending it by wire.
    * @param opus
@@ -85,8 +87,22 @@ class Encoder {
     }
   }
 
+  /**
+   * If requested rate is not supported this helper computes nearest supported one.
+   * Returns 0 if no adjustment required.
+   * @param rate
+   * @return
+   */
+  static int32_t AdjustRateIfUnsupported(int32_t rate);
+
  private:
-  static inline constexpr std::size_t FRAME_SIZE = 480U;
+  /**
+   * For performance reasons, we have to choose maximum possible frame size
+   * @param ceiling
+   * @return
+   */
+  [[nodiscard]] int32_t MaxPossibleFrameSize(int32_t ceiling) const;
+
 };
 
 }  // namespace riva::utils::opus

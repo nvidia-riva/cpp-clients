@@ -23,6 +23,7 @@
 #include "riva/utils/files/files.h"
 #include "riva/utils/stamping.h"
 #include "riva/utils/wav/wav_writer.h"
+#include "riva/utils/opus/opus_decoder.h"
 
 using grpc::Status;
 using grpc::StatusCode;
@@ -31,6 +32,7 @@ namespace nr_tts = nvidia::riva::tts;
 
 DEFINE_string(
     text_file, "", "Text file with list of sentences to be synthesized. Ignored if 'text' is set.");
+DEFINE_string(audio_encoding, "pcm", "Audio encoding (pcm or opus)");
 DEFINE_string(riva_uri, "localhost:50051", "Riva API server URI and port");
 DEFINE_int32(rate, 44100, "Sample rate for the TTS output");
 DEFINE_bool(online, false, "Whether synthesis should be online or batch");
@@ -67,9 +69,17 @@ synthesizeBatch(
   nr_tts::SynthesizeSpeechRequest request;
   request.set_text(text);
   request.set_language_code(language);
-  request.set_encoding(nr::LINEAR_PCM);
   request.set_sample_rate_hz(rate);
   request.set_voice_name(voice_name);
+
+  if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
+    request.set_encoding(nr::LINEAR_PCM);
+  } else if (FLAGS_audio_encoding == "opus") {
+    request.set_encoding(nr::OGGOPUS);
+  } else {
+    std::cerr << "Unsupported encoding: \'" << FLAGS_audio_encoding << "\'" << std::endl;
+    return -1;
+  }
 
   // Send text content using Synthesize().
   grpc::ClientContext context;
@@ -106,9 +116,17 @@ synthesizeOnline(
   nr_tts::SynthesizeSpeechRequest request;
   request.set_text(text);
   request.set_language_code(language);
-  request.set_encoding(nr::LINEAR_PCM);
   request.set_sample_rate_hz(rate);
   request.set_voice_name(voice_name);
+
+  if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
+    request.set_encoding(nr::LINEAR_PCM);
+  } else if (FLAGS_audio_encoding == "opus") {
+    request.set_encoding(nr::OGGOPUS);
+  } else {
+    std::cerr << "Unsupported encoding: \'" << FLAGS_audio_encoding << "\'" << std::endl;
+    return;
+  }
 
   // Send text content using SynthesizeOnline().
   grpc::ClientContext context;
@@ -153,8 +171,17 @@ synthesizeOnline(
     std::cerr << "Input was: \'" << text << "\'" << std::endl;
   } else {
     *num_samples = audio_len;
-    if (FLAGS_write_output_audio)
-      ::riva::utils::wav::Write(filepath, rate, buffer.data(), buffer.size());
+    if (FLAGS_write_output_audio) {
+      if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
+        ::riva::utils::wav::Write(filepath, rate, buffer.data(), buffer.size());
+      } else if (FLAGS_audio_encoding == "opus") {
+        riva::utils::opus::Decoder decoder(FLAGS_rate, 1);
+        auto ptr = reinterpret_cast<unsigned char *>(buffer.data());
+        auto pcm = decoder.DecodePcm(
+            decoder.DeserializeOpus(std::vector<unsigned char>(ptr, ptr + buffer.size())));
+        ::riva::utils::wav::Write(filepath, FLAGS_rate, pcm.data(), pcm.size());
+      }
+    }
   }
   return;
 }
@@ -187,6 +214,7 @@ main(int argc, char** argv)
   str_usage << "           --language=<language-code> " << std::endl;
   str_usage << "           --voice_name=<voice-name> " << std::endl;
   str_usage << "           --online=<true|false> " << std::endl;
+  str_usage << "           --audio_encoding=<pcm|opus> " << std::endl;
   str_usage << "           --num_parallel_requests=<num-parallel-reqs> " << std::endl;
   str_usage << "           --num_iterations=<num-iterations> " << std::endl;
   str_usage << "           --throttle_milliseconds=<throttle-milliseconds> " << std::endl;
@@ -370,7 +398,7 @@ main(int argc, char** argv)
         std::cout << "Chunk - P99: " << results_next_chunk->at(2) << std::endl;
 
         std::cout << "Throughput (RTF): " << (total_num_samples / FLAGS_rate) / elapsed.count()
-                  << std::endl;
+                  << std::endl << "Total samples: " << total_num_samples << std::endl;
       } else {
         std::cerr << "ERROR: Metrics vector is empty, check previous error messages for details."
                   << std::endl;
@@ -403,7 +431,7 @@ main(int argc, char** argv)
             std::accumulate(results_num_samples[i]->begin(), results_num_samples[i]->end(), 0.);
       }
       std::cout << "Average RTF: " << (total_num_samples / FLAGS_rate) / elapsed.count()
-                << std::endl;
+                << std::endl << "Total samples: " << total_num_samples << std::endl;
     }
   }
   return 0;
