@@ -1,6 +1,6 @@
 workspace(name = "com_nvidia_riva_api")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_repository")
 
 # alsa is only library required to exist in local environment
 new_local_repository(
@@ -67,9 +67,15 @@ grpc_deps()
 load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
 grpc_extra_deps()
 
-http_archive(
+git_repository(
     name = "nvriva_common",
     urls = ["https://github.com/nvidia-riva/common/archive/498c12de61d2dbfa55821220e80f41199efbade4.zip"],
     sha256 = "fe1bcd0ac54eb0f845c40d8a9eb3d23e432800b67e5c2f1645d6194fa90cb20e",
     strip_prefix = "common-498c12de61d2dbfa55821220e80f41199efbade4"
 )
+# http_archive(
+#     name = "nvriva_common",
+#     urls = ["https://github.com/nvidia-riva/common/archive/a14eeb43fcb55366a8c571643376bd942fe3e352.zip"],
+#     sha256 = "7aaa1ce5beb326e928f530bdcbefa37a1a6767fac7476ec9315caa1aed14647a",
+#     strip_prefix = "common-a14eeb43fcb55366a8c571643376bd942fe3e352"
+# )
