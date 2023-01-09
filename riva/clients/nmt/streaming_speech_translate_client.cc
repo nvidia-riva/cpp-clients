@@ -180,12 +180,8 @@ StreamingSpeechTranslateClient::GenerateRequests(std::shared_ptr<ClientCall> cal
     // Set write done to true so next call will lead to WritesDone
     if (offset == call->stream->wav->data.size()) {
       done = true;
-      std::cout << "done=true and Calling writes done!" << std::endl;
       call->streamer->WritesDone();
-      std::cout << "called writes done!" <<  std::endl;
       grpc::Status status = call->streamer->Finish();
-      std::cout << "Status is :" << status.ok() << std::endl;
-
     }
   }
 
@@ -193,7 +189,6 @@ StreamingSpeechTranslateClient::GenerateRequests(std::shared_ptr<ClientCall> cal
     std::lock_guard<std::mutex> lock(latencies_mutex_);
     total_audio_processed_ += audio_processed;
   }
-  std::cout << "decrementing active streams" << std::endl;
   num_active_streams_--;
 }
 
