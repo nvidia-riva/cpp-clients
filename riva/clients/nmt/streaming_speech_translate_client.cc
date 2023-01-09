@@ -11,7 +11,7 @@
 
 static void
 MicrophoneThreadMain(
-    std::shared_ptr<ClientCall> call, snd_pcm_t* alsa_handle, int samplerate, int numchannels,
+    std::shared_ptr<S2TClientCall> call, snd_pcm_t* alsa_handle, int samplerate, int numchannels,
     nr::AudioEncoding& encoding, int32_t chunk_duration_ms, bool& request_exit)
 {
   nr_nmt::StreamingTranslateSpeechToTextRequest request;
@@ -51,14 +51,15 @@ MicrophoneThreadMain(
 
 StreamingSpeechTranslateClient::StreamingSpeechTranslateClient(
     std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
-    const std::string& language_code, int32_t max_alternatives, bool profanity_filter, bool word_time_offsets,
-    bool automatic_punctuation, bool separate_recognition_per_channel, bool print_transcripts,
-    int32_t chunk_duration_ms, bool interim_results, std::string output_filename,
-    std::string model_name, bool simulate_realtime, bool verbatim_transcripts,
-    const std::string& boosted_phrases_file, float boosted_phrases_score)
+    const std::string& language_code, int32_t max_alternatives, bool profanity_filter,
+    bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
+    bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
+    std::string output_filename, std::string model_name, bool simulate_realtime,
+    bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score)
     : print_latency_stats_(true), stub_(nr_nmt::RivaTranslation::NewStub(channel)),
-      language_code_(language_code), max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
-      word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
+      language_code_(language_code), max_alternatives_(max_alternatives),
+      profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
+      automatic_punctuation_(automatic_punctuation),
       separate_recognition_per_channel_(separate_recognition_per_channel),
       print_transcripts_(print_transcripts), chunk_duration_ms_(chunk_duration_ms),
       interim_results_(interim_results), total_audio_processed_(0.), num_streams_started_(0),
@@ -87,8 +88,8 @@ void
 StreamingSpeechTranslateClient::StartNewStream(std::unique_ptr<Stream> stream)
 {
   std::cout << "starting a new stream!" << std::endl;
-  std::shared_ptr<ClientCall> call =
-      std::make_shared<ClientCall>(stream->corr_id, word_time_offsets_);
+  std::shared_ptr<S2TClientCall> call =
+      std::make_shared<S2TClientCall>(stream->corr_id, word_time_offsets_);
   call->streamer = stub_->StreamingTranslateSpeechToText(&call->context);
   call->stream = std::move(stream);
 
@@ -96,15 +97,15 @@ StreamingSpeechTranslateClient::StartNewStream(std::unique_ptr<Stream> stream)
   num_streams_started_++;
 
   auto gen_func = std::bind(&StreamingSpeechTranslateClient::GenerateRequests, this, call);
-  auto recv_func =
-      std::bind(&StreamingSpeechTranslateClient::ReceiveResponses, this, call, false /*audio_device*/);
+  auto recv_func = std::bind(
+      &StreamingSpeechTranslateClient::ReceiveResponses, this, call, false /*audio_device*/);
 
   thread_pool_->Enqueue(gen_func);
   thread_pool_->Enqueue(recv_func);
 }
 
 void
-StreamingSpeechTranslateClient::GenerateRequests(std::shared_ptr<ClientCall> call)
+StreamingSpeechTranslateClient::GenerateRequests(std::shared_ptr<S2TClientCall> call)
 {
   float audio_processed = 0.;
 
@@ -115,10 +116,10 @@ StreamingSpeechTranslateClient::GenerateRequests(std::shared_ptr<ClientCall> cal
     nr_nmt::StreamingTranslateSpeechToTextRequest request;
     if (first_write) {
       auto streaming_speech_translate_config = request.mutable_config();
-      streaming_speech_translate_config->set_source_language_code(language_code_.substr(0,2)); //
-      //std::cout << "language <" << language_code_.substr(0,2);
-      streaming_speech_translate_config->set_target_language_code("en");
-      auto streaming_asr_config = streaming_speech_translate_config->mutable_config();
+      auto translation_config = streaming_speech_translate_config->mutable_translation_config();
+      translation_config->set_source_language_code(language_code_);
+      translation_config->set_target_language_code("en");
+      auto streaming_asr_config = streaming_speech_translate_config->mutable_asr_config();
       streaming_asr_config->set_interim_results(interim_results_);
       auto config = streaming_asr_config->mutable_config();
       config->set_sample_rate_hertz(call->stream->wav->sample_rate);
@@ -180,12 +181,8 @@ StreamingSpeechTranslateClient::GenerateRequests(std::shared_ptr<ClientCall> cal
     // Set write done to true so next call will lead to WritesDone
     if (offset == call->stream->wav->data.size()) {
       done = true;
-      std::cout << "done=true and Calling writes done!" << std::endl;
       call->streamer->WritesDone();
-      std::cout << "called writes done!" <<  std::endl;
       grpc::Status status = call->streamer->Finish();
-      std::cout << "Status is :" << status.ok() << std::endl;
-
     }
   }
 
@@ -193,7 +190,6 @@ StreamingSpeechTranslateClient::GenerateRequests(std::shared_ptr<ClientCall> cal
     std::lock_guard<std::mutex> lock(latencies_mutex_);
     total_audio_processed_ += audio_processed;
   }
-  std::cout << "decrementing active streams" << std::endl;
   num_active_streams_--;
 }
 
@@ -205,7 +201,8 @@ StreamingSpeechTranslateClient::DoStreamingFromFile(
   std::vector<std::shared_ptr<WaveData>> all_wav;
   try {
     LoadWavData(all_wav, audio_file);
-  } catch (const std::exception& e) {
+  }
+  catch (const std::exception& e) {
     std::cerr << "Unable to load audio file(s): " << e.what() << std::endl;
     return 1;
   }
@@ -258,7 +255,8 @@ StreamingSpeechTranslateClient::DoStreamingFromFile(
 }
 
 void
-StreamingSpeechTranslateClient::PostProcessResults(std::shared_ptr<ClientCall> call, bool audio_device)
+StreamingSpeechTranslateClient::PostProcessResults(
+    std::shared_ptr<S2TClientCall> call, bool audio_device)
 {
   std::lock_guard<std::mutex> lock(latencies_mutex_);
   // it is possible we get one response more than the number of requests sent
@@ -285,14 +283,14 @@ StreamingSpeechTranslateClient::PostProcessResults(std::shared_ptr<ClientCall> c
 }
 
 void
-StreamingSpeechTranslateClient::ReceiveResponses(std::shared_ptr<ClientCall> call, bool audio_device)
+StreamingSpeechTranslateClient::ReceiveResponses(
+    std::shared_ptr<S2TClientCall> call, bool audio_device)
 {
   if (audio_device) {
     clear_screen();
     std::cout << "ASR started... press `Ctrl-C' to stop recording\n\n";
     gotoxy(0, 5);
   }
-  int cur_response = 0;
   while (call->streamer->Read(&call->response)) {  // Returns false when no more to read.
     call->recv_times.push_back(std::chrono::steady_clock::now());
     for (int r = 0; r < call->response.results_size(); ++r) {
@@ -310,11 +308,11 @@ StreamingSpeechTranslateClient::ReceiveResponses(std::shared_ptr<ClientCall> cal
     }
   }
   std::cout << "call fone" << std::endl;
-  //grpc::Status status = call->streamer->Finish();
-  //if (!status.ok()) {
-    // Report the RPC failure.
-///    std::cerr << status.error_message() << std::endl;
- // }
+  // grpc::Status status = call->streamer->Finish();
+  // if (!status.ok()) {
+  // Report the RPC failure.
+  ///    std::cerr << status.error_message() << std::endl;
+  // }
 
   num_streams_finished_++;
 }
@@ -338,14 +336,14 @@ StreamingSpeechTranslateClient::DoStreamingFromMicrophone(
   }
   std::cout << "Using device:" << audio_device << std::endl;
 
-  std::shared_ptr<ClientCall> call = std::make_shared<ClientCall>(1, word_time_offsets_);
+  std::shared_ptr<S2TClientCall> call = std::make_shared<S2TClientCall>(1, word_time_offsets_);
   call->streamer = stub_->StreamingTranslateSpeechToText(&call->context);
 
   // Send first request
   nr_nmt::StreamingTranslateSpeechToTextRequest request;
   auto speech_translate_config = request.mutable_config();
 
-  auto streaming_config = speech_translate_config->mutable_config();
+  auto streaming_config = speech_translate_config->mutable_asr_config();
   streaming_config->set_interim_results(interim_results_);
   auto config = streaming_config->mutable_config();
   config->set_sample_rate_hertz(samplerate);
@@ -377,7 +375,8 @@ StreamingSpeechTranslateClient::DoStreamingFromMicrophone(
 }
 
 void
-StreamingSpeechTranslateClient::PrintLatencies(std::vector<double>& latencies, const std::string& name)
+StreamingSpeechTranslateClient::PrintLatencies(
+    std::vector<double>& latencies, const std::string& name)
 {
   if (latencies.size() > 0) {
     std::sort(latencies.begin(), latencies.end());

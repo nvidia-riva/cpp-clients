@@ -10,7 +10,18 @@ license agreement from NVIDIA CORPORATION is strictly prohibited.
 package(
     default_visibility = ["//visibility:public"],
 )
+cc_binary(
+    name = "riva_nmt_client",
+    srcs = ["riva_nmt.cc"],
+    deps = [
+        "//riva/clients/utils:grpc",
+        "@nvriva_common//riva/proto:riva_grpc_nmt",
+        "@com_github_gflags_gflags//:gflags",
+        "@glog//:glog",
+        "@com_github_grpc_grpc//:grpc++"
+    ]
 
+)
 cc_library(
     name = "asr_client_helper",
     srcs = ["riva_asr_client_helper.h", "riva_asr_client_helper.cc"],
@@ -28,7 +39,7 @@ cc_library(
 
 cc_library(
     name = "client_call",
-    srcs = ["client_call.h", "client_call.cc"],
+    srcs = ["client_call.h"],
     deps = select({
         "@platforms//cpu:aarch64": [
             "@alsa_aarch64//:libasound"
@@ -45,14 +56,15 @@ cc_library(
 )
 
 cc_library(
-    name = "streaming_recognize_client",
-    srcs = ["streaming_recognize_client.h", 
-            "streaming_recognize_client.cc"
+    name = "streaming_s2s_client",
+    srcs = ["streaming_s2s_client.h",
+            "streaming_s2s_client.cc"
     ],
     deps = [
         ":asr_client_helper",
         ":client_call",
         "//riva/utils/wav:reader",
+        "//riva/utils/wav:writer",
         "@glog//:glog",
     ] + select({
         "@platforms//cpu:aarch64": [
@@ -169,7 +181,6 @@ cc_binary(
         ":streaming_s2s_client",
         "@nvriva_common//riva/proto:riva_grpc_nmt",
         "//riva/utils/files:files",
-        "//riva/utils/wav:reader",
         "@glog//:glog",
         "//riva/clients/utils:grpc",
     ] + select({

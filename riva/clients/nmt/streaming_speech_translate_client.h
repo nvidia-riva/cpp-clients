@@ -39,15 +39,21 @@ namespace nr = nvidia::riva;
 namespace nr_asr = nvidia::riva::asr;
 namespace nr_nmt = nvidia::riva::nmt;
 
+typedef ClientCall<
+    nr_nmt::StreamingTranslateSpeechToTextRequest, nr_nmt::StreamingTranslateSpeechToTextResponse>
+    S2TClientCall;
+
+
 class StreamingSpeechTranslateClient {
  public:
   StreamingSpeechTranslateClient(
       std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
-      const std::string& language_code, int32_t max_alternatives, bool profanity_filter, bool word_time_offsets,
-      bool automatic_punctuation, bool separate_recognition_per_channel, bool print_transcripts,
-      int32_t chunk_duration_ms, bool interim_results, std::string output_filename,
-      std::string model_name, bool simulate_realtime, bool verbatim_transcripts,
-      const std::string& boosted_phrases_file, float boosted_phrases_score);
+      const std::string& language_code, int32_t max_alternatives, bool profanity_filter,
+      bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
+      bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
+      std::string output_filename, std::string model_name, bool simulate_realtime,
+      bool verbatim_transcripts, const std::string& boosted_phrases_file,
+      float boosted_phrases_score);
 
   ~StreamingSpeechTranslateClient();
 
@@ -59,14 +65,14 @@ class StreamingSpeechTranslateClient {
 
   void StartNewStream(std::unique_ptr<Stream> stream);
 
-  void GenerateRequests(std::shared_ptr<ClientCall> call);
+  void GenerateRequests(std::shared_ptr<S2TClientCall> call);
 
   int DoStreamingFromFile(
       std::string& audio_file, int32_t num_iterations, int32_t num_parallel_requests);
 
-  void PostProcessResults(std::shared_ptr<ClientCall> call, bool audio_device);
+  void PostProcessResults(std::shared_ptr<S2TClientCall> call, bool audio_device);
 
-  void ReceiveResponses(std::shared_ptr<ClientCall> call, bool audio_device);
+  void ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool audio_device);
 
   int DoStreamingFromMicrophone(const std::string& auido_device, bool& request_exit);
 
