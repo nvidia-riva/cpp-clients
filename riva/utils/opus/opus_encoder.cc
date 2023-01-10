@@ -60,35 +60,6 @@ int32_t Encoder::MaxPossibleFrameSize(int32_t ceiling) const
   return quantum;
 }
 
-//
-//  int32_t ret = rate_ * 6 / (50 * channels_);
-//  if (ret > ceiling) {
-//    ret = rate_ * 5 / (50 * channels_);
-//    if (ret > ceiling) {
-//      ret = rate_ * 4 / (50 * channels_);
-//      if (ret > ceiling) {
-//        ret = rate_ * 3 / (50 * channels_);
-//        if (ret > ceiling) {
-//          ret = rate_ / (25 * channels_);
-//          if (ret > ceiling) {
-//            ret = rate_ / (50 * channels_);
-//            if (ret > ceiling) {
-//              ret = rate_ / (100 * channels_);
-//              if (ret > ceiling) {
-//                ret = rate_ / (200 * channels_);
-//                if (ret > ceiling) {
-//                  ret = rate_ / (400 * channels_);
-//                }
-//              }
-//            }
-//          }
-//        }
-//      }
-//    }
-//  }
-//  return ret;
-
-
 std::vector<std::vector<unsigned char>>
 Encoder::EncodePcm(const std::vector<int16_t>& pcm, int32_t* samples_encoded) const
 {
