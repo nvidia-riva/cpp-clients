@@ -10,7 +10,18 @@ license agreement from NVIDIA CORPORATION is strictly prohibited.
 package(
     default_visibility = ["//visibility:public"],
 )
+cc_binary(
+    name = "riva_nmt_client",
+    srcs = ["riva_nmt.cc"],
+    deps = [
+        "//riva/clients/utils:grpc",
+        "@nvriva_common//riva/proto:riva_grpc_nmt",
+        "@com_github_gflags_gflags//:gflags",
+        "@glog//:glog",
+        "@com_github_grpc_grpc//:grpc++"
+    ]
 
+)
 cc_library(
     name = "asr_client_helper",
     srcs = ["riva_asr_client_helper.h", "riva_asr_client_helper.cc"],

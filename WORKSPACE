@@ -69,13 +69,6 @@ grpc_extra_deps()
 
 git_repository(
     name = "nvriva_common",
-    urls = ["https://github.com/nvidia-riva/common/archive/498c12de61d2dbfa55821220e80f41199efbade4.zip"],
-    sha256 = "fe1bcd0ac54eb0f845c40d8a9eb3d23e432800b67e5c2f1645d6194fa90cb20e",
-    strip_prefix = "common-498c12de61d2dbfa55821220e80f41199efbade4"
+    remote = "https://github.com/junkin/riva-common.git",
+    commit = "3e9a7eddc5a211eb81e4deab2aa52a34b6fbb656"
 )
-# http_archive(
-#     name = "nvriva_common",
-#     urls = ["https://github.com/nvidia-riva/common/archive/a14eeb43fcb55366a8c571643376bd942fe3e352.zip"],
-#     sha256 = "7aaa1ce5beb326e928f530bdcbefa37a1a6767fac7476ec9315caa1aed14647a",
-#     strip_prefix = "common-a14eeb43fcb55366a8c571643376bd942fe3e352"
-# )
