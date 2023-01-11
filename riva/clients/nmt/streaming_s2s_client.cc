@@ -115,7 +115,7 @@ StreamingS2SClient::GenerateRequests(std::shared_ptr<S2SClientCall> call)
     nr_nmt::StreamingTranslateSpeechToSpeechRequest request;
     if (first_write) {
       auto streaming_s2s_config = request.mutable_config();
-      auto streaming_asr_config = streaming_s2s_config->mutable_asrconfig();
+      auto streaming_asr_config = streaming_s2s_config->mutable_asr_config();
       streaming_asr_config->set_interim_results(interim_results_);
       auto config = streaming_asr_config->mutable_config();
       config->set_sample_rate_hertz(call->stream->wav->sample_rate);
@@ -336,7 +336,7 @@ StreamingS2SClient::DoStreamingFromMicrophone(const std::string& audio_device, b
   nr_nmt::StreamingTranslateSpeechToSpeechRequest request;
   auto s2s_config = request.mutable_config();
 
-  auto streaming_config = s2s_config->mutable_asrconfig();
+  auto streaming_config = s2s_config->mutable_asr_config();
   streaming_config->set_interim_results(interim_results_);
   auto config = streaming_config->mutable_config();
   config->set_sample_rate_hertz(samplerate);

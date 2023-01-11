@@ -30,7 +30,6 @@
 #include "riva/utils/files/files.h"
 #include "riva/utils/stamping.h"
 #include "riva/utils/wav/wav_reader.h"
-#include "riva_asr_client_helper.h"
 #include "streaming_s2s_client.h"
 
 using grpc::Status;

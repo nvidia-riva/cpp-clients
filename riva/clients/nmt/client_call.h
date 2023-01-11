@@ -23,10 +23,10 @@
 #include <string>
 #include <thread>
 
+#include "riva/clients/asr/riva_asr_client_helper.h"
 #include "riva/proto/riva_asr.grpc.pb.h"
 #include "riva/proto/riva_nmt.grpc.pb.h"
 #include "riva/utils/wav/wav_reader.h"
-#include "riva_asr_client_helper.h"
 
 using grpc::Status;
 using grpc::StatusCode;
