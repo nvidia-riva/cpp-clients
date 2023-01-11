@@ -102,7 +102,6 @@ class Decoder {
   // "Opus can encode frames of 2.5, 5, 10, 20, 40, or 60 ms.
   // It can also combine multiple frames into packets of up to 120 ms."
   static inline constexpr std::size_t DECODED_CHUNK_SIZE = 120U * 48U;  // 120ms x 48khz
-  static inline constexpr std::size_t FRAME_SIZE = 480U;
 };
 
 }  // namespace riva::utils::opus

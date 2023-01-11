@@ -23,6 +23,7 @@
 #include "riva/utils/files/files.h"
 #include "riva/utils/stamping.h"
 #include "riva/utils/wav/wav_writer.h"
+#include "riva/utils/opus/opus_decoder.h"
 
 using grpc::Status;
 using grpc::StatusCode;
@@ -31,6 +32,7 @@ namespace nr_tts = nvidia::riva::tts;
 
 DEFINE_string(
     text_file, "", "Text file with list of sentences to be synthesized. Ignored if 'text' is set.");
+DEFINE_string(audio_encoding, "pcm", "Audio encoding (pcm or opus)");
 DEFINE_string(riva_uri, "localhost:50051", "Riva API server URI and port");
 DEFINE_int32(rate, 44100, "Sample rate for the TTS output");
 DEFINE_bool(online, false, "Whether synthesis should be online or batch");
@@ -67,9 +69,17 @@ synthesizeBatch(
   nr_tts::SynthesizeSpeechRequest request;
   request.set_text(text);
   request.set_language_code(language);
-  request.set_encoding(nr::LINEAR_PCM);
   request.set_sample_rate_hz(rate);
   request.set_voice_name(voice_name);
+
+  if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
+    request.set_encoding(nr::LINEAR_PCM);
+  } else if (FLAGS_audio_encoding == "opus") {
+    request.set_encoding(nr::OGGOPUS);
+  } else {
+    std::cerr << "Unsupported encoding: \'" << FLAGS_audio_encoding << "\'" << std::endl;
+    return -1;
+  }
 
   // Send text content using Synthesize().
   grpc::ClientContext context;
@@ -106,9 +116,19 @@ synthesizeOnline(
   nr_tts::SynthesizeSpeechRequest request;
   request.set_text(text);
   request.set_language_code(language);
-  request.set_encoding(nr::LINEAR_PCM);
   request.set_sample_rate_hz(rate);
   request.set_voice_name(voice_name);
+
+  auto ae = nr::AudioEncoding::ENCODING_UNSPECIFIED;
+  if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
+    ae = nr::LINEAR_PCM;
+  } else if (FLAGS_audio_encoding == "opus") {
+    ae = nr::OGGOPUS;
+  } else {
+    std::cerr << "Unsupported encoding: \'" << FLAGS_audio_encoding << "\'" << std::endl;
+    return;
+  }
+  request.set_encoding(ae);
 
   // Send text content using SynthesizeOnline().
   grpc::ClientContext context;
@@ -122,13 +142,26 @@ synthesizeOnline(
 
   std::vector<int16_t> buffer;
   size_t audio_len = 0;
+  riva::utils::opus::Decoder opus_decoder(FLAGS_rate, 1);
 
   while (reader->Read(&chunk)) {
     // DLOG(INFO) << "Received chunk with " << chunk.audio().length() << " bytes.";
     // Copy chunk to local buffer
-    int16_t* audio_data = (int16_t*)chunk.audio().data();
-    size_t len = chunk.audio().length() / sizeof(int16_t);
-    std::copy(audio_data, audio_data + len, std::back_inserter(buffer));
+    size_t len = 0U;
+    if (ae == nr::OGGOPUS) {
+      const unsigned char *opus_data = (unsigned char *) chunk.audio().data();
+      len = chunk.audio().length();
+      auto pcm = opus_decoder.DecodePcm(
+          opus_decoder.DeserializeOpus(std::vector<unsigned char>(opus_data, opus_data + len)));
+      len = pcm.size();
+      std::copy(pcm.cbegin(), pcm.cend(), std::back_inserter(buffer));
+    } else {
+      int16_t* audio_data;
+      audio_data = (int16_t*)chunk.audio().data();
+      len = chunk.audio().length() / sizeof(int16_t);
+      std::copy(audio_data, audio_data + len, std::back_inserter(buffer));
+    }
+
     if (audio_len == 0) {
       auto t_next_audio = std::chrono::steady_clock::now();
       std::chrono::duration<double> elapsed_first_audio = t_next_audio - start;
@@ -153,10 +186,10 @@ synthesizeOnline(
     std::cerr << "Input was: \'" << text << "\'" << std::endl;
   } else {
     *num_samples = audio_len;
-    if (FLAGS_write_output_audio)
+    if (FLAGS_write_output_audio) {
       ::riva::utils::wav::Write(filepath, rate, buffer.data(), buffer.size());
+    }
   }
-  return;
 }
 
 std::vector<double>*
@@ -187,6 +220,7 @@ main(int argc, char** argv)
   str_usage << "           --language=<language-code> " << std::endl;
   str_usage << "           --voice_name=<voice-name> " << std::endl;
   str_usage << "           --online=<true|false> " << std::endl;
+  str_usage << "           --audio_encoding=<pcm|opus> " << std::endl;
   str_usage << "           --num_parallel_requests=<num-parallel-reqs> " << std::endl;
   str_usage << "           --num_iterations=<num-iterations> " << std::endl;
   str_usage << "           --throttle_milliseconds=<throttle-milliseconds> " << std::endl;
@@ -370,7 +404,7 @@ main(int argc, char** argv)
         std::cout << "Chunk - P99: " << results_next_chunk->at(2) << std::endl;
 
         std::cout << "Throughput (RTF): " << (total_num_samples / FLAGS_rate) / elapsed.count()
-                  << std::endl;
+                  << std::endl << "Total samples: " << total_num_samples << std::endl;
       } else {
         std::cerr << "ERROR: Metrics vector is empty, check previous error messages for details."
                   << std::endl;
@@ -403,7 +437,7 @@ main(int argc, char** argv)
             std::accumulate(results_num_samples[i]->begin(), results_num_samples[i]->end(), 0.);
       }
       std::cout << "Average RTF: " << (total_num_samples / FLAGS_rate) / elapsed.count()
-                << std::endl;
+                << std::endl << "Total samples: " << total_num_samples << std::endl;
     }
   }
   return 0;
