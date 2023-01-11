@@ -102,7 +102,6 @@ class Encoder {
    * @return
    */
   [[nodiscard]] int32_t MaxPossibleFrameSize(int32_t ceiling) const;
-
 };
 
 }  // namespace riva::utils::opus

@@ -34,7 +34,8 @@ Encoder::~Encoder()
   }
 }
 
-int32_t Encoder::MaxPossibleFrameSize(int32_t ceiling) const
+int32_t
+Encoder::MaxPossibleFrameSize(int32_t ceiling) const
 {
   //
   // Note: Opus doc is not very specific about all possible frame lengths.
@@ -76,8 +77,8 @@ Encoder::EncodePcm(const std::vector<int16_t>& pcm, int32_t* samples_encoded) co
       break;
     }
     std::vector<unsigned char> encoded_frame(frame_size_byte);
-    int32_t bytes_encoded = opus_encode(
-        encoder_, &pcm[pos], frame_size, encoded_frame.data(), frame_size_byte);
+    int32_t bytes_encoded =
+        opus_encode(encoder_, &pcm[pos], frame_size, encoded_frame.data(), frame_size_byte);
     if (bytes_encoded < 0) {
       LOG(ERROR) << "Failed to encode: " << opus_strerror(bytes_encoded)
                  << ", bytes_to_encode: " << bytes_to_encode << ", frame_length: " << frame_size;
