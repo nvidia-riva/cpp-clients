@@ -70,7 +70,8 @@ class RecognizeClient {
       int32_t max_alternatives, bool profanity_filter, bool word_time_offsets,
       bool automatic_punctuation, bool separate_recognition_per_channel, bool print_transcripts,
       std::string output_filename, std::string model_name, bool ctm, bool verbatim_transcripts,
-      const std::string& boosted_phrases_file, float boosted_phrases_score, bool speaker_diarization)
+      const std::string& boosted_phrases_file, float boosted_phrases_score,
+      bool speaker_diarization)
       : stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)), language_code_(language_code),
         max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
         word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
@@ -119,10 +120,14 @@ class RecognizeClient {
       auto hypothesis = result.alternatives(0);
       for (int w = 0; w < hypothesis.words_size(); ++w) {
         auto& word_info = hypothesis.words(w);
-        output_file_ << bname << " " << (speaker_diarization_ ? std::string("speaker_") + std::to_string(word_info.speaker_tag()) : side) /* channel */ << " "
-                     << (float)word_info.start_time() / 1000. << " "
+        output_file_ << bname << " "
+                     << (speaker_diarization_
+                             ? std::string("speaker_") + std::to_string(word_info.speaker_tag())
+                             : side) /* channel */
+                     << " " << (float)word_info.start_time() / 1000. << " "
                      << (float)(word_info.end_time() - word_info.start_time()) / 1000. << " "
-                     << word_info.word() << " " << word_info.confidence() /* confidence */ << std::endl;
+                     << word_info.word() << " "
+                     << word_info.confidence() /* confidence */ << std::endl;
       }
     }
   }
@@ -482,7 +487,8 @@ main(int argc, char** argv)
   std::vector<std::shared_ptr<WaveData>> all_wav;
   try {
     LoadWavData(all_wav, FLAGS_audio_file);
-  } catch (const std::exception& e) {
+  }
+  catch (const std::exception& e) {
     std::cerr << "Unable to load audio file(s): " << e.what() << std::endl;
     return 1;
   }

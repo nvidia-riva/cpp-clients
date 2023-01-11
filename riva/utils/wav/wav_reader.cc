@@ -21,7 +21,8 @@ namespace nr = nvidia::riva;
 namespace nr_asr = nvidia::riva::asr;
 
 template <typename T>
-T little_endian_val(const char* str)
+T
+little_endian_val(const char* str)
 {
   T val = T();
   T shift = 0;
@@ -131,8 +132,8 @@ ParseHeader(
       const std::string head(header_buf, header_buf + OPUS_HEADER_LENGTH);
       const std::size_t head_pos = head.find("OpusHead");
       if (head_pos != std::string::npos) {
-        channels = (int) little_endian_val<uint8_t>(head.data() + head_pos + 9);
-        samplerate = (int) little_endian_val<uint16_t>(head.data() + head_pos + 12);
+        channels = (int)little_endian_val<uint8_t>(head.data() + head_pos + 9);
+        samplerate = (int)little_endian_val<uint16_t>(head.data() + head_pos + 12);
       }
     }
     data_offset = file_stream.tellg();
