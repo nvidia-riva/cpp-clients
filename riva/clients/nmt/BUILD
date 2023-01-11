@@ -141,14 +141,3 @@ cc_binary(
     ],
 )
 
-cc_test(
-    name = "streaming_recognize_client_test",
-    srcs = ["streaming_recognize_client_test.cc"],
-    copts = ["-Iexternal/gtest/include"],
-    deps = [
-        ":streaming_recognize_client",
-        "@googletest//:gtest_main",
-        "@nvriva_common//riva/proto:riva_grpc_nmt",
-    ],
-    tags = ["needs_alsa"]
-)
