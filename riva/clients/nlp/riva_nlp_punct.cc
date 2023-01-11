@@ -53,7 +53,9 @@ class Query {
 
 class PunctQuery : public Query {
  public:
-  PunctQuery(const std::string& text, const std::string& model, const std::string& language_code, uint32_t _corr_id)
+  PunctQuery(
+      const std::string& text, const std::string& model, const std::string& language_code,
+      uint32_t _corr_id)
       : Query(_corr_id), text_(text), model_(model), language_code_(language_code)
   {
   }
@@ -212,8 +214,8 @@ main(int argc, char** argv)
   while (true) {
     while (client.NumActiveTasks() < (uint32_t)FLAGS_parallel_requests &&
            all_query_i < all_query_max) {
-      std::unique_ptr<PunctQuery> query(
-          new PunctQuery(all_queries_repeated[all_query_i], FLAGS_model_name, FLAGS_language_code, all_query_i));
+      std::unique_ptr<PunctQuery> query(new PunctQuery(
+          all_queries_repeated[all_query_i], FLAGS_model_name, FLAGS_language_code, all_query_i));
       client.Infer(std::move(query));
       ++all_query_i;
     }

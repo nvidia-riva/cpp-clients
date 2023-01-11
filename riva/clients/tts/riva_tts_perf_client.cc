@@ -21,9 +21,9 @@
 #include "riva/clients/utils/grpc.h"
 #include "riva/proto/riva_tts.grpc.pb.h"
 #include "riva/utils/files/files.h"
+#include "riva/utils/opus/opus_decoder.h"
 #include "riva/utils/stamping.h"
 #include "riva/utils/wav/wav_writer.h"
-#include "riva/utils/opus/opus_decoder.h"
 
 using grpc::Status;
 using grpc::StatusCode;
@@ -149,7 +149,7 @@ synthesizeOnline(
     // Copy chunk to local buffer
     size_t len = 0U;
     if (ae == nr::OGGOPUS) {
-      const unsigned char *opus_data = (unsigned char *) chunk.audio().data();
+      const unsigned char* opus_data = (unsigned char*)chunk.audio().data();
       len = chunk.audio().length();
       auto pcm = opus_decoder.DecodePcm(
           opus_decoder.DeserializeOpus(std::vector<unsigned char>(opus_data, opus_data + len)));
@@ -404,7 +404,8 @@ main(int argc, char** argv)
         std::cout << "Chunk - P99: " << results_next_chunk->at(2) << std::endl;
 
         std::cout << "Throughput (RTF): " << (total_num_samples / FLAGS_rate) / elapsed.count()
-                  << std::endl << "Total samples: " << total_num_samples << std::endl;
+                  << std::endl
+                  << "Total samples: " << total_num_samples << std::endl;
       } else {
         std::cerr << "ERROR: Metrics vector is empty, check previous error messages for details."
                   << std::endl;
@@ -437,7 +438,8 @@ main(int argc, char** argv)
             std::accumulate(results_num_samples[i]->begin(), results_num_samples[i]->end(), 0.);
       }
       std::cout << "Average RTF: " << (total_num_samples / FLAGS_rate) / elapsed.count()
-                << std::endl << "Total samples: " << total_num_samples << std::endl;
+                << std::endl
+                << "Total samples: " << total_num_samples << std::endl;
     }
   }
   return 0;

@@ -51,14 +51,15 @@ MicrophoneThreadMain(
 
 StreamingRecognizeClient::StreamingRecognizeClient(
     std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
-    const std::string& language_code, int32_t max_alternatives, bool profanity_filter, bool word_time_offsets,
-    bool automatic_punctuation, bool separate_recognition_per_channel, bool print_transcripts,
-    int32_t chunk_duration_ms, bool interim_results, std::string output_filename,
-    std::string model_name, bool simulate_realtime, bool verbatim_transcripts,
-    const std::string& boosted_phrases_file, float boosted_phrases_score)
+    const std::string& language_code, int32_t max_alternatives, bool profanity_filter,
+    bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
+    bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
+    std::string output_filename, std::string model_name, bool simulate_realtime,
+    bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score)
     : print_latency_stats_(true), stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)),
-      language_code_(language_code), max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
-      word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
+      language_code_(language_code), max_alternatives_(max_alternatives),
+      profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
+      automatic_punctuation_(automatic_punctuation),
       separate_recognition_per_channel_(separate_recognition_per_channel),
       print_transcripts_(print_transcripts), chunk_duration_ms_(chunk_duration_ms),
       interim_results_(interim_results), total_audio_processed_(0.), num_streams_started_(0),
@@ -196,7 +197,8 @@ StreamingRecognizeClient::DoStreamingFromFile(
   std::vector<std::shared_ptr<WaveData>> all_wav;
   try {
     LoadWavData(all_wav, audio_file);
-  } catch (const std::exception& e) {
+  }
+  catch (const std::exception& e) {
     std::cerr << "Unable to load audio file(s): " << e.what() << std::endl;
     return 1;
   }

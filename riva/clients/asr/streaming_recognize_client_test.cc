@@ -19,8 +19,8 @@ TEST(StreamingRecognizeClient, num_responses_requests)
   auto current_time = std::chrono::steady_clock::now();
 
   StreamingRecognizeClient recognize_client(
-      grpc_channel, 1, "en-US", 1, false, false, false, false, false, 800, false, "dummy.txt", "dummy",
-      true, true, "", 10.);
+      grpc_channel, 1, "en-US", 1, false, false, false, false, false, 800, false, "dummy.txt",
+      "dummy", true, true, "", 10.);
 
   std::shared_ptr<ClientCall> call = std::make_shared<ClientCall>(1, true);
   uint32_t num_sends = 10;

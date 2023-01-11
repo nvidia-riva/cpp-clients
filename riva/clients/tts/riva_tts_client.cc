@@ -17,9 +17,9 @@
 #include "riva/clients/utils/grpc.h"
 #include "riva/proto/riva_tts.grpc.pb.h"
 #include "riva/utils/files/files.h"
+#include "riva/utils/opus/opus_decoder.h"
 #include "riva/utils/stamping.h"
 #include "riva/utils/wav/wav_writer.h"
-#include "riva/utils/opus/opus_decoder.h"
 
 using grpc::Status;
 using grpc::StatusCode;
@@ -150,7 +150,8 @@ main(int argc, char** argv)
     } else if (FLAGS_audio_encoding == "opus") {
       riva::utils::opus::Decoder decoder(FLAGS_rate, 1);
       auto ptr = reinterpret_cast<unsigned char*>(audio.data());
-      auto pcm = decoder.DecodePcm(decoder.DeserializeOpus(std::vector<unsigned char>(ptr, ptr + audio.size())));
+      auto pcm = decoder.DecodePcm(
+          decoder.DeserializeOpus(std::vector<unsigned char>(ptr, ptr + audio.size())));
       ::riva::utils::wav::Write(FLAGS_audio_file, FLAGS_rate, pcm.data(), pcm.size());
     }
   } else {  // online inference
@@ -171,7 +172,7 @@ main(int argc, char** argv)
       std::cerr << "Got chunk: " << chunk.audio().size() << " bytes" << std::endl;
 
       if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
-        int16_t *audio_data = (int16_t *) chunk.audio().data();
+        int16_t* audio_data = (int16_t*)chunk.audio().data();
         size_t len = chunk.audio().length() / sizeof(int16_t);
         std::copy(audio_data, audio_data + len, std::back_inserter(pcm_buffer));
         audio_len += len;
