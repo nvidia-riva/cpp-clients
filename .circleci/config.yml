@@ -16,9 +16,6 @@ jobs:
           name: "Install bazel"
           command: "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/bazelisk-linux-amd64 && sudo mv bazelisk-linux-amd64 /usr/local/bin/bazelisk && sudo chmod +x /usr/local/bin/bazelisk"
       - checkout
-      - restore_cache:
-          keys: 
-            - v3-deps-{{ checksum "WORKSPACE" }}
       - run:
           name: "Build deps"
           command: "bazelisk build --config release @com_google_protobuf//:protoc @com_github_grpc_grpc//:grpc++"
