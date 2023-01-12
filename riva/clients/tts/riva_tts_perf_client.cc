@@ -21,9 +21,9 @@
 #include "riva/clients/utils/grpc.h"
 #include "riva/proto/riva_tts.grpc.pb.h"
 #include "riva/utils/files/files.h"
+#include "riva/utils/opus/opus_decoder.h"
 #include "riva/utils/stamping.h"
 #include "riva/utils/wav/wav_writer.h"
-#include "riva/utils/opus/opus_decoder.h"
 
 using grpc::Status;
 using grpc::StatusCode;
@@ -119,14 +119,16 @@ synthesizeOnline(
   request.set_sample_rate_hz(rate);
   request.set_voice_name(voice_name);
 
+  auto ae = nr::AudioEncoding::ENCODING_UNSPECIFIED;
   if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
-    request.set_encoding(nr::LINEAR_PCM);
+    ae = nr::LINEAR_PCM;
   } else if (FLAGS_audio_encoding == "opus") {
-    request.set_encoding(nr::OGGOPUS);
+    ae = nr::OGGOPUS;
   } else {
     std::cerr << "Unsupported encoding: \'" << FLAGS_audio_encoding << "\'" << std::endl;
     return;
   }
+  request.set_encoding(ae);
 
   // Send text content using SynthesizeOnline().
   grpc::ClientContext context;
@@ -140,13 +142,26 @@ synthesizeOnline(
 
   std::vector<int16_t> buffer;
   size_t audio_len = 0;
+  riva::utils::opus::Decoder opus_decoder(FLAGS_rate, 1);
 
   while (reader->Read(&chunk)) {
     // DLOG(INFO) << "Received chunk with " << chunk.audio().length() << " bytes.";
     // Copy chunk to local buffer
-    int16_t* audio_data = (int16_t*)chunk.audio().data();
-    size_t len = chunk.audio().length() / sizeof(int16_t);
-    std::copy(audio_data, audio_data + len, std::back_inserter(buffer));
+    size_t len = 0U;
+    if (ae == nr::OGGOPUS) {
+      const unsigned char* opus_data = (unsigned char*)chunk.audio().data();
+      len = chunk.audio().length();
+      auto pcm = opus_decoder.DecodePcm(
+          opus_decoder.DeserializeOpus(std::vector<unsigned char>(opus_data, opus_data + len)));
+      len = pcm.size();
+      std::copy(pcm.cbegin(), pcm.cend(), std::back_inserter(buffer));
+    } else {
+      int16_t* audio_data;
+      audio_data = (int16_t*)chunk.audio().data();
+      len = chunk.audio().length() / sizeof(int16_t);
+      std::copy(audio_data, audio_data + len, std::back_inserter(buffer));
+    }
+
     if (audio_len == 0) {
       auto t_next_audio = std::chrono::steady_clock::now();
       std::chrono::duration<double> elapsed_first_audio = t_next_audio - start;
@@ -172,18 +187,9 @@ synthesizeOnline(
   } else {
     *num_samples = audio_len;
     if (FLAGS_write_output_audio) {
-      if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
-        ::riva::utils::wav::Write(filepath, rate, buffer.data(), buffer.size());
-      } else if (FLAGS_audio_encoding == "opus") {
-        riva::utils::opus::Decoder decoder(FLAGS_rate, 1);
-        auto ptr = reinterpret_cast<unsigned char *>(buffer.data());
-        auto pcm = decoder.DecodePcm(
-            decoder.DeserializeOpus(std::vector<unsigned char>(ptr, ptr + buffer.size())));
-        ::riva::utils::wav::Write(filepath, FLAGS_rate, pcm.data(), pcm.size());
-      }
+      ::riva::utils::wav::Write(filepath, rate, buffer.data(), buffer.size());
     }
   }
-  return;
 }
 
 std::vector<double>*
@@ -398,7 +404,8 @@ main(int argc, char** argv)
         std::cout << "Chunk - P99: " << results_next_chunk->at(2) << std::endl;
 
         std::cout << "Throughput (RTF): " << (total_num_samples / FLAGS_rate) / elapsed.count()
-                  << std::endl << "Total samples: " << total_num_samples << std::endl;
+                  << std::endl
+                  << "Total samples: " << total_num_samples << std::endl;
       } else {
         std::cerr << "ERROR: Metrics vector is empty, check previous error messages for details."
                   << std::endl;
@@ -431,7 +438,8 @@ main(int argc, char** argv)
             std::accumulate(results_num_samples[i]->begin(), results_num_samples[i]->end(), 0.);
       }
       std::cout << "Average RTF: " << (total_num_samples / FLAGS_rate) / elapsed.count()
-                << std::endl << "Total samples: " << total_num_samples << std::endl;
+                << std::endl
+                << "Total samples: " << total_num_samples << std::endl;
     }
   }
   return 0;

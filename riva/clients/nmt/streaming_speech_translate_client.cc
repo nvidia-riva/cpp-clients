@@ -1,20 +1,20 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  */
 
 
-#include "streaming_recognize_client.h"
+#include "streaming_speech_translate_client.h"
 
 #define clear_screen() printf("\033[H\033[J")
 #define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
 
 static void
 MicrophoneThreadMain(
-    std::shared_ptr<ClientCall> call, snd_pcm_t* alsa_handle, int samplerate, int numchannels,
+    std::shared_ptr<S2TClientCall> call, snd_pcm_t* alsa_handle, int samplerate, int numchannels,
     nr::AudioEncoding& encoding, int32_t chunk_duration_ms, bool& request_exit)
 {
-  nr_asr::StreamingRecognizeRequest request;
+  nr_nmt::StreamingTranslateSpeechToTextRequest request;
   int total_samples = 0;
 
   // Read 0.1s of audio
@@ -49,14 +49,14 @@ MicrophoneThreadMain(
   }
 }
 
-StreamingRecognizeClient::StreamingRecognizeClient(
+StreamingSpeechTranslateClient::StreamingSpeechTranslateClient(
     std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
     const std::string& language_code, int32_t max_alternatives, bool profanity_filter,
     bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
     bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
     std::string output_filename, std::string model_name, bool simulate_realtime,
     bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score)
-    : print_latency_stats_(true), stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)),
+    : print_latency_stats_(true), stub_(nr_nmt::RivaTranslation::NewStub(channel)),
       language_code_(language_code), max_alternatives_(max_alternatives),
       profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
       automatic_punctuation_(automatic_punctuation),
@@ -77,7 +77,7 @@ StreamingRecognizeClient::StreamingRecognizeClient(
   boosted_phrases_ = ReadBoostedPhrases(boosted_phrases_file);
 }
 
-StreamingRecognizeClient::~StreamingRecognizeClient()
+StreamingSpeechTranslateClient::~StreamingSpeechTranslateClient()
 {
   if (print_transcripts_) {
     output_file_.close();
@@ -85,26 +85,27 @@ StreamingRecognizeClient::~StreamingRecognizeClient()
 }
 
 void
-StreamingRecognizeClient::StartNewStream(std::unique_ptr<Stream> stream)
+StreamingSpeechTranslateClient::StartNewStream(std::unique_ptr<Stream> stream)
 {
-  std::shared_ptr<ClientCall> call =
-      std::make_shared<ClientCall>(stream->corr_id, word_time_offsets_);
-  call->streamer = stub_->StreamingRecognize(&call->context);
+  std::cout << "starting a new stream!" << std::endl;
+  std::shared_ptr<S2TClientCall> call =
+      std::make_shared<S2TClientCall>(stream->corr_id, word_time_offsets_);
+  call->streamer = stub_->StreamingTranslateSpeechToText(&call->context);
   call->stream = std::move(stream);
 
   num_active_streams_++;
   num_streams_started_++;
 
-  auto gen_func = std::bind(&StreamingRecognizeClient::GenerateRequests, this, call);
-  auto recv_func =
-      std::bind(&StreamingRecognizeClient::ReceiveResponses, this, call, false /*audio_device*/);
+  auto gen_func = std::bind(&StreamingSpeechTranslateClient::GenerateRequests, this, call);
+  auto recv_func = std::bind(
+      &StreamingSpeechTranslateClient::ReceiveResponses, this, call, false /*audio_device*/);
 
   thread_pool_->Enqueue(gen_func);
   thread_pool_->Enqueue(recv_func);
 }
 
 void
-StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
+StreamingSpeechTranslateClient::GenerateRequests(std::shared_ptr<S2TClientCall> call)
 {
   float audio_processed = 0.;
 
@@ -112,11 +113,15 @@ StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
   bool done = false;
   auto start_time = std::chrono::steady_clock::now();
   while (!done) {
-    nr_asr::StreamingRecognizeRequest request;
+    nr_nmt::StreamingTranslateSpeechToTextRequest request;
     if (first_write) {
-      auto streaming_config = request.mutable_streaming_config();
-      streaming_config->set_interim_results(interim_results_);
-      auto config = streaming_config->mutable_config();
+      auto streaming_speech_translate_config = request.mutable_config();
+      auto translation_config = streaming_speech_translate_config->mutable_translation_config();
+      translation_config->set_source_language_code(language_code_);
+      translation_config->set_target_language_code("en");
+      auto streaming_asr_config = streaming_speech_translate_config->mutable_asr_config();
+      streaming_asr_config->set_interim_results(interim_results_);
+      auto config = streaming_asr_config->mutable_config();
       config->set_sample_rate_hertz(call->stream->wav->sample_rate);
       config->set_language_code(language_code_);
       config->set_encoding(call->stream->wav->encoding);
@@ -136,7 +141,6 @@ StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
       nr_asr::SpeechContext* speech_context = config->add_speech_contexts();
       *(speech_context->mutable_phrases()) = {boosted_phrases_.begin(), boosted_phrases_.end()};
       speech_context->set_boost(boosted_phrases_score_);
-
       call->streamer->Write(request);
       first_write = false;
     }
@@ -176,8 +180,9 @@ StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
 
     // Set write done to true so next call will lead to WritesDone
     if (offset == call->stream->wav->data.size()) {
-      call->streamer->WritesDone();
       done = true;
+      call->streamer->WritesDone();
+      grpc::Status status = call->streamer->Finish();
     }
   }
 
@@ -185,12 +190,11 @@ StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
     std::lock_guard<std::mutex> lock(latencies_mutex_);
     total_audio_processed_ += audio_processed;
   }
-
   num_active_streams_--;
 }
 
 int
-StreamingRecognizeClient::DoStreamingFromFile(
+StreamingSpeechTranslateClient::DoStreamingFromFile(
     std::string& audio_file, int32_t num_iterations, int32_t num_parallel_requests)
 {
   // Preload all wav files, sort by size to reduce tail effects
@@ -251,7 +255,8 @@ StreamingRecognizeClient::DoStreamingFromFile(
 }
 
 void
-StreamingRecognizeClient::PostProcessResults(std::shared_ptr<ClientCall> call, bool audio_device)
+StreamingSpeechTranslateClient::PostProcessResults(
+    std::shared_ptr<S2TClientCall> call, bool audio_device)
 {
   std::lock_guard<std::mutex> lock(latencies_mutex_);
   // it is possible we get one response more than the number of requests sent
@@ -278,63 +283,42 @@ StreamingRecognizeClient::PostProcessResults(std::shared_ptr<ClientCall> call, b
 }
 
 void
-StreamingRecognizeClient::ReceiveResponses(std::shared_ptr<ClientCall> call, bool audio_device)
+StreamingSpeechTranslateClient::ReceiveResponses(
+    std::shared_ptr<S2TClientCall> call, bool audio_device)
 {
   if (audio_device) {
     clear_screen();
     std::cout << "ASR started... press `Ctrl-C' to stop recording\n\n";
     gotoxy(0, 5);
   }
-
-  while (call->streamer->Read(&call->response)) {  // Returns false when no m ore to read.
+  while (call->streamer->Read(&call->response)) {  // Returns false when no more to read.
     call->recv_times.push_back(std::chrono::steady_clock::now());
-
-    // Reset the partial transcript
-    call->latest_result_.partial_transcript = "";
-    call->latest_result_.partial_time_stamps.clear();
-
-    bool is_final = false;
     for (int r = 0; r < call->response.results_size(); ++r) {
       const auto& result = call->response.results(r);
-      if (result.is_final()) {
-        is_final = true;
-      }
 
       if (audio_device) {
         clear_screen();
         std::cout << "ASR started... press `Ctrl-C' to stop recording\n\n";
         gotoxy(0, 5);
       }
-
-
-      call->latest_result_.audio_processed = result.audio_processed();
+      std::cout << "result: " << result.DebugString();
       if (print_transcripts_) {
         call->AppendResult(result);
       }
     }
-
-    if (call->response.results_size() && interim_results_ && print_transcripts_) {
-      std::cout << call->latest_result_.final_transcripts[0] +
-                       call->latest_result_.partial_transcript
-                << std::endl;
-    }
-
-    call->recv_final_flags.push_back(is_final);
   }
-
-  grpc::Status status = call->streamer->Finish();
-  if (!status.ok()) {
-    // Report the RPC failure.
-    std::cerr << status.error_message() << std::endl;
-  } else {
-    PostProcessResults(call, audio_device);
-  }
+  std::cout << "call fone" << std::endl;
+  // grpc::Status status = call->streamer->Finish();
+  // if (!status.ok()) {
+  // Report the RPC failure.
+  ///    std::cerr << status.error_message() << std::endl;
+  // }
 
   num_streams_finished_++;
 }
 
 int
-StreamingRecognizeClient::DoStreamingFromMicrophone(
+StreamingSpeechTranslateClient::DoStreamingFromMicrophone(
     const std::string& audio_device, bool& request_exit)
 {
   nr::AudioEncoding encoding = nr::LINEAR_PCM;
@@ -352,12 +336,14 @@ StreamingRecognizeClient::DoStreamingFromMicrophone(
   }
   std::cout << "Using device:" << audio_device << std::endl;
 
-  std::shared_ptr<ClientCall> call = std::make_shared<ClientCall>(1, word_time_offsets_);
-  call->streamer = stub_->StreamingRecognize(&call->context);
+  std::shared_ptr<S2TClientCall> call = std::make_shared<S2TClientCall>(1, word_time_offsets_);
+  call->streamer = stub_->StreamingTranslateSpeechToText(&call->context);
 
   // Send first request
-  nr_asr::StreamingRecognizeRequest request;
-  auto streaming_config = request.mutable_streaming_config();
+  nr_nmt::StreamingTranslateSpeechToTextRequest request;
+  auto speech_translate_config = request.mutable_config();
+
+  auto streaming_config = speech_translate_config->mutable_asr_config();
   streaming_config->set_interim_results(interim_results_);
   auto config = streaming_config->mutable_config();
   config->set_sample_rate_hertz(samplerate);
@@ -373,7 +359,6 @@ StreamingRecognizeClient::DoStreamingFromMicrophone(
   if (model_name_ != "") {
     config->set_model(model_name_);
   }
-
   call->streamer->Write(request);
 
   std::thread microphone_thread(
@@ -390,7 +375,8 @@ StreamingRecognizeClient::DoStreamingFromMicrophone(
 }
 
 void
-StreamingRecognizeClient::PrintLatencies(std::vector<double>& latencies, const std::string& name)
+StreamingSpeechTranslateClient::PrintLatencies(
+    std::vector<double>& latencies, const std::string& name)
 {
   if (latencies.size() > 0) {
     std::sort(latencies.begin(), latencies.end());
@@ -416,7 +402,7 @@ StreamingRecognizeClient::PrintLatencies(std::vector<double>& latencies, const s
 }
 
 int
-StreamingRecognizeClient::PrintStats()
+StreamingSpeechTranslateClient::PrintStats()
 {
   if (print_latency_stats_ && simulate_realtime_) {
     PrintLatencies(latencies_, "Latencies");

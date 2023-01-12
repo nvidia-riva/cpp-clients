@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  */
 
@@ -27,20 +27,26 @@
 #include <thread>
 
 #include "client_call.h"
+#include "riva/clients/asr/riva_asr_client_helper.h"
 #include "riva/proto/riva_asr.grpc.pb.h"
 #include "riva/utils/thread_pool.h"
 #include "riva/utils/wav/wav_reader.h"
-#include "riva_asr_client_helper.h"
 
 using grpc::Status;
 using grpc::StatusCode;
 
 namespace nr = nvidia::riva;
 namespace nr_asr = nvidia::riva::asr;
+namespace nr_nmt = nvidia::riva::nmt;
 
-class StreamingRecognizeClient {
+typedef ClientCall<
+    nr_nmt::StreamingTranslateSpeechToTextRequest, nr_nmt::StreamingTranslateSpeechToTextResponse>
+    S2TClientCall;
+
+
+class StreamingSpeechTranslateClient {
  public:
-  StreamingRecognizeClient(
+  StreamingSpeechTranslateClient(
       std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
       const std::string& language_code, int32_t max_alternatives, bool profanity_filter,
       bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
@@ -49,7 +55,7 @@ class StreamingRecognizeClient {
       bool verbatim_transcripts, const std::string& boosted_phrases_file,
       float boosted_phrases_score);
 
-  ~StreamingRecognizeClient();
+  ~StreamingSpeechTranslateClient();
 
   uint32_t NumActiveStreams() { return num_active_streams_.load(); }
 
@@ -59,14 +65,14 @@ class StreamingRecognizeClient {
 
   void StartNewStream(std::unique_ptr<Stream> stream);
 
-  void GenerateRequests(std::shared_ptr<ClientCall> call);
+  void GenerateRequests(std::shared_ptr<S2TClientCall> call);
 
   int DoStreamingFromFile(
       std::string& audio_file, int32_t num_iterations, int32_t num_parallel_requests);
 
-  void PostProcessResults(std::shared_ptr<ClientCall> call, bool audio_device);
+  void PostProcessResults(std::shared_ptr<S2TClientCall> call, bool audio_device);
 
-  void ReceiveResponses(std::shared_ptr<ClientCall> call, bool audio_device);
+  void ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool audio_device);
 
   int DoStreamingFromMicrophone(const std::string& auido_device, bool& request_exit);
 
@@ -81,7 +87,7 @@ class StreamingRecognizeClient {
  private:
   // Out of the passed in Channel comes the stub, stored here, our view of the
   // server's exposed services.
-  std::unique_ptr<nr_asr::RivaSpeechRecognition::Stub> stub_;
+  std::unique_ptr<nr_nmt::RivaTranslation::Stub> stub_;
   std::vector<double> int_latencies_, final_latencies_, latencies_;
 
   std::string language_code_;

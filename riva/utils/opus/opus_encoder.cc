@@ -34,7 +34,8 @@ Encoder::~Encoder()
   }
 }
 
-int32_t Encoder::MaxPossibleFrameSize(int32_t ceiling) const
+int32_t
+Encoder::MaxPossibleFrameSize(int32_t ceiling) const
 {
   //
   // Note: Opus doc is not very specific about all possible frame lengths.
@@ -60,35 +61,6 @@ int32_t Encoder::MaxPossibleFrameSize(int32_t ceiling) const
   return quantum;
 }
 
-//
-//  int32_t ret = rate_ * 6 / (50 * channels_);
-//  if (ret > ceiling) {
-//    ret = rate_ * 5 / (50 * channels_);
-//    if (ret > ceiling) {
-//      ret = rate_ * 4 / (50 * channels_);
-//      if (ret > ceiling) {
-//        ret = rate_ * 3 / (50 * channels_);
-//        if (ret > ceiling) {
-//          ret = rate_ / (25 * channels_);
-//          if (ret > ceiling) {
-//            ret = rate_ / (50 * channels_);
-//            if (ret > ceiling) {
-//              ret = rate_ / (100 * channels_);
-//              if (ret > ceiling) {
-//                ret = rate_ / (200 * channels_);
-//                if (ret > ceiling) {
-//                  ret = rate_ / (400 * channels_);
-//                }
-//              }
-//            }
-//          }
-//        }
-//      }
-//    }
-//  }
-//  return ret;
-
-
 std::vector<std::vector<unsigned char>>
 Encoder::EncodePcm(const std::vector<int16_t>& pcm, int32_t* samples_encoded) const
 {
@@ -105,8 +77,8 @@ Encoder::EncodePcm(const std::vector<int16_t>& pcm, int32_t* samples_encoded) co
       break;
     }
     std::vector<unsigned char> encoded_frame(frame_size_byte);
-    int32_t bytes_encoded = opus_encode(
-        encoder_, &pcm[pos], frame_size, encoded_frame.data(), frame_size_byte);
+    int32_t bytes_encoded =
+        opus_encode(encoder_, &pcm[pos], frame_size, encoded_frame.data(), frame_size_byte);
     if (bytes_encoded < 0) {
       LOG(ERROR) << "Failed to encode: " << opus_strerror(bytes_encoded)
                  << ", bytes_to_encode: " << bytes_to_encode << ", frame_length: " << frame_size;
