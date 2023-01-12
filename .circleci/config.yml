@@ -7,6 +7,9 @@ jobs:
     resource_class: large
     steps:
       - run:
+         name: "cleaner"
+         command: "rm -rf /home/circleci/.cache/bazel/_bazel_circleci/install/c87283ec3a7822eea44f4cecb6db792e"
+      - run:
           name: "Install build dependencies"
           command: "sudo apt-get --allow-releaseinfo-change update && sudo apt-get install -y wget libasound2-dev libopus-dev libopusfile-dev"
       - run:
