@@ -18,7 +18,7 @@ jobs:
             - v3-deps-{{ checksum "WORKSPACE" }}
       - run:
           name: "Build deps"
-          command: "bazelisk build --config release @com_google_protobuf//:protoc @com_github_grpc_grpc//:grpc++"
+          command: "rm -rf ~/.cache/bazel && bazelisk build --config release @com_google_protobuf//:protoc @com_github_grpc_grpc//:grpc++"
       - run:
           name: "Build clients"
           command: "bazelisk build --stamp --config release //..."
