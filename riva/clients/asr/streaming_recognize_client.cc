@@ -242,14 +242,14 @@ StreamingRecognizeClient::DoStreamingFromFile(
     std::cout << std::flush;
     double diff_time = std::chrono::duration<double, std::milli>(current_time - start_time).count();
 
-    float total_processed = 0.F;
-    if (all_wav[0]->encoding == nvidia::riva::AudioEncoding::OGGOPUS) {
+    float total_processed = TotalAudioProcessed();
+    for (auto& wav : all_wav) {
       riva::utils::opus::Decoder decoder;
-      std::ifstream is(all_wav[0]->filename);
-      auto wav_stream = decoder.DecodeStream(is);
-      total_processed = (float)wav_stream.size() / 48000.F;
-    } else {
-      total_processed = TotalAudioProcessed();
+      if (wav->encoding == nvidia::riva::AudioEncoding::OGGOPUS) {
+        std::ifstream is(wav->filename);
+        auto wav_stream = decoder.DecodeStream(is);
+        total_processed = (float) wav_stream.size() / 48000.F;
+      }
     }
 
     std::cout << "Run time: " << diff_time / 1000. << " sec." << std::endl;
