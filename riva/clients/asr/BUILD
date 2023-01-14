@@ -49,10 +49,13 @@ cc_library(
     srcs = ["streaming_recognize_client.h", 
             "streaming_recognize_client.cc"
     ],
+    copts = ["-I/usr/include/opus"],
+    linkopts = ["-lopus -lopusfile"],
     deps = [
         ":asr_client_helper",
         ":client_call",
         "//riva/utils/wav:reader",
+        "//riva/utils/opus",
         "@glog//:glog",
     ] + select({
         "@platforms//cpu:aarch64": [
