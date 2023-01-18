@@ -219,6 +219,8 @@ ParsePath(const char* path, std::vector<std::string>& filelist)
         ParsePath(full_path.c_str(), filelist);
       else if (
           full_path.find(".wav") != std::string::npos ||
+          full_path.find(".opus") != std::string::npos ||
+          full_path.find(".ogg") != std::string::npos ||
           full_path.find(".flac") != std::string::npos)
         filelist.push_back(full_path);
     }
