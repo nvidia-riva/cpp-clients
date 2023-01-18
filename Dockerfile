@@ -6,7 +6,10 @@ ARG TARGET_OS=linux    # valid values: linux, l4t
 FROM ubuntu:20.04 AS base
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y libasound2    
+RUN apt-get update && apt-get install -y \
+    libasound2 \
+    libopus0 \
+    libopusfile0
 
 FROM base AS builddep
 ARG BAZEL_VERSION
@@ -19,9 +22,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     build-essential \
     libasound2-dev \
-    libopus0 \
     libopus-dev \
-    libopusfile0 \
     libopusfile-dev
 
 RUN if [ "$TARGET_ARCH" = "aarch64" ] && [ "$TARGET_OS" = "l4t" ]; then \
@@ -57,11 +58,11 @@ RUN ls -lah /work; ls -lah /work/.git; cat /work/.bazelrc
 FROM base as riva-clients
 
 WORKDIR /work
-COPY --from=builder /opt/riva/clients/asr/riva_asr_client /usr/local/bin/ 
-COPY --from=builder /opt/riva/clients/asr/riva_streaming_asr_client /usr/local/bin/ 
-COPY --from=builder /opt/riva/clients/tts/riva_tts_client /usr/local/bin/ 
-COPY --from=builder /opt/riva/clients/tts/riva_tts_perf_client /usr/local/bin/ 
-COPY --from=builder /opt/riva/clients/nlp/riva_nlp_classify_tokens /usr/local/bin/ 
-COPY --from=builder /opt/riva/clients/nlp/riva_nlp_punct /usr/local/bin/ 
+COPY --from=builder /opt/riva/clients/asr/riva_asr_client /usr/local/bin/
+COPY --from=builder /opt/riva/clients/asr/riva_streaming_asr_client /usr/local/bin/
+COPY --from=builder /opt/riva/clients/tts/riva_tts_client /usr/local/bin/
+COPY --from=builder /opt/riva/clients/tts/riva_tts_perf_client /usr/local/bin/
+COPY --from=builder /opt/riva/clients/nlp/riva_nlp_classify_tokens /usr/local/bin/
+COPY --from=builder /opt/riva/clients/nlp/riva_nlp_punct /usr/local/bin/
 COPY --from=builder /opt/riva/clients/nlp/riva_nlp_qa /usr/local/bin/
 COPY examples /work/examples
