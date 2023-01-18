@@ -18,6 +18,7 @@
 #include "riva/proto/riva_tts.grpc.pb.h"
 #include "riva/utils/files/files.h"
 #include "riva/utils/opus/opus_decoder.h"
+#include "riva/utils/opus/opus_encoder.h"
 #include "riva/utils/stamping.h"
 #include "riva/utils/wav/wav_writer.h"
 
@@ -198,7 +199,8 @@ main(int argc, char** argv)
     if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
       ::riva::utils::wav::Write(FLAGS_audio_file, FLAGS_rate, pcm_buffer.data(), pcm_buffer.size());
     } else if (FLAGS_audio_encoding == "opus") {
-      riva::utils::opus::Decoder decoder(FLAGS_rate, 1);
+      int32_t rate = riva::utils::opus::Encoder::AdjustRateIfUnsupported(FLAGS_rate);
+      riva::utils::opus::Decoder decoder(rate, 1);
       auto pcm = decoder.DecodePcm(decoder.DeserializeOpus(opus_buffer));
       ::riva::utils::wav::Write(FLAGS_audio_file, FLAGS_rate, pcm.data(), pcm.size());
     }
