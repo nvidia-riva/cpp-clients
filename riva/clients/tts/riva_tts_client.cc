@@ -18,6 +18,7 @@
 #include "riva/proto/riva_tts.grpc.pb.h"
 #include "riva/utils/files/files.h"
 #include "riva/utils/opus/opus_decoder.h"
+#include "riva/utils/opus/opus_encoder.h"
 #include "riva/utils/stamping.h"
 #include "riva/utils/wav/wav_writer.h"
 
@@ -120,7 +121,13 @@ main(int argc, char** argv)
     std::cerr << "Unsupported encoding: \'" << FLAGS_audio_encoding << "\'" << std::endl;
     return -1;
   }
-  request.set_sample_rate_hz(FLAGS_rate);
+
+  int32_t rate = FLAGS_rate;
+  if (FLAGS_audio_encoding == "opus") {
+    rate = riva::utils::opus::Encoder::AdjustRateIfUnsupported(FLAGS_rate);
+  }
+
+  request.set_sample_rate_hz(rate);
   request.set_voice_name(FLAGS_voice_name);
 
   // Send text content using Synthesize().
@@ -146,13 +153,13 @@ main(int argc, char** argv)
     // Write to WAV file
     if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
       ::riva::utils::wav::Write(
-          FLAGS_audio_file, FLAGS_rate, (int16_t*)audio.data(), audio.length() / sizeof(int16_t));
+          FLAGS_audio_file, rate, (int16_t*)audio.data(), audio.length() / sizeof(int16_t));
     } else if (FLAGS_audio_encoding == "opus") {
-      riva::utils::opus::Decoder decoder(FLAGS_rate, 1);
+      riva::utils::opus::Decoder decoder(rate, 1);
       auto ptr = reinterpret_cast<unsigned char*>(audio.data());
       auto pcm = decoder.DecodePcm(
           decoder.DeserializeOpus(std::vector<unsigned char>(ptr, ptr + audio.size())));
-      ::riva::utils::wav::Write(FLAGS_audio_file, FLAGS_rate, pcm.data(), pcm.size());
+      ::riva::utils::wav::Write(FLAGS_audio_file, rate, pcm.data(), pcm.size());
     }
   } else {  // online inference
     std::vector<int16_t> pcm_buffer;
@@ -196,11 +203,11 @@ main(int argc, char** argv)
     }
 
     if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
-      ::riva::utils::wav::Write(FLAGS_audio_file, FLAGS_rate, pcm_buffer.data(), pcm_buffer.size());
+      ::riva::utils::wav::Write(FLAGS_audio_file, rate, pcm_buffer.data(), pcm_buffer.size());
     } else if (FLAGS_audio_encoding == "opus") {
-      riva::utils::opus::Decoder decoder(FLAGS_rate, 1);
+      riva::utils::opus::Decoder decoder(rate, 1);
       auto pcm = decoder.DecodePcm(decoder.DeserializeOpus(opus_buffer));
-      ::riva::utils::wav::Write(FLAGS_audio_file, FLAGS_rate, pcm.data(), pcm.size());
+      ::riva::utils::wav::Write(FLAGS_audio_file, rate, pcm.data(), pcm.size());
     }
   }
   return 0;
