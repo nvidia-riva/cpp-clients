@@ -8,6 +8,7 @@
 
 #define clear_screen() printf("\033[H\033[J")
 #define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
+#define TTS_CHUNK_SIZE_BYTES 81408
 
 static void
 MicrophoneThreadMain(
@@ -87,6 +88,7 @@ StreamingS2SClient::~StreamingS2SClient()
 void
 StreamingS2SClient::StartNewStream(std::unique_ptr<Stream> stream)
 {
+  std::cout << "starting a new stream!" << std::endl;
   std::shared_ptr<S2SClientCall> call =
       std::make_shared<S2SClientCall>(stream->corr_id, word_time_offsets_);
   call->streamer = stub_->StreamingTranslateSpeechToSpeech(&call->context);
@@ -115,6 +117,9 @@ StreamingS2SClient::GenerateRequests(std::shared_ptr<S2SClientCall> call)
     nr_nmt::StreamingTranslateSpeechToSpeechRequest request;
     if (first_write) {
       auto streaming_s2s_config = request.mutable_config();
+      auto translation_config = streaming_s2s_config->mutable_translation_config();
+      translation_config->set_source_language_code(language_code_);
+      translation_config->set_target_language_code("en-US");
       auto streaming_asr_config = streaming_s2s_config->mutable_asr_config();
       streaming_asr_config->set_interim_results(interim_results_);
       auto config = streaming_asr_config->mutable_config();
@@ -177,10 +182,8 @@ StreamingS2SClient::GenerateRequests(std::shared_ptr<S2SClientCall> call)
     // Set write done to true so next call will lead to WritesDone
     if (offset == call->stream->wav->data.size()) {
       done = true;
-      std::cout << "done=true and Calling writes done!" << std::endl;
-      // call->streamer->WritesDone();
+      call->streamer->WritesDone();
       grpc::Status status = call->streamer->Finish();
-      std::cout << "Status is :" << status.ok() << std::endl;
     }
   }
 
@@ -188,7 +191,6 @@ StreamingS2SClient::GenerateRequests(std::shared_ptr<S2SClientCall> call)
     std::lock_guard<std::mutex> lock(latencies_mutex_);
     total_audio_processed_ += audio_processed;
   }
-  std::cout << "decrementing active streams" << std::endl;
   num_active_streams_--;
 }
 
@@ -288,25 +290,38 @@ StreamingS2SClient::ReceiveResponses(std::shared_ptr<S2SClientCall> call, bool a
     std::cout << "ASR started... press `Ctrl-C' to stop recording\n\n";
     gotoxy(0, 5);
   }
+
+  std::vector<int16_t> pcm_buffer;
   int cur_response = 0;
-  while (call->streamer->Read(&call->response)) {  // Returns false when no m ore to read.
+  while (call->streamer->Read(&call->response)) {  // Returns false when no more to read.
     call->recv_times.push_back(std::chrono::steady_clock::now());
     auto audio = call->response.speech().audio();
+    if (audio_device) {
+      clear_screen();
+      std::cout << "ASR started... press `Ctrl-C' to stop recording\n\n";
+      gotoxy(0, 5);
+    }
     // Write to WAV file
-    std::cerr << "Got " << audio.length() << " bytes back from server" << std::endl;
+    std::cout << "Got " << audio.length() << " bytes back from server" << std::endl;
     // different for opus
 
-    ::riva::utils::wav::Write(
-        std::string("streaming_" + std::to_string(cur_response) + ".wav"), 44100,
-        (int16_t*)audio.data(), audio.length() / sizeof(int16_t));
+    int16_t* audio_data = (int16_t*)audio.data();
+    size_t len = audio.length() / sizeof(int16_t);
+    std::copy(audio_data, audio_data + len, std::back_inserter(pcm_buffer));
+    if (audio.length() < TTS_CHUNK_SIZE_BYTES) { // last chunk for this request
+      ::riva::utils::wav::Write(
+          std::string("streaming_" + std::to_string(cur_response) + ".wav"), 44100,
+          pcm_buffer.data(), pcm_buffer.size());
+      cur_response++;
+      pcm_buffer.clear();
+    }
   }
-  grpc::Status status = call->streamer->Finish();
-  if (!status.ok()) {
-    // Report the RPC failure.
-    std::cerr << status.error_message() << std::endl;
-  }
+  // grpc::Status status = call->streamer->Finish();
+  // if (!status.ok()) {
+  // Report the RPC failure.
+  ///    std::cerr << status.error_message() << std::endl;
+  // }
 
-  std::cout << "Response to be finished received " << std::endl;
   num_streams_finished_++;
 }
 

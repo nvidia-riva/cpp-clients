@@ -91,7 +91,7 @@ main(int argc, char** argv)
   FLAGS_logtostderr = 1;
 
   std::stringstream str_usage;
-  str_usage << "Usage: riva_streaming_asr_client " << std::endl;
+  str_usage << "Usage: riva_streaming_s2s_client " << std::endl;
   str_usage << "           --audio_file=<filename or folder> " << std::endl;
   str_usage << "           --audio_device=<device_id (such as hw:5,0)> " << std::endl;
   str_usage << "           --automatic_punctuation=<true|false>" << std::endl;
