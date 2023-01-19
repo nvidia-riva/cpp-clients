@@ -120,7 +120,7 @@ Encoder::SerializeOpus(const std::vector<std::vector<unsigned char>>& opus) cons
 int32_t
 Encoder::AdjustRateIfUnsupported(int32_t rate)
 {
-  int32_t adjusted_rate = 0;
+  int32_t adjusted_rate = rate;
   if (rate > 48000) {
     adjusted_rate = 48000;
   } else if (rate > 24000 && rate < 48000) {
