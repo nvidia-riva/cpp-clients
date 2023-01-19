@@ -149,7 +149,8 @@ main(int argc, char** argv)
       ::riva::utils::wav::Write(
           FLAGS_audio_file, FLAGS_rate, (int16_t*)audio.data(), audio.length() / sizeof(int16_t));
     } else if (FLAGS_audio_encoding == "opus") {
-      riva::utils::opus::Decoder decoder(FLAGS_rate, 1);
+      int32_t rate = riva::utils::opus::Encoder::AdjustRateIfUnsupported(FLAGS_rate);
+      riva::utils::opus::Decoder decoder(rate, 1);
       auto ptr = reinterpret_cast<unsigned char*>(audio.data());
       auto pcm = decoder.DecodePcm(
           decoder.DeserializeOpus(std::vector<unsigned char>(ptr, ptr + audio.size())));
