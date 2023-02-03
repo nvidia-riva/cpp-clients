@@ -6,6 +6,9 @@
 
 #include "streaming_s2s_client.h"
 
+#include "riva/utils/opus/opus_decoder.h"
+#include "riva/utils/opus/opus_encoder.h"
+
 #define clear_screen() printf("\033[H\033[J")
 #define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
 #define TTS_CHUNK_SIZE_BYTES 81408
@@ -56,7 +59,8 @@ StreamingS2SClient::StreamingS2SClient(
     bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
     bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
     std::string output_filename, std::string model_name, bool simulate_realtime,
-    bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score)
+    bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score,
+    const std::string& tts_encoding, const std::string& tts_audio_file, int tts_sample_rate)
     : print_latency_stats_(true), stub_(nr_nmt::RivaTranslation::NewStub(channel)),
       language_code_(language_code), max_alternatives_(max_alternatives),
       profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
@@ -65,7 +69,9 @@ StreamingS2SClient::StreamingS2SClient(
       print_transcripts_(print_transcripts), chunk_duration_ms_(chunk_duration_ms),
       interim_results_(interim_results), total_audio_processed_(0.), num_streams_started_(0),
       model_name_(model_name), simulate_realtime_(simulate_realtime),
-      verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score)
+      verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
+      tts_encoding_(tts_encoding), tts_audio_file_(tts_audio_file),
+      tts_sample_rate_(tts_sample_rate)
 {
   num_active_streams_.store(0);
   num_streams_finished_.store(0);
@@ -291,7 +297,9 @@ StreamingS2SClient::ReceiveResponses(std::shared_ptr<S2SClientCall> call, bool a
     gotoxy(0, 5);
   }
 
+  size_t audio_len = 0;
   std::vector<int16_t> pcm_buffer;
+  std::vector<unsigned char> opus_buffer;
   int cur_response = 0;
   while (call->streamer->Read(&call->response)) {  // Returns false when no more to read.
     call->recv_times.push_back(std::chrono::steady_clock::now());
@@ -305,15 +313,40 @@ StreamingS2SClient::ReceiveResponses(std::shared_ptr<S2SClientCall> call, bool a
     std::cout << "Got " << audio.length() << " bytes back from server" << std::endl;
     // different for opus
 
+
+    if (tts_encoding_.empty() || tts_encoding_ == "pcm") {
+      int16_t* audio_data = (int16_t*)audio.data();
+      size_t len = audio.length() / sizeof(int16_t);
+      std::copy(audio_data, audio_data + len, std::back_inserter(pcm_buffer));
+      audio_len += len;
+    } else if (tts_encoding_ == "opus") {
+      const unsigned char* opus_data = (unsigned char*)audio.data();
+      size_t len = audio.length();
+      std::copy(opus_data, opus_data + len, std::back_inserter(opus_buffer));
+      audio_len += len;
+    }
+
+
     int16_t* audio_data = (int16_t*)audio.data();
     size_t len = audio.length() / sizeof(int16_t);
     std::copy(audio_data, audio_data + len, std::back_inserter(pcm_buffer));
-    if (audio.length() < TTS_CHUNK_SIZE_BYTES) { // last chunk for this request
+    if (audio.length() < TTS_CHUNK_SIZE_BYTES) {  // last chunk for this request
       ::riva::utils::wav::Write(
           std::string("streaming_" + std::to_string(cur_response) + ".wav"), 44100,
           pcm_buffer.data(), pcm_buffer.size());
       cur_response++;
       pcm_buffer.clear();
+    }
+
+
+    if (tts_encoding_.empty() || tts_encoding_ == "pcm") {
+      ::riva::utils::wav::Write(
+          tts_audio_file_, call->stream->wav->sample_rate, pcm_buffer.data(), pcm_buffer.size());
+    } else if (tts_encoding_ == "opus") {
+      riva::utils::opus::Decoder decoder(call->stream->wav->sample_rate, 1);
+      auto pcm = decoder.DecodePcm(decoder.DeserializeOpus(opus_buffer));
+      ::riva::utils::wav::Write(
+          tts_audio_file_, call->stream->wav->sample_rate, pcm.data(), pcm.size());
     }
   }
   // grpc::Status status = call->streamer->Finish();
