@@ -6,9 +6,11 @@
 
 #include "streaming_s2s_client.h"
 
+#include "riva/utils/opus/opus_decoder.h"
+#include "riva/utils/opus/opus_encoder.h"
+
 #define clear_screen() printf("\033[H\033[J")
 #define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
-#define TTS_CHUNK_SIZE_BYTES 81408
 
 static void
 MicrophoneThreadMain(
@@ -56,7 +58,9 @@ StreamingS2SClient::StreamingS2SClient(
     bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
     bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
     std::string output_filename, std::string model_name, bool simulate_realtime,
-    bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score)
+    bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score,
+    const std::string& tts_encoding, const std::string& tts_audio_file,
+    int tts_sample_rate, const std::string& tts_voice_name)
     : print_latency_stats_(true), stub_(nr_nmt::RivaTranslation::NewStub(channel)),
       language_code_(language_code), max_alternatives_(max_alternatives),
       profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
@@ -65,7 +69,9 @@ StreamingS2SClient::StreamingS2SClient(
       print_transcripts_(print_transcripts), chunk_duration_ms_(chunk_duration_ms),
       interim_results_(interim_results), total_audio_processed_(0.), num_streams_started_(0),
       model_name_(model_name), simulate_realtime_(simulate_realtime),
-      verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score)
+      verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
+      tts_encoding_(tts_encoding), tts_audio_file_(tts_audio_file),
+      tts_sample_rate_(tts_sample_rate), tts_voice_name_(tts_voice_name)
 {
   num_active_streams_.store(0);
   num_streams_finished_.store(0);
@@ -117,9 +123,28 @@ StreamingS2SClient::GenerateRequests(std::shared_ptr<S2SClientCall> call)
     nr_nmt::StreamingTranslateSpeechToSpeechRequest request;
     if (first_write) {
       auto streaming_s2s_config = request.mutable_config();
+
+      // set nmt config
       auto translation_config = streaming_s2s_config->mutable_translation_config();
       translation_config->set_source_language_code(language_code_);
       translation_config->set_target_language_code("en-US");
+
+      // set tts config
+      auto tts_config = streaming_s2s_config->mutable_tts_config();
+      if (tts_encoding_.empty() || tts_encoding_ == "pcm") {
+        tts_config->set_encoding(nr::LINEAR_PCM);
+      } else if (tts_encoding_ == "opus") {
+        tts_config->set_encoding(nr::OGGOPUS);
+      }
+      int32_t rate = tts_sample_rate_;
+      if (tts_encoding_ == "opus") {
+        rate = riva::utils::opus::Encoder::AdjustRateIfUnsupported(tts_sample_rate_);
+      }
+      tts_config->set_sample_rate_hz(rate);
+      tts_config->set_voice_name(tts_voice_name_);
+      tts_config->set_language_code("en-US");
+
+      // set asr config
       auto streaming_asr_config = streaming_s2s_config->mutable_asr_config();
       streaming_asr_config->set_interim_results(interim_results_);
       auto config = streaming_asr_config->mutable_config();
@@ -292,7 +317,7 @@ StreamingS2SClient::ReceiveResponses(std::shared_ptr<S2SClientCall> call, bool a
   }
 
   std::vector<int16_t> pcm_buffer;
-  int cur_response = 0;
+  std::vector<unsigned char> opus_buffer;
   while (call->streamer->Read(&call->response)) {  // Returns false when no more to read.
     call->recv_times.push_back(std::chrono::steady_clock::now());
     auto audio = call->response.speech().audio();
@@ -301,21 +326,33 @@ StreamingS2SClient::ReceiveResponses(std::shared_ptr<S2SClientCall> call, bool a
       std::cout << "ASR started... press `Ctrl-C' to stop recording\n\n";
       gotoxy(0, 5);
     }
-    // Write to WAV file
-    std::cout << "Got " << audio.length() << " bytes back from server" << std::endl;
-    // different for opus
 
-    int16_t* audio_data = (int16_t*)audio.data();
-    size_t len = audio.length() / sizeof(int16_t);
-    std::copy(audio_data, audio_data + len, std::back_inserter(pcm_buffer));
-    if (audio.length() < TTS_CHUNK_SIZE_BYTES) { // last chunk for this request
-      ::riva::utils::wav::Write(
-          std::string("streaming_" + std::to_string(cur_response) + ".wav"), 44100,
-          pcm_buffer.data(), pcm_buffer.size());
-      cur_response++;
-      pcm_buffer.clear();
+    std::cout << "Got " << audio.length() << " bytes back from server" << std::endl;
+    if (tts_encoding_.empty() || tts_encoding_ == "pcm") {
+      int16_t* pcm_data = (int16_t*)audio.data();
+      size_t len = audio.length() / sizeof(int16_t);
+      std::copy(pcm_data, pcm_data + len, std::back_inserter(pcm_buffer));
+    } else if (tts_encoding_ == "opus") {
+      const unsigned char* opus_data = (unsigned char*)audio.data();
+      size_t len = audio.length();
+      std::copy(opus_data, opus_data + len, std::back_inserter(opus_buffer));
     }
   }
+
+  // Write to WAV file
+  if (tts_encoding_.empty() || tts_encoding_ == "pcm") {
+    ::riva::utils::wav::Write(
+        tts_audio_file_, tts_sample_rate_, pcm_buffer.data(), pcm_buffer.size());
+    pcm_buffer.clear();
+  } else if (tts_encoding_ == "opus") {
+    int32_t rate = riva::utils::opus::Encoder::AdjustRateIfUnsupported(tts_sample_rate_);
+    riva::utils::opus::Decoder decoder(rate, 1);
+    auto pcm = decoder.DecodePcm(decoder.DeserializeOpus(opus_buffer));
+    ::riva::utils::wav::Write(
+        tts_audio_file_, rate, pcm.data(), pcm.size());
+    opus_buffer.clear();
+  }
+
   // grpc::Status status = call->streamer->Finish();
   // if (!status.ok()) {
   // Report the RPC failure.
