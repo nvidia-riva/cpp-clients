@@ -118,7 +118,7 @@ StreamingSpeechTranslateClient::GenerateRequests(std::shared_ptr<S2TClientCall> 
       auto streaming_speech_translate_config = request.mutable_config();
       auto translation_config = streaming_speech_translate_config->mutable_translation_config();
       translation_config->set_source_language_code(language_code_);
-      translation_config->set_target_language_code("en");
+      translation_config->set_target_language_code("en-US");
       auto streaming_asr_config = streaming_speech_translate_config->mutable_asr_config();
       streaming_asr_config->set_interim_results(interim_results_);
       auto config = streaming_asr_config->mutable_config();
@@ -307,7 +307,6 @@ StreamingSpeechTranslateClient::ReceiveResponses(
       }
     }
   }
-  std::cout << "call fone" << std::endl;
   // grpc::Status status = call->streamer->Finish();
   // if (!status.ok()) {
   // Report the RPC failure.
