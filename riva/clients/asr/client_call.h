@@ -33,16 +33,6 @@ using grpc::StatusCode;
 namespace nr = nvidia::riva;
 namespace nr_asr = nvidia::riva::asr;
 
-struct Results {
-  std::vector<std::string> final_transcripts;
-  std::vector<float> final_scores;
-  std::string partial_transcript;
-  std::vector<std::vector<nr_asr::WordInfo>> final_time_stamps;
-  std::vector<nr_asr::WordInfo> partial_time_stamps;
-  int request_cnt;
-  float audio_processed;
-};
-
 class ClientCall {
  public:
   ClientCall(uint32_t _corr_id, bool word_time_offsets);

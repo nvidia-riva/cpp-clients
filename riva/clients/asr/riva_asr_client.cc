@@ -76,11 +76,10 @@ class RecognizeClient {
         max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
         word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
         separate_recognition_per_channel_(separate_recognition_per_channel),
-        print_transcripts_(print_transcripts), done_sending_(false), num_requests_(0),
-        num_responses_(0), num_failed_requests_(0), total_audio_processed_(0.),
-        model_name_(model_name), output_filename_(output_filename),
-        verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
-        speaker_diarization_(speaker_diarization)
+        speaker_diarization_(speaker_diarization), print_transcripts_(print_transcripts),
+        done_sending_(false), num_requests_(0), num_responses_(0), num_failed_requests_(0),
+        total_audio_processed_(0.), model_name_(model_name), output_filename_(output_filename),
+        verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score)
   {
     if (!output_filename.empty()) {
       output_file_.open(output_filename);
@@ -307,12 +306,20 @@ class RecognizeClient {
         auto end_time = std::chrono::steady_clock::now();
         double lat = std::chrono::duration<double, std::milli>(end_time - call->start_time).count();
         latencies_.push_back(lat);
-        const auto& result = call->response.results(0);
-        total_audio_processed_ += result.audio_processed();
 
         if (print_transcripts_) {
-          PrintResults(result, call->stream->wav->filename);
+          Results output_result;
+          for (int r = 0; r < call->response.results_size(); ++r) {
+            AppendResult(
+                output_result, call->response.results(r), word_time_offsets_, speaker_diarization_);
+          }
+          PrintResult(
+              output_result, call->stream->wav->filename, word_time_offsets_, speaker_diarization_);
         }
+
+        const auto& last_result = call->response.results(call->response.results_size() - 1);
+        total_audio_processed_ = last_result.audio_processed();
+
         if (!output_filename_.empty()) {
           (this->*write_fn_)(result, call->stream->wav->filename);
         }
