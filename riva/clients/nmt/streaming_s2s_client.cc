@@ -69,8 +69,8 @@ StreamingS2SClient::StreamingS2SClient(
       interim_results_(interim_results), total_audio_processed_(0.), num_streams_started_(0),
       model_name_(model_name), simulate_realtime_(simulate_realtime),
       verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
-      tts_encoding_(tts_encoding), tts_audio_file_(tts_audio_file),
-      tts_sample_rate_(tts_sample_rate), tts_voice_name_(tts_voice_name)
+      tts_encoding_(tts_encoding), tts_audio_file_(tts_audio_file), tts_voice_name_(tts_voice_name),
+      tts_sample_rate_(tts_sample_rate)
 {
   num_active_streams_.store(0);
   num_streams_finished_.store(0);

@@ -90,11 +90,7 @@ class StreamingS2SClient {
   // server's exposed services.
   std::unique_ptr<nr_nmt::RivaTranslation::Stub> stub_;
   std::vector<double> int_latencies_, final_latencies_, latencies_;
-  std::string tts_encoding_;
-  std::string tts_audio_file_;
-  std::string tts_voice_name_;
   std::string language_code_;
-  int tts_sample_rate_;
   int32_t max_alternatives_;
   bool profanity_filter_;
   int32_t channels_;
@@ -124,4 +120,9 @@ class StreamingS2SClient {
 
   std::vector<std::string> boosted_phrases_;
   float boosted_phrases_score_;
+
+  std::string tts_encoding_;
+  std::string tts_audio_file_;
+  std::string tts_voice_name_;
+  int tts_sample_rate_;
 };

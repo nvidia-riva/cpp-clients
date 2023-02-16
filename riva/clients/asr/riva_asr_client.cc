@@ -321,7 +321,8 @@ class RecognizeClient {
         total_audio_processed_ = last_result.audio_processed();
 
         if (!output_filename_.empty()) {
-          (this->*write_fn_)(result, call->stream->wav->filename);
+          // TODO write appended result
+          (this->*write_fn_)(last_result, call->stream->wav->filename);
         }
       } else {
         std::cout << "RPC failed: " << call->status.error_message() << std::endl;
