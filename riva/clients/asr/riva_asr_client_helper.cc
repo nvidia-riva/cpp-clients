@@ -176,10 +176,11 @@ PrintResult(
             std::cout << std::setw(16) << std::left << word_info.end_time();
           }
           std::cout << std::setw(16) << std::setprecision(4) << std::scientific
-                    << word_info.confidence() << std::endl;
+                    << word_info.confidence();
           if (a == 0 && speaker_diarization) {
             std::cout << std::setw(16) << std::left << word_info.speaker_tag();
           }
+          std::cout << std::endl;
         }
       }
       std::cout << std::endl;

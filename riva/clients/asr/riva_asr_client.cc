@@ -147,53 +147,6 @@ class RecognizeClient {
     }
   }
 
-  void PrintResults(const nr_asr::SpeechRecognitionResult& result, const std::string& filename)
-  {
-    std::cout << "-----------------------------------------------------------" << std::endl;
-    std::cout << "File: " << filename << std::endl;
-    std::cout << std::endl;
-    std::cout << "Final transcripts: " << std::endl;
-
-    if (result.alternatives_size() != 0) {
-      for (int a = 0; a < result.alternatives_size(); ++a) {
-        std::cout << a << " : " << result.alternatives(a).transcript() << std::endl;
-
-        std::cout << std::endl;
-
-        if (word_time_offsets_ || speaker_diarization_) {
-          std::cout << std::setw(40) << std::left << "Word";
-          if (word_time_offsets_) {
-            std::cout << std::setw(16) << std::left << "Start (ms)";
-            std::cout << std::setw(16) << std::left << "End (ms)";
-          }
-          std::cout << std::setw(16) << std::left << "Confidence";
-          if (a == 0 && speaker_diarization_) {
-            std::cout << std::setw(16) << std::left << "Speaker";
-          }
-          std::cout << std::endl;
-          for (int w = 0; w < result.alternatives(a).words_size(); ++w) {
-            auto& word_info = result.alternatives(a).words(w);
-            std::cout << std::setw(40) << std::left << word_info.word();
-            if (word_time_offsets_) {
-              std::cout << std::setw(16) << std::left << word_info.start_time();
-              std::cout << std::setw(16) << std::left << word_info.end_time();
-            }
-            std::cout << std::setw(16) << std::setprecision(4) << std::scientific
-                      << word_info.confidence();
-            if (a == 0 && speaker_diarization_) {
-              std::cout << std::setw(16) << std::left << word_info.speaker_tag();
-            }
-            std::cout << std::endl;
-          }
-        }
-      }
-      std::cout << std::endl;
-    }
-    std::cout << "Audio processed: " << result.audio_processed() << " sec." << std::endl;
-    std::cout << "-----------------------------------------------------------" << std::endl;
-    std::cout << std::endl;
-  }
-
   void PrintStats()
   {
     std::sort(latencies_.begin(), latencies_.end());

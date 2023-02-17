@@ -35,16 +35,6 @@ namespace nr = nvidia::riva;
 namespace nr_asr = nvidia::riva::asr;
 namespace nr_nmt = nvidia::riva::nmt;
 
-// struct Results {
-//   std::vector<std::string> final_transcripts;
-//   std::vector<float> final_scores;
-//   std::string partial_transcript;
-//   std::vector<std::vector<nr_asr::WordInfo>> final_time_stamps;
-//   std::vector<nr_asr::WordInfo> partial_time_stamps;
-//   int request_cnt;
-//   float audio_processed;
-// };
-
 
 template <typename Request, typename Response>
 class ClientCall {
