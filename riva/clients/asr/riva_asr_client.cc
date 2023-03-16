@@ -259,20 +259,23 @@ class RecognizeClient {
         double lat = std::chrono::duration<double, std::milli>(end_time - call->start_time).count();
         latencies_.push_back(lat);
 
-        const auto& last_result = call->response.results(call->response.results_size() - 1);
-        total_audio_processed_ = last_result.audio_processed();
+        if (call->response.results_size()) {
+          const auto& last_result = call->response.results(call->response.results_size() - 1);
+          total_audio_processed_ = last_result.audio_processed();
 
-        Results output_result;
-        for (int r = 0; r < call->response.results_size(); ++r) {
-          AppendResult(
-              output_result, call->response.results(r), word_time_offsets_, speaker_diarization_);
-        }
-        if (print_transcripts_) {
-          PrintResult(
-              output_result, call->stream->wav->filename, word_time_offsets_, speaker_diarization_);
-        }
-        if (!output_filename_.empty()) {
-          (this->*write_fn_)(output_result, call->stream->wav->filename);
+          Results output_result;
+          for (int r = 0; r < call->response.results_size(); ++r) {
+            AppendResult(
+                output_result, call->response.results(r), word_time_offsets_, speaker_diarization_);
+          }
+          if (print_transcripts_) {
+            PrintResult(
+                output_result, call->stream->wav->filename, word_time_offsets_,
+                speaker_diarization_);
+          }
+          if (!output_filename_.empty()) {
+            (this->*write_fn_)(output_result, call->stream->wav->filename);
+          }
         }
       } else {
         std::cout << "RPC failed: " << call->status.error_message() << std::endl;
@@ -286,7 +289,6 @@ class RecognizeClient {
         curr_tasks_.erase(call->stream->corr_id);
         num_responses_++;
       }
-
 
       // Once we're complete, deallocate the call object.
       delete call;
@@ -499,7 +501,9 @@ main(int argc, char** argv)
               << std::endl;
     std::cout << "Throughput: " << recognize_client.TotalAudioProcessed() * 1000. / diff_time
               << " RTFX" << std::endl;
-    std::cout << "Final transcripts written to " << FLAGS_output_filename << std::endl;
+    if (!FLAGS_output_filename.empty()) {
+      std::cout << "Final transcripts written to " << FLAGS_output_filename << std::endl;
+    }
   }
 
   return 0;
