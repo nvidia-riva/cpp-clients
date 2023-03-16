@@ -42,11 +42,14 @@ cc_library(
     srcs = ["streaming_s2s_client.h",
             "streaming_s2s_client.cc"
     ],
+    copts = ["-I/usr/include/opus"],
+    linkopts = ["-lopus -lopusfile"],
     deps = [
         "//riva/clients/asr:asr_client_helper",
         ":client_call",
         "//riva/utils/wav:reader",
         "//riva/utils/wav:writer",
+        "//riva/utils/opus",
         "@glog//:glog",
     ] + select({
         "@platforms//cpu:aarch64": [

@@ -70,6 +70,10 @@ DEFINE_bool(
     "True returns text exactly as it was said with no normalization.  False applies text inverse "
     "normalization");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
+DEFINE_string(tts_encoding, "", "TTS output encoding, currently either PCM or OPUS");
+DEFINE_string(tts_audio_file, "s2s_output.wav", "TTS output file");
+DEFINE_int32(tts_sample_rate, 44100, "TTS sample rate hz");
+DEFINE_string(tts_voice_name, "English-US.Female-1", "Desired TTS voice name");
 
 void
 signal_handler(int signal_num)
@@ -91,7 +95,7 @@ main(int argc, char** argv)
   FLAGS_logtostderr = 1;
 
   std::stringstream str_usage;
-  str_usage << "Usage: riva_streaming_asr_client " << std::endl;
+  str_usage << "Usage: riva_streaming_s2s_client " << std::endl;
   str_usage << "           --audio_file=<filename or folder> " << std::endl;
   str_usage << "           --audio_device=<device_id (such as hw:5,0)> " << std::endl;
   str_usage << "           --automatic_punctuation=<true|false>" << std::endl;
@@ -111,6 +115,11 @@ main(int argc, char** argv)
   str_usage << "           --boosted_words_file=<string>" << std::endl;
   str_usage << "           --boosted_words_score=<float>" << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
+  str_usage << "           --tts_encoding=<opus|pcm>" << std::endl;
+  str_usage << "           --tts_audio_file=<filename>" << std::endl;
+  str_usage << "           --tts_sample_rate=<rate hz>" << std::endl;
+  str_usage << "           --tts_voice_name=<voice name>" << std::endl;
+
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -162,12 +171,18 @@ main(int argc, char** argv)
     return 1;
   }
 
+  if (!FLAGS_tts_encoding.empty() && FLAGS_tts_encoding != "pcm" && FLAGS_tts_encoding != "opus") {
+    std::cerr << "Unsupported encoding: \'" << FLAGS_tts_encoding << "\'" << std::endl;
+    return -1;
+  }
+
   StreamingS2SClient recognize_client(
       grpc_channel, FLAGS_num_parallel_requests, FLAGS_language_code, FLAGS_max_alternatives,
       FLAGS_profanity_filter, FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
       /* separate_recognition_per_channel*/ false, FLAGS_print_transcripts, FLAGS_chunk_duration_ms,
       FLAGS_interim_results, FLAGS_output_filename, FLAGS_model_name, FLAGS_simulate_realtime,
-      FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score);
+      FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score,
+      FLAGS_tts_encoding, FLAGS_tts_audio_file, FLAGS_tts_sample_rate, FLAGS_tts_voice_name);
 
   if (FLAGS_audio_file.size()) {
     return recognize_client.DoStreamingFromFile(

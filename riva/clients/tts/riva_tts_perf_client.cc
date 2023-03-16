@@ -22,6 +22,7 @@
 #include "riva/proto/riva_tts.grpc.pb.h"
 #include "riva/utils/files/files.h"
 #include "riva/utils/opus/opus_decoder.h"
+#include "riva/utils/opus/opus_encoder.h"
 #include "riva/utils/stamping.h"
 #include "riva/utils/wav/wav_writer.h"
 
@@ -100,9 +101,18 @@ synthesizeBatch(
 
   auto audio = response.audio();
   // Write to WAV file
-  if (FLAGS_write_output_audio)
-    ::riva::utils::wav::Write(
-        filepath, rate, (int16_t*)audio.data(), audio.length() / sizeof(int16_t));
+  if (FLAGS_write_output_audio) {
+    if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
+      ::riva::utils::wav::Write(
+          filepath, rate, (int16_t*)audio.data(), audio.length() / sizeof(int16_t));
+    } else if (FLAGS_audio_encoding == "opus") {
+      riva::utils::opus::Decoder decoder(rate, 1);
+      auto ptr = reinterpret_cast<unsigned char*>(audio.data());
+      auto pcm = decoder.DecodePcm(
+          decoder.DeserializeOpus(std::vector<unsigned char>(ptr, ptr + audio.size())));
+      ::riva::utils::wav::Write(filepath, rate, pcm.data(), pcm.size());
+    }
+  }
 
   return audio.length() / sizeof(int16_t);
 }
@@ -142,7 +152,7 @@ synthesizeOnline(
 
   std::vector<int16_t> buffer;
   size_t audio_len = 0;
-  riva::utils::opus::Decoder opus_decoder(FLAGS_rate, 1);
+  riva::utils::opus::Decoder opus_decoder(rate, 1);
 
   while (reader->Read(&chunk)) {
     // DLOG(INFO) << "Received chunk with " << chunk.audio().length() << " bytes.";
@@ -258,6 +268,12 @@ main(int argc, char** argv)
     return -1;
   }
 
+  // Adjust rate
+  int32_t rate = FLAGS_rate;
+  if (FLAGS_audio_encoding == "opus") {
+    rate = riva::utils::opus::Encoder::AdjustRateIfUnsupported(FLAGS_rate);
+  }
+
   // create sentence vectors for each worker
   for (int i = 0; i < FLAGS_num_parallel_requests; i++) {
     std::vector<std::pair<int, std::string>> sentence_vec;
@@ -345,7 +361,7 @@ main(int argc, char** argv)
           auto time_to_next_chunk = new std::vector<double>();
           size_t num_samples = 0;
           synthesizeOnline(
-              std::move(tts), sentences[i][s].second, FLAGS_language, FLAGS_rate, FLAGS_voice_name,
+              std::move(tts), sentences[i][s].second, FLAGS_language, rate, FLAGS_voice_name,
               &time_to_first_chunk, time_to_next_chunk, &num_samples,
               std::to_string(sentences[i][s].first) + ".wav");
           latencies_first_chunk[i]->push_back(time_to_first_chunk);
@@ -403,7 +419,7 @@ main(int argc, char** argv)
         std::cout << "Chunk - P95: " << results_next_chunk->at(1) << std::endl;
         std::cout << "Chunk - P99: " << results_next_chunk->at(2) << std::endl;
 
-        std::cout << "Throughput (RTF): " << (total_num_samples / FLAGS_rate) / elapsed.count()
+        std::cout << "Throughput (RTF): " << (total_num_samples / rate) / elapsed.count()
                   << std::endl
                   << "Total samples: " << total_num_samples << std::endl;
       } else {
@@ -421,7 +437,7 @@ main(int argc, char** argv)
         for (size_t s = 0; s < sentences[i].size(); s++) {
           auto tts = CreateTTS(channel);
           size_t num_samples = synthesizeBatch(
-              std::move(tts), sentences[i][s].second, FLAGS_language, FLAGS_rate, FLAGS_voice_name,
+              std::move(tts), sentences[i][s].second, FLAGS_language, rate, FLAGS_voice_name,
               std::to_string(sentences[i][s].first) + ".wav");
           results_num_samples[i]->push_back(num_samples);
         }
@@ -437,7 +453,7 @@ main(int argc, char** argv)
         total_num_samples +=
             std::accumulate(results_num_samples[i]->begin(), results_num_samples[i]->end(), 0.);
       }
-      std::cout << "Average RTF: " << (total_num_samples / FLAGS_rate) / elapsed.count()
+      std::cout << "Average RTF: " << (total_num_samples / rate) / elapsed.count()
                 << std::endl
                 << "Total samples: " << total_num_samples << std::endl;
     }

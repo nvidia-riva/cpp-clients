@@ -6,6 +6,8 @@
 
 #include "streaming_recognize_client.h"
 
+#include "riva/utils/opus/opus_decoder.h"
+
 #define clear_screen() printf("\033[H\033[J")
 #define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
 
@@ -232,7 +234,6 @@ StreamingRecognizeClient::DoStreamingFromFile(
     }
   }
 
-
   auto current_time = std::chrono::steady_clock::now();
   {
     std::lock_guard<std::mutex> lock(latencies_mutex_);
@@ -241,9 +242,21 @@ StreamingRecognizeClient::DoStreamingFromFile(
     std::cout << std::flush;
     double diff_time = std::chrono::duration<double, std::milli>(current_time - start_time).count();
 
+    float total_processed = 0.F;
+    for (auto& wav : all_wav) {
+      riva::utils::opus::Decoder decoder;
+      if (wav->encoding == nvidia::riva::AudioEncoding::OGGOPUS) {
+        std::ifstream is(wav->filename);
+        auto wav_stream = decoder.DecodeStream(is);
+        total_processed += (float) wav_stream.size() / 48000.F;
+      } else {
+        total_processed = TotalAudioProcessed();
+      }
+    }
+
     std::cout << "Run time: " << diff_time / 1000. << " sec." << std::endl;
-    std::cout << "Total audio processed: " << TotalAudioProcessed() << " sec." << std::endl;
-    std::cout << "Throughput: " << TotalAudioProcessed() * 1000. / diff_time << " RTFX"
+    std::cout << "Total audio processed: " << total_processed << " sec." << std::endl;
+    std::cout << "Throughput: " << total_processed * 1000. / diff_time << " RTFX"
               << std::endl;
   }
 
