@@ -64,11 +64,13 @@ class Encoder {
    * 16-bit PCM to OPUS encoder. OPUS works with small frames of size 120..5760.
    * Each frame usually gets compressed in 1:10 ratio
    * @param pcm samples array
+   * @param last_chunk if true then "slow down" algorithm is used (minimizing tail data loss)
    * @param samples_encoded [out] samples encoded, might be les than pcm.size()
    * @return Array of encoded frames
    */
   [[nodiscard]] std::vector<std::vector<unsigned char>> EncodePcm(
-      const std::vector<int16_t>& pcm, int32_t* samples_encoded = nullptr) const;
+      const std::vector<int16_t>& pcm, bool last_chunk = false,
+      int32_t* samples_encoded = nullptr) const;
 
   /**
    * This function unifies multiple OPUS encoded frames into one container for sending it by wire.
@@ -97,7 +99,7 @@ class Encoder {
 
  private:
   /**
-   * For performance reasons, we have to choose maximum possible frame size
+   * For better performance, we have to choose maximum possible frame size
    * @param ceiling
    * @return
    */

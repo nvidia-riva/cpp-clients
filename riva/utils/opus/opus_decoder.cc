@@ -14,35 +14,10 @@
 
 namespace riva::utils::opus {
 
-int
-ReaderCallBack(void* _decoder, unsigned char* ptr, int nbytes)
-{
-  Decoder* decoder = (Decoder*)_decoder;
-  if (decoder->opus_file_ == nullptr) {
-    return 0;
-  }
-  if (nbytes > decoder->buffer_.unread_) {
-    nbytes = decoder->buffer_.unread_;
-  }
-  if (nbytes > 0) {
-    std::memcpy(ptr, decoder->buffer_.cur_, nbytes);
-    decoder->buffer_.cur_ += nbytes;
-    decoder->buffer_.unread_ -= nbytes;
-  }
-  return nbytes;
-}
-
 Decoder::Decoder(int rate, int channels)
-    : decoder_(nullptr), callbacks_(), opus_file_(nullptr), buffer_(), rate_(rate),
-      channels_(channels)
+    : decoder_(nullptr), opus_file_(nullptr), opus_tags_{}, rate_(rate), channels_(channels),
+      length_(0.F)
 {
-  buffer_.begin_ = buffer_.data_;
-  buffer_.cur_ = buffer_.data_;
-  buffer_.unread_ = 0;
-  callbacks_.read = ReaderCallBack;
-  callbacks_.seek = nullptr;
-  callbacks_.tell = nullptr;
-  callbacks_.close = nullptr;
 }
 
 Decoder::~Decoder()
@@ -53,54 +28,6 @@ Decoder::~Decoder()
   if (opus_file_ != nullptr) {
     op_free(opus_file_);
   }
-}
-
-bool
-Decoder::EnqueueChunk(const char* data, std::size_t& size)
-{
-  std::size_t bufferTotal = sizeof(buffer_.data_);
-  std::size_t bufferUsed = buffer_.unread_;
-  if (bufferUsed + size > bufferTotal) {
-    LOG(ERROR) << "Failed to decode " << size << " bytes. Too big chunk: " << bufferUsed << " + "
-               << size << " > " << bufferTotal;
-    return false;
-  }
-  buffer_.cur_ = buffer_.begin_;
-  if (opus_file_ == nullptr) {
-    if (buffer_.unread_ + size > OPUS_HEADER_LENGTH) {
-      size = OPUS_HEADER_LENGTH - buffer_.unread_;
-    }
-    std::memcpy(buffer_.cur_ + buffer_.unread_, data, size);
-    buffer_.unread_ += (int)size;
-    int err;
-    opus_file_ = op_open_callbacks(this, &callbacks_, buffer_.cur_, buffer_.unread_, &err);
-    if (err == 0) {
-      const std::string head(buffer_.cur_, buffer_.cur_ + buffer_.unread_);
-      const std::size_t head_pos = head.find("OpusHead");
-      const std::size_t tags_pos = head.find("OpusTags");
-      if (head_pos != std::string::npos && tags_pos != std::string::npos) {
-        // TODO: Find out why this thing returns err=-133 no matter what.
-        // err = opus_head_parse(&opus_head_, head.data() + head_pos, tags_pos - head_pos);
-        const unsigned char* headpos = (const unsigned char*)head.data() + head_pos;
-        opus_head_.version = (int)ReadLittleEndian<uint8_t>(headpos + 8);
-        opus_head_.channel_count = (int)ReadLittleEndian<uint8_t>(headpos + 9);
-        opus_head_.pre_skip = ReadLittleEndian<uint16_t>(headpos + 10);
-        opus_head_.input_sample_rate = ReadLittleEndian<uint16_t>(headpos + 12);
-        opus_head_.output_gain = ReadLittleEndian<uint16_t>(headpos + 16);
-        // Currently, we don't use these tags, but we might will.
-        //        opus_tags_parse(&opus_tags_, (const unsigned char*)head.data() + tags_pos,
-        //                        buffer_.unread_ - tags_pos);
-      }
-      LOG(INFO) << "OggOpusFile instantiated, " << buffer_.unread_ << " bytes read so far";
-      buffer_.unread_ = 0;
-    } else {
-      return false;
-    }
-  } else {
-    buffer_.unread_ += (int)size;
-    std::memcpy(buffer_.cur_, data, size);
-  }
-  return true;
 }
 
 std::vector<float>
@@ -114,19 +41,41 @@ Decoder::DecodeStream(std::istream& is)
 std::vector<float>
 Decoder::DecodeChunk(const std::string& chunk)
 {
-  float float_buffer[DECODED_CHUNK_SIZE];
   std::vector<float> ret;
-  int decoded;
-  std::size_t pos = 0U;
-  std::size_t read = 0U;
-  while (pos < chunk.size()) {
-    read = std::min(chunk.size() - pos, READ_SIZE);
-    if (EnqueueChunk(chunk.data() + pos, read)) {
-      while ((decoded = op_read_float(opus_file_, float_buffer, DECODED_CHUNK_SIZE, nullptr)) > 0) {
-        ret.insert(ret.end(), float_buffer, float_buffer + decoded);
+  float pcmdata[READ_SIZE];
+  int err = 0;
+  opus_file_ = op_open_memory((const unsigned char*)chunk.data(), chunk.size(), &err);
+  if (opus_file_ == nullptr) {
+    LOG(ERROR) << "Opus content can't be parsed, error " << opus_strerror(err);
+    return ret;
+  }
+  while ((err = op_read_float(opus_file_, pcmdata, READ_SIZE, nullptr)) > 0) {
+    ret.insert(ret.end(), pcmdata, pcmdata + err);
+  }
+  if (err == 0) {
+    const std::size_t head_pos = chunk.find("OpusHead");
+    if (head_pos != std::string::npos) {
+      const unsigned char* ptr = (const unsigned char*)chunk.data() + head_pos + 12;
+      rate_ = (uint32_t)ptr[0] | (uint32_t)ptr[1] << 8 | (uint32_t)ptr[2] << 16 |
+              (uint32_t)ptr[3] << 24;
+    } else {
+      LOG(ERROR) << "OpusHead can't be parsed";
+      return ret;
+    }
+    channels_ = op_channel_count(opus_file_, -1);
+    length_ = (float)op_pcm_total(opus_file_, -1) / (float)rate_;
+    const std::size_t tags_pos = chunk.find("OpusTags");
+    if (tags_pos != std::string::npos) {
+      err = opus_tags_parse(
+          &opus_tags_, (const unsigned char*)chunk.data() + tags_pos, chunk.size() - tags_pos);
+      if (err != 0) {
+        LOG(ERROR) << "OpusTags can't be parsed, error " << opus_strerror(err);
+        return ret;
       }
     }
-    pos += read;
+  } else {
+    LOG(ERROR) << "Opus file can't be parsed, error " << opus_strerror(err);
+    return ret;
   }
   return ret;
 }
@@ -138,7 +87,7 @@ Decoder::DecodePcm(const std::vector<unsigned char>& packet)
     int err;
     decoder_ = opus_decoder_create(rate_, channels_, &err);
     if (err < 0) {
-      LOG(ERROR) << "Failed to create decoder: " << opus_strerror(err);
+      LOG(ERROR) << "Failed to create encoder: " << opus_strerror(err);
       return {};
     }
   }
@@ -150,7 +99,39 @@ Decoder::DecodePcm(const std::vector<unsigned char>& packet)
     LOG(ERROR) << "Decoding error: " << opus_strerror(samples);
     return {};
   }
-  return {ret.data(), ret.data() + samples * channels_};
+  return {ret.data(), ret.data() + samples};
+//  return {ret.data(), ret.data() + samples * channels_};
+}
+
+std::vector<float>
+Decoder::DecodePcmFloat(const std::vector<unsigned char>& packet)
+{
+  if (decoder_ == nullptr) {
+    int err;
+    decoder_ = opus_decoder_create(rate_, channels_, &err);
+    if (err < 0) {
+      LOG(ERROR) << "Failed to create encoder: " << opus_strerror(err);
+      return {};
+    }
+  }
+  // the longest frame length accepted
+  const std::size_t frame_length = rate_ * 6 / (50 * channels_);
+  std::vector<float> ret(frame_length);
+  int samples = opus_decode_float(decoder_, packet.data(), packet.size(), ret.data(), frame_length, 0);
+  if (samples < 0) {
+    LOG(ERROR) << "Decoding error: " << opus_strerror(samples);
+    return {};
+  }
+//  float softclip_mem[2];
+//  opus_pcm_soft_clip(ret.data(),
+//                     frame_length,
+//                              channels_,
+//                              softclip_mem
+//  );
+
+
+  return {ret.data(), ret.data() + samples};
+//  return {ret.data(), ret.data() + samples * channels_};
 }
 
 std::vector<int16_t>

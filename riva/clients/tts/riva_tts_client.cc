@@ -124,7 +124,11 @@ main(int argc, char** argv)
 
   int32_t rate = FLAGS_rate;
   if (FLAGS_audio_encoding == "opus") {
-    rate = riva::utils::opus::Encoder::AdjustRateIfUnsupported(FLAGS_rate);
+    if (rate == 44100) {
+      rate = 48000;
+    } else {
+      rate = riva::utils::opus::Encoder::AdjustRateIfUnsupported(FLAGS_rate);
+    }
   }
 
   request.set_sample_rate_hz(rate);
@@ -176,8 +180,7 @@ main(int argc, char** argv)
         std::chrono::duration<double> elapsed_first_audio = t_first_audio - start;
         std::cerr << "Time to first chunk: " << elapsed_first_audio.count() << " s" << std::endl;
       }
-      std::cerr << "Got chunk: " << chunk.audio().size() << " bytes" << std::endl;
-
+      std::cout << "Got chunk: " << chunk.audio().size() << " bytes" << std::endl;
       if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
         int16_t* audio_data = (int16_t*)chunk.audio().data();
         size_t len = chunk.audio().length() / sizeof(int16_t);

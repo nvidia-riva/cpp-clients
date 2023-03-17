@@ -19,22 +19,11 @@
 
 namespace riva::utils::opus {
 
-struct Buffer {
-  //  As per https://xiph.org/ogg/doc/oggstream.html
-  //  pages are at maximum of just under 64kB
-  unsigned char data_[64 * 1024];
-  unsigned char *begin_, *cur_;
-  int unread_;
-};
-
 class Decoder {
  public:
   OpusDecoder* decoder_;
-  OpusFileCallbacks callbacks_;
   OggOpusFile* opus_file_;
-  OpusHead opus_head_;
-  //  OpusTags opus_tags_;
-  Buffer buffer_;
+  OpusTags opus_tags_;
 
   Decoder(int rate = 48000, int channels = 1);
   ~Decoder();
@@ -59,6 +48,7 @@ class Decoder {
    * @return
    */
   std::vector<int16_t> DecodePcm(const std::vector<unsigned char>& packet);
+  std::vector<float> DecodePcmFloat(const std::vector<unsigned char>& packet);
   /**
    * Streaming decoder for multiple OPUS frames
    * @param packets
@@ -74,13 +64,36 @@ class Decoder {
   [[nodiscard]] std::vector<std::vector<unsigned char>> DeserializeOpus(
       const std::vector<unsigned char>& opus) const;
 
+  /**
+   * Bitrate of decoded audio
+   * @return rate
+   */
+  [[nodiscard]] int Rate() const { return rate_; }
+
+  /**
+   * Number of channels of decoded audio
+   * @return channels
+   */
+  [[nodiscard]] int Channels() const { return channels_; }
+
+  /**
+   * Returns OpusTags structure after parsing, empty otherwise
+   * @return tags
+   */
+  [[nodiscard]] OpusTags Tags() const { return opus_tags_; }
+
+  /**
+   * Length of decoded audio in seconds
+   * @return length
+   */
+  [[nodiscard]] float Length() const { return length_; }
 
   template <typename T>
   static T ReadLittleEndian(const unsigned char* str)
   {
     T val = T();
     T shift = 0;
-    for (int i = 0; i < sizeof(T); ++i) {
+    for (int i = 0; i < (int)sizeof(T); ++i) {
       val += T(str[i] & 0xFF) << shift;
       shift += 8;
     }
@@ -90,18 +103,11 @@ class Decoder {
  private:
   int rate_;
   int channels_;
-
-  bool EnqueueChunk(const char* data, std::size_t& size);
-  // Header length
-  static inline constexpr std::size_t OPUS_HEADER_LENGTH = 8192U;
+  float length_;
   // While testing, it's been noticed that op_read_float consumes data stream
   // by chunks of 5120 bytes. Technically, we can set whatever size we want here, but it makes
   // more sense to use their step size for better performance.
   static inline constexpr std::size_t READ_SIZE = 5120U;
-  // According to https://wiki.xiph.org/Opus_Recommended_Settings
-  // "Opus can encode frames of 2.5, 5, 10, 20, 40, or 60 ms.
-  // It can also combine multiple frames into packets of up to 120 ms."
-  static inline constexpr std::size_t DECODED_CHUNK_SIZE = 120U * 48U;  // 120ms x 48khz
 };
 
 }  // namespace riva::utils::opus

@@ -23,9 +23,10 @@ cc_library(
     ],
     deps = [
         "@glog//:glog",
+        "@libogg",
+        "@libopus",
+        "@libopusfile",
         "//riva/utils/wav:reader",
     ],
-    copts = ["-I/usr/include/opus"],
     linkstatic = False,
-    linkopts = ["-lm"]
 )

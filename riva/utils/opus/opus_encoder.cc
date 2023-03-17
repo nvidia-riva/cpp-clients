@@ -62,7 +62,7 @@ Encoder::MaxPossibleFrameSize(int32_t ceiling) const
 }
 
 std::vector<std::vector<unsigned char>>
-Encoder::EncodePcm(const std::vector<int16_t>& pcm, int32_t* samples_encoded) const
+Encoder::EncodePcm(const std::vector<int16_t>& pcm, bool last_chunk, int32_t* samples_encoded) const
 {
   std::vector<std::vector<unsigned char>> ret;
   auto bytes_to_encode = (int32_t)(pcm.size() * sizeof(int16_t));
@@ -70,8 +70,14 @@ Encoder::EncodePcm(const std::vector<int16_t>& pcm, int32_t* samples_encoded) co
   if (samples_encoded != nullptr) {
     *samples_encoded = 0;
   }
+  int32_t last_frame_size = 0;
   while (bytes_to_encode > 0) {
     const int32_t frame_size = MaxPossibleFrameSize((int32_t)(pcm.size() - pos));
+    if (!last_chunk && frame_size < last_frame_size) {
+      // don't slow down, postpone till next chunk
+      break;
+    }
+    last_frame_size = frame_size;
     const int32_t frame_size_byte = frame_size * (int32_t)sizeof(int16_t);
     if (frame_size_byte > bytes_to_encode) {
       break;
