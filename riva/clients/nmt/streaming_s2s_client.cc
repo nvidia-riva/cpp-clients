@@ -6,8 +6,7 @@
 
 #include "streaming_s2s_client.h"
 
-#include "riva/utils/opus/opus_decoder.h"
-#include "riva/utils/opus/opus_encoder.h"
+#include "riva/utils/opus/opus_client_decoder.h"
 
 #define clear_screen() printf("\033[H\033[J")
 #define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
@@ -345,7 +344,7 @@ StreamingS2SClient::ReceiveResponses(std::shared_ptr<S2SClientCall> call, bool a
         tts_audio_file_, tts_sample_rate_, pcm_buffer.data(), pcm_buffer.size());
     pcm_buffer.clear();
   } else if (tts_encoding_ == "opus") {
-    int32_t rate = riva::utils::opus::Encoder::AdjustRateIfUnsupported(tts_sample_rate_);
+    int32_t rate = riva::utils::opus::Decoder::AdjustRateIfUnsupported(tts_sample_rate_);
     riva::utils::opus::Decoder decoder(rate, 1);
     auto pcm = decoder.DecodePcm(decoder.DeserializeOpus(opus_buffer));
     ::riva::utils::wav::Write(

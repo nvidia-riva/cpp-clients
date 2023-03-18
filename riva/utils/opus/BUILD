@@ -14,12 +14,10 @@ package(
 cc_library(
     name = "opus",
     srcs = [
-        "opus_encoder.cc",
-        "opus_decoder.cc",
+        "opus_client_decoder.cc",
     ],
     hdrs = [
-        "opus_encoder.h",
-        "opus_decoder.h",
+        "opus_client_decoder.h",
     ],
     deps = [
         "@glog//:glog",

@@ -8,7 +8,7 @@
  * license agreement from NVIDIA CORPORATION is strictly prohibited.
  */
 
-#include "opus_decoder.h"
+#include "opus_client_decoder.h"
 
 #include <glog/logging.h>
 
@@ -56,8 +56,7 @@ Decoder::DecodeChunk(const std::string& chunk)
     const std::size_t head_pos = chunk.find("OpusHead");
     if (head_pos != std::string::npos) {
       const unsigned char* ptr = (const unsigned char*)chunk.data() + head_pos + 12;
-      rate_ = (uint32_t)ptr[0] | (uint32_t)ptr[1] << 8 | (uint32_t)ptr[2] << 16 |
-              (uint32_t)ptr[3] << 24;
+      rate_ = ReadLittleEndian<int32_t>(ptr);
     } else {
       LOG(ERROR) << "OpusHead can't be parsed";
       return ret;
@@ -100,38 +99,6 @@ Decoder::DecodePcm(const std::vector<unsigned char>& packet)
     return {};
   }
   return {ret.data(), ret.data() + samples};
-//  return {ret.data(), ret.data() + samples * channels_};
-}
-
-std::vector<float>
-Decoder::DecodePcmFloat(const std::vector<unsigned char>& packet)
-{
-  if (decoder_ == nullptr) {
-    int err;
-    decoder_ = opus_decoder_create(rate_, channels_, &err);
-    if (err < 0) {
-      LOG(ERROR) << "Failed to create encoder: " << opus_strerror(err);
-      return {};
-    }
-  }
-  // the longest frame length accepted
-  const std::size_t frame_length = rate_ * 6 / (50 * channels_);
-  std::vector<float> ret(frame_length);
-  int samples = opus_decode_float(decoder_, packet.data(), packet.size(), ret.data(), frame_length, 0);
-  if (samples < 0) {
-    LOG(ERROR) << "Decoding error: " << opus_strerror(samples);
-    return {};
-  }
-//  float softclip_mem[2];
-//  opus_pcm_soft_clip(ret.data(),
-//                     frame_length,
-//                              channels_,
-//                              softclip_mem
-//  );
-
-
-  return {ret.data(), ret.data() + samples};
-//  return {ret.data(), ret.data() + samples * channels_};
 }
 
 std::vector<int16_t>
@@ -158,6 +125,22 @@ Decoder::DeserializeOpus(const std::vector<unsigned char>& opus) const
     pos += frame_size;
   }
   return ret;
+}
+
+int32_t
+Decoder::AdjustRateIfUnsupported(int32_t rate)
+{
+  int32_t adjusted_rate = 0;
+  if (rate < 800) {
+    adjusted_rate = 800;
+  } else if (rate > 800 && rate < 16000) {
+    adjusted_rate = 16000;
+  } else if (rate > 16000 && rate < 24000) {
+    adjusted_rate = 24000;
+  } else {
+    adjusted_rate = 48000;
+  }
+  return adjusted_rate;
 }
 
 }  // namespace riva::utils::opus

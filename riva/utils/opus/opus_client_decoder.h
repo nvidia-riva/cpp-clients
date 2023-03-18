@@ -48,7 +48,7 @@ class Decoder {
    * @return
    */
   std::vector<int16_t> DecodePcm(const std::vector<unsigned char>& packet);
-  std::vector<float> DecodePcmFloat(const std::vector<unsigned char>& packet);
+
   /**
    * Streaming decoder for multiple OPUS frames
    * @param packets
@@ -99,6 +99,14 @@ class Decoder {
     }
     return val;
   }
+
+  /**
+ * If requested rate is not supported this helper computes nearest supported one.
+ * Returns 0 if no adjustment required.
+ * @param rate
+ * @return
+ */
+  static int32_t AdjustRateIfUnsupported(int32_t rate);
 
  private:
   int rate_;
