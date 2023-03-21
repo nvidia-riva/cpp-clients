@@ -131,9 +131,9 @@ int32_t
 Decoder::AdjustRateIfUnsupported(int32_t rate)
 {
   int32_t adjusted_rate = 0;
-  if (rate < 800) {
-    adjusted_rate = 800;
-  } else if (rate > 800 && rate < 16000) {
+  if (rate < 8000) {
+    adjusted_rate = 8000;
+  } else if (rate > 8000 && rate < 16000) {
     adjusted_rate = 16000;
   } else if (rate > 16000 && rate < 24000) {
     adjusted_rate = 24000;
