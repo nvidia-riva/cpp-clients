@@ -86,7 +86,7 @@ Decoder::DecodePcm(const std::vector<unsigned char>& packet)
     int err;
     decoder_ = opus_decoder_create(rate_, channels_, &err);
     if (err < 0) {
-      LOG(ERROR) << "Failed to create encoder: " << opus_strerror(err);
+      LOG(ERROR) << "Failed to create decoder: " << opus_strerror(err);
       return {};
     }
   }
