@@ -123,11 +123,7 @@ main(int argc, char** argv)
 
   int32_t rate = FLAGS_rate;
   if (FLAGS_audio_encoding == "opus") {
-    if (rate == 44100) {
-      rate = 48000;
-    } else {
-      rate = riva::utils::opus::Decoder::AdjustRateIfUnsupported(FLAGS_rate);
-    }
+    rate = riva::utils::opus::Decoder::AdjustRateIfUnsupported(FLAGS_rate);
   }
 
   request.set_sample_rate_hz(rate);

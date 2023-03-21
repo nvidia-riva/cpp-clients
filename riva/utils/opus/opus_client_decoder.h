@@ -40,7 +40,7 @@ class Decoder {
    * @param audio
    * @return
    */
-  std::vector<float> DecodeChunk(const std::string& chunk);
+  std::vector<float> DecodeOGG(const std::string& ogg);
 
   /**
    * Streaming decoder for single OPUS frame

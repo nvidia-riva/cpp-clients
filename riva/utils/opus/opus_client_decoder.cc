@@ -35,16 +35,16 @@ Decoder::DecodeStream(std::istream& is)
 {
   std::stringstream istream_buffer;
   istream_buffer << is.rdbuf();
-  return DecodeChunk(istream_buffer.str());
+  return DecodeOGG(istream_buffer.str());
 }
 
 std::vector<float>
-Decoder::DecodeChunk(const std::string& chunk)
+Decoder::DecodeOGG(const std::string& ogg)
 {
   std::vector<float> ret;
   float pcmdata[READ_SIZE];
   int err = 0;
-  opus_file_ = op_open_memory((const unsigned char*)chunk.data(), chunk.size(), &err);
+  opus_file_ = op_open_memory((const unsigned char*)ogg.data(), ogg.size(), &err);
   if (opus_file_ == nullptr) {
     LOG(ERROR) << "Opus content can't be parsed, error " << opus_strerror(err);
     return ret;
@@ -53,9 +53,9 @@ Decoder::DecodeChunk(const std::string& chunk)
     ret.insert(ret.end(), pcmdata, pcmdata + err);
   }
   if (err == 0) {
-    const std::size_t head_pos = chunk.find("OpusHead");
+    const std::size_t head_pos = ogg.find("OpusHead");
     if (head_pos != std::string::npos) {
-      const unsigned char* ptr = (const unsigned char*)chunk.data() + head_pos + 12;
+      const unsigned char* ptr = (const unsigned char*)ogg.data() + head_pos + 12;
       rate_ = ReadLittleEndian<int32_t>(ptr);
     } else {
       LOG(ERROR) << "OpusHead can't be parsed";
@@ -63,10 +63,10 @@ Decoder::DecodeChunk(const std::string& chunk)
     }
     channels_ = op_channel_count(opus_file_, -1);
     length_ = (float)op_pcm_total(opus_file_, -1) / (float)rate_;
-    const std::size_t tags_pos = chunk.find("OpusTags");
+    const std::size_t tags_pos = ogg.find("OpusTags");
     if (tags_pos != std::string::npos) {
       err = opus_tags_parse(
-          &opus_tags_, (const unsigned char*)chunk.data() + tags_pos, chunk.size() - tags_pos);
+          &opus_tags_, (const unsigned char*)ogg.data() + tags_pos, ogg.size() - tags_pos);
       if (err != 0) {
         LOG(ERROR) << "OpusTags can't be parsed, error " << opus_strerror(err);
         return ret;
