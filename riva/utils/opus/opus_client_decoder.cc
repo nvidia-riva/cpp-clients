@@ -130,15 +130,19 @@ Decoder::DeserializeOpus(const std::vector<unsigned char>& opus) const
 int32_t
 Decoder::AdjustRateIfUnsupported(int32_t rate)
 {
-  int32_t adjusted_rate = 0;
-  if (rate < 8000) {
-    adjusted_rate = 8000;
-  } else if (rate > 8000 && rate < 16000) {
-    adjusted_rate = 16000;
-  } else if (rate > 16000 && rate < 24000) {
-    adjusted_rate = 24000;
-  } else {
+  int32_t adjusted_rate = rate;
+  if (rate > 48000) {
     adjusted_rate = 48000;
+  } else if (rate > 24000 && rate < 48000) {
+    adjusted_rate = 24000;
+  } else if (rate > 16000 && rate < 24000) {
+    adjusted_rate = 16000;
+  } else if (rate > 12000 && rate < 16000) {
+    adjusted_rate = 12000;
+  } else if (rate > 8000 && rate < 12000) {
+    adjusted_rate = 8000;
+  } else if (rate < 8000) {
+    adjusted_rate = 8000;
   }
   return adjusted_rate;
 }
