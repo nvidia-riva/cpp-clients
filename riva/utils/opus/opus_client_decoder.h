@@ -102,7 +102,6 @@ class Decoder {
 
   /**
  * If requested rate is not supported this helper computes nearest supported one.
- * Returns 0 if no adjustment required.
  * @param rate
  * @return
  */
