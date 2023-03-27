@@ -137,7 +137,7 @@ StreamingS2SClient::GenerateRequests(std::shared_ptr<S2SClientCall> call)
       }
       int32_t rate = tts_sample_rate_;
       if (tts_encoding_ == "opus") {
-        rate = riva::utils::opus::Encoder::AdjustRateIfUnsupported(tts_sample_rate_);
+        rate = riva::utils::opus::Decoder::AdjustRateIfUnsupported(tts_sample_rate_);
       }
       tts_config->set_sample_rate_hz(rate);
       tts_config->set_voice_name(tts_voice_name_);

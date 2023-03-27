@@ -270,7 +270,7 @@ main(int argc, char** argv)
   // Adjust rate
   int32_t rate = FLAGS_rate;
   if (FLAGS_audio_encoding == "opus") {
-    rate = riva::utils::opus::Encoder::AdjustRateIfUnsupported(FLAGS_rate);
+    rate = riva::utils::opus::Decoder::AdjustRateIfUnsupported(FLAGS_rate);
   }
 
   // create sentence vectors for each worker
