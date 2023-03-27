@@ -61,20 +61,20 @@ main(int argc, char** argv)
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
   if (argc < 2) {
-    std::cout << gflags::ProgramUsage();
+    LOG(INFO) << gflags::ProgramUsage();
     return 1;
   }
 
   gflags::ParseCommandLineFlags(&argc, &argv, true);
 
   if (argc > 1) {
-    std::cout << gflags::ProgramUsage();
+    LOG(INFO) << gflags::ProgramUsage();
     return 1;
   }
 
   auto text = FLAGS_text;
   if (text.length() == 0) {
-    std::cerr << "Input text cannot be empty." << std::endl;
+    LOG(ERROR) << "Input text cannot be empty." << std::endl;
     return -1;
   }
 
@@ -82,7 +82,7 @@ main(int argc, char** argv)
   const char* riva_uri = getenv("RIVA_URI");
 
   if (riva_uri && flag_set) {
-    std::cout << "Using environment for " << riva_uri << std::endl;
+    LOG(INFO) << "Using environment for " << riva_uri << std::endl;
     FLAGS_riva_uri = riva_uri;
   }
   std::shared_ptr<grpc::ChannelCredentials> creds;
@@ -95,7 +95,7 @@ main(int argc, char** argv)
       creds = grpc::SslCredentials(ssl_opts);
     }
     catch (const std::exception& e) {
-      std::cout << "Failed to load SSL certificate: " << e.what() << std::endl;
+      LOG(INFO) << "Failed to load SSL certificate: " << e.what() << std::endl;
       return 1;
     }
   } else {
@@ -117,7 +117,7 @@ main(int argc, char** argv)
   } else if (FLAGS_audio_encoding == "opus") {
     request.set_encoding(nr::OGGOPUS);
   } else {
-    std::cerr << "Unsupported encoding: \'" << FLAGS_audio_encoding << "\'" << std::endl;
+    LOG(ERROR) << "Unsupported encoding: \'" << FLAGS_audio_encoding << "\'" << std::endl;
     return -1;
   }
 
@@ -138,17 +138,17 @@ main(int argc, char** argv)
     grpc::Status rpc_status = tts->Synthesize(&context, request, &response);
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed = end - start;
-    std::cerr << "Request time: " << elapsed.count() << " s" << std::endl;
+    LOG(ERROR) << "Request time: " << elapsed.count() << " s" << std::endl;
 
     if (!rpc_status.ok()) {
       // Report the RPC failure.
-      std::cerr << rpc_status.error_message() << std::endl;
-      std::cerr << "Input was: \'" << text << "\'" << std::endl;
+      LOG(ERROR) << rpc_status.error_message() << std::endl;
+      LOG(ERROR) << "Input was: \'" << text << "\'" << std::endl;
       return -1;
     }
 
     auto audio = response.audio();
-    std::cerr << "Got " << audio.length() << " bytes back from server" << std::endl;
+    LOG(ERROR) << "Got " << audio.length() << " bytes back from server" << std::endl;
     // Write to WAV file
     if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
       ::riva::utils::wav::Write(
@@ -173,9 +173,9 @@ main(int argc, char** argv)
       if (audio_len == 0) {
         auto t_first_audio = std::chrono::steady_clock::now();
         std::chrono::duration<double> elapsed_first_audio = t_first_audio - start;
-        std::cerr << "Time to first chunk: " << elapsed_first_audio.count() << " s" << std::endl;
+        LOG(ERROR) << "Time to first chunk: " << elapsed_first_audio.count() << " s" << std::endl;
       }
-      std::cout << "Got chunk: " << chunk.audio().size() << " bytes" << std::endl;
+      LOG(INFO) << "Got chunk: " << chunk.audio().size() << " bytes" << std::endl;
       if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
         int16_t* audio_data = (int16_t*)chunk.audio().data();
         size_t len = chunk.audio().length() / sizeof(int16_t);
@@ -191,12 +191,12 @@ main(int argc, char** argv)
     grpc::Status rpc_status = reader->Finish();
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed_total = end - start;
-    std::cerr << "Streaming time: " << elapsed_total.count() << " s" << std::endl;
+    LOG(ERROR) << "Streaming time: " << elapsed_total.count() << " s" << std::endl;
 
     if (!rpc_status.ok()) {
       // Report the RPC failure.
-      std::cerr << rpc_status.error_message() << std::endl;
-      std::cerr << "Input was: \'" << text << "\'" << std::endl;
+      LOG(ERROR) << rpc_status.error_message() << std::endl;
+      LOG(ERROR) << "Input was: \'" << text << "\'" << std::endl;
       return -1;
     }
 
