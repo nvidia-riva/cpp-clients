@@ -21,10 +21,12 @@ cc_library(
     ],
     deps = [
         "@glog//:glog",
-        "@libogg",
         "@libopus",
         "@libopusfile",
         "//riva/utils/wav:reader",
+    ],
+    linkopts = [
+        "-logg"
     ],
     linkstatic = False,
 )

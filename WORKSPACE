@@ -74,14 +74,6 @@ git_repository(
 )
 
 http_archive(
-    name = "libogg",
-    url = "https://github.com/xiph/ogg/archive/refs/tags/v1.3.5.tar.gz",
-    sha256 = "f6f1b04cfa4e98b70ffe775d5e302d9c6b98541f05159af6de2d6617817ed7d6",
-    strip_prefix = "ogg-1.3.5",
-    build_file = "//third_party:BUILD.libogg"
-)
-
-http_archive(
     name = "libopus",
     url = "https://github.com/xiph/opus/archive/refs/tags/v1.3.1.tar.gz",
     sha256 = "4834a8944c33a7ecab5cad9454eeabe4680ca1842cb8f5a2437572dbf636de8f",

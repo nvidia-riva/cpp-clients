@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include <opus/opusfile.h>
+#include <opusfile.h>
 
 #include <cstdlib>
 #include <cstring>

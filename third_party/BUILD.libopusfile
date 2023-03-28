@@ -20,8 +20,13 @@ cc_library(
     includes = [
         "include",
     ],
+    copts = [
+        "-DUSE_ALLOCA=1 -DOPUS_BUILD=1",
+    ],
+    linkopts = [
+        "-logg"
+    ],
     deps = [
-        "@libogg",
         "@libopus",
     ],
     visibility = ["//visibility:public"],

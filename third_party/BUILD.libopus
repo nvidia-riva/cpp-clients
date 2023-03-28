@@ -15,6 +15,12 @@ cc_library(
         "celt/*.c",
         "silk/*.c",
         "silk/float/*.c",
+    ], exclude=[
+        "src/opus_compare.c",
+        "src/opus_demo.c",
+        "src/repacketizer_demo.c",
+        "celt/opus_custom_demo.c",
+        "celt/dump_modes/dump_modes.c",
     ]),
     hdrs = glob([
         "include/*.h",
@@ -31,6 +37,9 @@ cc_library(
     ],
     copts = [
         "-DUSE_ALLOCA=1 -DOPUS_BUILD=1",
+    ],
+    linkopts = [
+        "-logg"
     ],
     visibility = ["//visibility:public"],
 )
