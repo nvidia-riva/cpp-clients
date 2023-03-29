@@ -6,7 +6,7 @@
 
 #include "streaming_recognize_client.h"
 
-#include "riva/utils/opus/opus_decoder.h"
+#include "riva/utils/opus/opus_client_decoder.h"
 
 #define clear_screen() printf("\033[H\033[J")
 #define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))

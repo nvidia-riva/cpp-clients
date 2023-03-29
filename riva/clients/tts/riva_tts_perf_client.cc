@@ -21,8 +21,7 @@
 #include "riva/clients/utils/grpc.h"
 #include "riva/proto/riva_tts.grpc.pb.h"
 #include "riva/utils/files/files.h"
-#include "riva/utils/opus/opus_decoder.h"
-#include "riva/utils/opus/opus_encoder.h"
+#include "riva/utils/opus/opus_client_decoder.h"
 #include "riva/utils/stamping.h"
 #include "riva/utils/wav/wav_writer.h"
 
@@ -271,7 +270,7 @@ main(int argc, char** argv)
   // Adjust rate
   int32_t rate = FLAGS_rate;
   if (FLAGS_audio_encoding == "opus") {
-    rate = riva::utils::opus::Encoder::AdjustRateIfUnsupported(FLAGS_rate);
+    rate = riva::utils::opus::Decoder::AdjustRateIfUnsupported(FLAGS_rate);
   }
 
   // create sentence vectors for each worker

@@ -1,0 +1,45 @@
+"""
+Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+
+NVIDIA CORPORATION and its licensors retain all intellectual property
+and proprietary rights in and to this software, related documentation
+and any modifications thereto. Any use, reproduction, disclosure or
+distribution of this software and related documentation without an express
+license agreement from NVIDIA CORPORATION is strictly prohibited.
+"""
+
+cc_library(
+    name = "libopus",
+    srcs = glob([
+        "src/*.c",
+        "celt/*.c",
+        "silk/*.c",
+        "silk/float/*.c",
+    ], exclude=[
+        "src/opus_compare.c",
+        "src/opus_demo.c",
+        "src/repacketizer_demo.c",
+        "celt/opus_custom_demo.c",
+        "celt/dump_modes/dump_modes.c",
+    ]),
+    hdrs = glob([
+        "include/*.h",
+        "src/*.h",
+        "celt/*.h",
+        "silk/*.h",
+        "silk/**/*.h",
+    ]),
+    includes = [
+        "include",
+        "celt",
+        "silk",
+        "silk/float",
+    ],
+    copts = [
+        "-DUSE_ALLOCA=1 -DOPUS_BUILD=1",
+    ],
+    linkopts = [
+        "-logg"
+    ],
+    visibility = ["//visibility:public"],
+)

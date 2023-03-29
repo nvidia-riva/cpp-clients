@@ -72,3 +72,19 @@ git_repository(
      remote = "https://github.com/nvidia-riva/common.git",
      commit = "4105452f13ae96be1b15db48d97040ac79a3a509"
 )
+
+http_archive(
+    name = "libopus",
+    url = "https://github.com/xiph/opus/archive/refs/tags/v1.3.1.tar.gz",
+    sha256 = "4834a8944c33a7ecab5cad9454eeabe4680ca1842cb8f5a2437572dbf636de8f",
+    strip_prefix = "opus-1.3.1",
+    build_file = "//third_party:BUILD.libopus"
+)
+
+http_archive(
+    name = "libopusfile",
+    url = "https://github.com/xiph/opusfile/archive/refs/tags/v0.12.tar.gz",
+    sha256 = "a20a1dff1cdf0719d1e995112915e9966debf1470ee26bb31b2f510ccf00ef40",
+    strip_prefix = "opusfile-0.12",
+    build_file = "//third_party:BUILD.libopusfile"
+)

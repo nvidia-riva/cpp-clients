@@ -8,8 +8,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
     libasound2 \
-    libopus0 \
-    libopusfile0
+    libogg0
 
 FROM base AS builddep
 ARG BAZEL_VERSION
@@ -22,8 +21,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     build-essential \
     libasound2-dev \
-    libopus-dev \
-    libopusfile-dev
+    libogg-dev
 
 RUN if [ "$TARGET_ARCH" = "aarch64" ] && [ "$TARGET_OS" = "l4t" ]; then \
         apt-get update && apt-get install -y --no-install-recommends openjdk-11-jdk-headless; \
