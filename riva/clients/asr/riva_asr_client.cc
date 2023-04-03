@@ -261,7 +261,7 @@ class RecognizeClient {
 
         if (call->response.results_size()) {
           const auto& last_result = call->response.results(call->response.results_size() - 1);
-          total_audio_processed_ = last_result.audio_processed();
+          total_audio_processed_ += last_result.audio_processed();
 
           Results output_result;
           for (int r = 0; r < call->response.results_size(); ++r) {
