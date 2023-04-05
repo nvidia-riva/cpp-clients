@@ -71,6 +71,8 @@ DEFINE_bool(
     "True returns text exactly as it was said with no normalization.  False applies text inverse "
     "normalization");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
+DEFINE_bool(use_ssl, false, "Whether to use SSL credentials or not. If ssl_cert is specified, "
+    "this is assumed to be true");
 
 void
 signal_handler(int signal_num)
@@ -144,13 +146,17 @@ main(int argc, char** argv)
   std::shared_ptr<grpc::Channel> grpc_channel;
   try {
     std::shared_ptr<grpc::ChannelCredentials> creds;
-    if (FLAGS_ssl_cert.size() > 0) {
-      auto cacert = riva::utils::files::ReadFileContentAsString(FLAGS_ssl_cert);
-      grpc::SslCredentialsOptions ssl_opts;
-      ssl_opts.pem_root_certs = cacert;
-      LOG(INFO) << "Using SSL Credentials";
-      creds = grpc::SslCredentials(ssl_opts);
-    } else {
+    if (FLAGS_ssl_cert.size() > 0 || FLAGS_use_ssl) {
+        LOG(INFO) << "Using Secure Server Credentials";
+        grpc::SslCredentialsOptions ssl_opts;
+        if (FLAGS_ssl_cert.size() > 0) {
+            LOG(INFO) << "Using SSL Credentials";
+            auto cacert = riva::utils::files::ReadFileContentAsString(FLAGS_ssl_cert);
+            ssl_opts.pem_root_certs = cacert;
+        }
+        creds = grpc::SslCredentials(ssl_opts);
+    }
+    else {
       LOG(INFO) << "Using Insecure Server Credentials";
       creds = grpc::InsecureChannelCredentials();
     }
