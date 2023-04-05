@@ -319,8 +319,7 @@ StreamingS2SClient::ReceiveResponses(std::shared_ptr<S2SClientCall> call, bool a
   std::vector<unsigned char> opus_buffer;
   while (call->streamer->Read(&call->response)) {  // Returns false when no more to read.
     if (call->response.has_is_final()) { // End of stream for TTS, exiting while.
-        std::cout<< "TTS end of stream :" << call->response.is_final() << std::endl;
-	break;
+        break;
     }
     call->recv_times.push_back(std::chrono::steady_clock::now());
     auto audio = call->response.speech().audio();
