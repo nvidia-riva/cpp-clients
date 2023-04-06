@@ -108,3 +108,85 @@ CloseAudioDevice(snd_pcm_t** handle)
   }
   return true;
 }
+
+void
+AppendResult(
+    Results& output_result, const nr_asr::SpeechRecognitionResult& result, bool word_time_offsets,
+    bool speaker_diarization)
+{
+  if (output_result.final_transcripts.size() < 1) {
+    output_result.final_transcripts.resize(1);
+    output_result.final_transcripts[0] = "";
+  }
+
+  int num_alternatives = result.alternatives_size();
+  output_result.final_transcripts.resize(num_alternatives);
+  output_result.final_scores.resize(num_alternatives);
+  output_result.final_time_stamps.resize(num_alternatives);
+  for (int a = 0; a < num_alternatives; ++a) {
+    // Append to transcript
+    output_result.final_transcripts[a] += result.alternatives(a).transcript();
+    output_result.final_scores[a] += result.alternatives(a).confidence();
+  }
+  if (word_time_offsets || speaker_diarization) {
+    if (num_alternatives > 0) {
+      for (int a = 0; a < num_alternatives; ++a) {
+        for (int w = 0; w < result.alternatives(a).words_size(); ++w) {
+          output_result.final_time_stamps[a].push_back(result.alternatives(a).words(w));
+        }
+      }
+    }
+  }
+  output_result.audio_processed = result.audio_processed();
+}
+
+void
+PrintResult(
+    Results& output_result, const std::string& filename, bool word_time_offsets,
+    bool speaker_diarization)
+{
+  std::cout << "-----------------------------------------------------------" << std::endl;
+  std::cout << "File: " << filename << std::endl;
+  std::cout << std::endl;
+  std::cout << "Final transcripts: " << std::endl;
+
+  if (output_result.final_transcripts.size()) {
+    for (uint32_t a = 0; a < output_result.final_transcripts.size(); ++a) {
+      std::cout << a << " : " << output_result.final_transcripts[a] << std::endl;
+      std::cout << std::endl;
+
+      if (word_time_offsets || speaker_diarization) {
+        std::cout << std::setw(40) << std::left << "Word";
+        if (word_time_offsets) {
+          std::cout << std::setw(16) << std::left << "Start (ms)";
+          std::cout << std::setw(16) << std::left << "End (ms)";
+        }
+        std::cout << std::setw(16) << std::left << "Confidence";
+        if (a == 0 && speaker_diarization) {
+          std::cout << std::setw(16) << std::left << "Speaker";
+        }
+        std::cout << std::endl;
+        for (uint32_t w = 0; a < output_result.final_time_stamps.size() &&
+                             w < output_result.final_time_stamps[a].size();
+             ++w) {
+          auto& word_info = output_result.final_time_stamps[a][w];
+          std::cout << std::setw(40) << std::left << word_info.word();
+          if (word_time_offsets) {
+            std::cout << std::setw(16) << std::left << word_info.start_time();
+            std::cout << std::setw(16) << std::left << word_info.end_time();
+          }
+          std::cout << std::setw(16) << std::setprecision(4) << std::scientific
+                    << word_info.confidence();
+          if (a == 0 && speaker_diarization) {
+            std::cout << std::setw(16) << std::left << word_info.speaker_tag();
+          }
+          std::cout << std::endl;
+        }
+      }
+      std::cout << std::endl;
+    }
+  }
+  std::cout << "Audio processed: " << output_result.audio_processed << " sec." << std::endl;
+  std::cout << "-----------------------------------------------------------" << std::endl;
+  std::cout << std::endl;
+}

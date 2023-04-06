@@ -452,8 +452,7 @@ main(int argc, char** argv)
         total_num_samples +=
             std::accumulate(results_num_samples[i]->begin(), results_num_samples[i]->end(), 0.);
       }
-      std::cout << "Average RTF: " << (total_num_samples / rate) / elapsed.count()
-                << std::endl
+      std::cout << "Average RTF: " << (total_num_samples / rate) / elapsed.count() << std::endl
                 << "Total samples: " << total_num_samples << std::endl;
     }
   }

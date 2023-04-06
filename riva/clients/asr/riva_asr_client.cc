@@ -76,11 +76,10 @@ class RecognizeClient {
         max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
         word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
         separate_recognition_per_channel_(separate_recognition_per_channel),
-        print_transcripts_(print_transcripts), done_sending_(false), num_requests_(0),
-        num_responses_(0), num_failed_requests_(0), total_audio_processed_(0.),
-        model_name_(model_name), output_filename_(output_filename),
-        verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
-        speaker_diarization_(speaker_diarization)
+        speaker_diarization_(speaker_diarization), print_transcripts_(print_transcripts),
+        done_sending_(false), num_requests_(0), num_responses_(0), num_failed_requests_(0),
+        total_audio_processed_(0.), model_name_(model_name), output_filename_(output_filename),
+        verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score)
   {
     if (!output_filename.empty()) {
       output_file_.open(output_filename);
@@ -111,15 +110,14 @@ class RecognizeClient {
 
   float TotalAudioProcessed() { return total_audio_processed_; }
 
-  void WriteCTM(const nr_asr::SpeechRecognitionResult& result, const std::string& filename)
+  void WriteCTM(const Results& result, const std::string& filename)
   {
     std::string bname(basename(filename.c_str()));
     std::string side = (bname.find("-B-") == std::string::npos) ? "A" : "B";
-    if (result.alternatives_size() > 0) {
+    if (result.final_transcripts.size() > 0) {
       // we only use the top result for now
-      auto hypothesis = result.alternatives(0);
-      for (int w = 0; w < hypothesis.words_size(); ++w) {
-        auto& word_info = hypothesis.words(w);
+      for (size_t w = 0; w < result.final_time_stamps.at(0).size(); ++w) {
+        auto& word_info = result.final_time_stamps.at(0).at(w);
         output_file_ << bname << " "
                      << (speaker_diarization_
                              ? std::string("speaker_") + std::to_string(word_info.speaker_tag())
@@ -132,67 +130,20 @@ class RecognizeClient {
     }
   }
 
-  void WriteJSON(const nr_asr::SpeechRecognitionResult& result, const std::string& filename)
+  void WriteJSON(const Results& result, const std::string& filename)
   {
-    if (result.alternatives_size() == 0) {
+    if (result.final_transcripts.size() == 0) {
       output_file_ << "{\"audio_filepath\": \"" << filename << "\",";
       output_file_ << "\"text\": \"\"}" << std::endl;
     } else {
-      for (int a = 0; a < result.alternatives_size(); ++a) {
+      for (size_t a = 0; a < result.final_transcripts.size(); ++a) {
         if (a == 0) {
           output_file_ << "{\"audio_filepath\": \"" << filename << "\",";
-          output_file_ << "\"text\": \"" << EscapeTranscript(result.alternatives(a).transcript())
+          output_file_ << "\"text\": \"" << EscapeTranscript(result.final_transcripts.at(a))
                        << "\"}" << std::endl;
         }
       }
     }
-  }
-
-  void PrintResults(const nr_asr::SpeechRecognitionResult& result, const std::string& filename)
-  {
-    std::cout << "-----------------------------------------------------------" << std::endl;
-    std::cout << "File: " << filename << std::endl;
-    std::cout << std::endl;
-    std::cout << "Final transcripts: " << std::endl;
-
-    if (result.alternatives_size() != 0) {
-      for (int a = 0; a < result.alternatives_size(); ++a) {
-        std::cout << a << " : " << result.alternatives(a).transcript() << std::endl;
-
-        std::cout << std::endl;
-
-        if (word_time_offsets_ || speaker_diarization_) {
-          std::cout << std::setw(40) << std::left << "Word";
-          if (word_time_offsets_) {
-            std::cout << std::setw(16) << std::left << "Start (ms)";
-            std::cout << std::setw(16) << std::left << "End (ms)";
-          }
-          std::cout << std::setw(16) << std::left << "Confidence";
-          if (a == 0 && speaker_diarization_) {
-            std::cout << std::setw(16) << std::left << "Speaker";
-          }
-          std::cout << std::endl;
-          for (int w = 0; w < result.alternatives(a).words_size(); ++w) {
-            auto& word_info = result.alternatives(a).words(w);
-            std::cout << std::setw(40) << std::left << word_info.word();
-            if (word_time_offsets_) {
-              std::cout << std::setw(16) << std::left << word_info.start_time();
-              std::cout << std::setw(16) << std::left << word_info.end_time();
-            }
-            std::cout << std::setw(16) << std::setprecision(4) << std::scientific
-                      << word_info.confidence();
-            if (a == 0 && speaker_diarization_) {
-              std::cout << std::setw(16) << std::left << word_info.speaker_tag();
-            }
-            std::cout << std::endl;
-          }
-        }
-      }
-      std::cout << std::endl;
-    }
-    std::cout << "Audio processed: " << result.audio_processed() << " sec." << std::endl;
-    std::cout << "-----------------------------------------------------------" << std::endl;
-    std::cout << std::endl;
   }
 
   void PrintStats()
@@ -307,14 +258,24 @@ class RecognizeClient {
         auto end_time = std::chrono::steady_clock::now();
         double lat = std::chrono::duration<double, std::milli>(end_time - call->start_time).count();
         latencies_.push_back(lat);
-        const auto& result = call->response.results(0);
-        total_audio_processed_ += result.audio_processed();
 
-        if (print_transcripts_) {
-          PrintResults(result, call->stream->wav->filename);
-        }
-        if (!output_filename_.empty()) {
-          (this->*write_fn_)(result, call->stream->wav->filename);
+        if (call->response.results_size()) {
+          const auto& last_result = call->response.results(call->response.results_size() - 1);
+          total_audio_processed_ += last_result.audio_processed();
+
+          Results output_result;
+          for (int r = 0; r < call->response.results_size(); ++r) {
+            AppendResult(
+                output_result, call->response.results(r), word_time_offsets_, speaker_diarization_);
+          }
+          if (print_transcripts_) {
+            PrintResult(
+                output_result, call->stream->wav->filename, word_time_offsets_,
+                speaker_diarization_);
+          }
+          if (!output_filename_.empty()) {
+            (this->*write_fn_)(output_result, call->stream->wav->filename);
+          }
         }
       } else {
         std::cout << "RPC failed: " << call->status.error_message() << std::endl;
@@ -328,7 +289,6 @@ class RecognizeClient {
         curr_tasks_.erase(call->stream->corr_id);
         num_responses_++;
       }
-
 
       // Once we're complete, deallocate the call object.
       delete call;
@@ -397,8 +357,7 @@ class RecognizeClient {
 
   std::vector<std::string> boosted_phrases_;
   float boosted_phrases_score_;
-  void (RecognizeClient::*write_fn_)(
-      const nr_asr::SpeechRecognitionResult& result, const std::string& filename);
+  void (RecognizeClient::*write_fn_)(const Results& result, const std::string& filename);
 };
 
 int
@@ -542,7 +501,9 @@ main(int argc, char** argv)
               << std::endl;
     std::cout << "Throughput: " << recognize_client.TotalAudioProcessed() * 1000. / diff_time
               << " RTFX" << std::endl;
-    std::cout << "Final transcripts written to " << FLAGS_output_filename << std::endl;
+    if (!FLAGS_output_filename.empty()) {
+      std::cout << "Final transcripts written to " << FLAGS_output_filename << std::endl;
+    }
   }
 
   return 0;

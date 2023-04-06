@@ -23,6 +23,7 @@ cc_library(
         ],
     }) + [
         "@com_github_grpc_grpc//:grpc++",
+        "@nvriva_common//riva/proto:riva_grpc_asr",
     ],
 )
 
@@ -46,7 +47,7 @@ cc_library(
 
 cc_library(
     name = "streaming_recognize_client",
-    srcs = ["streaming_recognize_client.h", 
+    srcs = ["streaming_recognize_client.h",
             "streaming_recognize_client.cc"
     ],
     deps = [

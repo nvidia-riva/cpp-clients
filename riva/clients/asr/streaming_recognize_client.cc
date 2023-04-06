@@ -248,7 +248,7 @@ StreamingRecognizeClient::DoStreamingFromFile(
       if (wav->encoding == nvidia::riva::AudioEncoding::OGGOPUS) {
         std::ifstream is(wav->filename);
         auto wav_stream = decoder.DecodeStream(is);
-        total_processed += (float) wav_stream.size() / 48000.F;
+        total_processed += (float)wav_stream.size() / 48000.F;
       } else {
         total_processed = TotalAudioProcessed();
       }
@@ -256,8 +256,7 @@ StreamingRecognizeClient::DoStreamingFromFile(
 
     std::cout << "Run time: " << diff_time / 1000. << " sec." << std::endl;
     std::cout << "Total audio processed: " << total_processed << " sec." << std::endl;
-    std::cout << "Throughput: " << total_processed * 1000. / diff_time << " RTFX"
-              << std::endl;
+    std::cout << "Throughput: " << total_processed * 1000. / diff_time << " RTFX" << std::endl;
   }
 
   return 0;

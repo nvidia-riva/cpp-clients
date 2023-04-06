@@ -58,8 +58,8 @@ StreamingS2SClient::StreamingS2SClient(
     bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
     std::string output_filename, std::string model_name, bool simulate_realtime,
     bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score,
-    const std::string& tts_encoding, const std::string& tts_audio_file,
-    int tts_sample_rate, const std::string& tts_voice_name)
+    const std::string& tts_encoding, const std::string& tts_audio_file, int tts_sample_rate,
+    const std::string& tts_voice_name)
     : print_latency_stats_(true), stub_(nr_nmt::RivaTranslation::NewStub(channel)),
       language_code_(language_code), max_alternatives_(max_alternatives),
       profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
@@ -69,8 +69,8 @@ StreamingS2SClient::StreamingS2SClient(
       interim_results_(interim_results), total_audio_processed_(0.), num_streams_started_(0),
       model_name_(model_name), simulate_realtime_(simulate_realtime),
       verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
-      tts_encoding_(tts_encoding), tts_audio_file_(tts_audio_file),
-      tts_sample_rate_(tts_sample_rate), tts_voice_name_(tts_voice_name)
+      tts_encoding_(tts_encoding), tts_audio_file_(tts_audio_file), tts_voice_name_(tts_voice_name),
+      tts_sample_rate_(tts_sample_rate)
 {
   num_active_streams_.store(0);
   num_streams_finished_.store(0);
@@ -347,8 +347,7 @@ StreamingS2SClient::ReceiveResponses(std::shared_ptr<S2SClientCall> call, bool a
     int32_t rate = riva::utils::opus::Decoder::AdjustRateIfUnsupported(tts_sample_rate_);
     riva::utils::opus::Decoder decoder(rate, 1);
     auto pcm = decoder.DecodePcm(decoder.DeserializeOpus(opus_buffer));
-    ::riva::utils::wav::Write(
-        tts_audio_file_, rate, pcm.data(), pcm.size());
+    ::riva::utils::wav::Write(tts_audio_file_, rate, pcm.data(), pcm.size());
     opus_buffer.clear();
   }
 
