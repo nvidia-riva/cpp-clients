@@ -419,16 +419,15 @@ main(int argc, char** argv)
   try {
     std::shared_ptr<grpc::ChannelCredentials> creds;
     if (FLAGS_ssl_cert.size() > 0 || FLAGS_use_ssl) {
-        LOG(INFO) << "Using Secure Server Credentials";
-        grpc::SslCredentialsOptions ssl_opts;
-        if (FLAGS_ssl_cert.size() > 0) {
-            LOG(INFO) << "Using SSL Credentials";
-            auto cacert = riva::utils::files::ReadFileContentAsString(FLAGS_ssl_cert);
-            ssl_opts.pem_root_certs = cacert;
-        }
-        creds = grpc::SslCredentials(ssl_opts);
-    }
-    else {
+      LOG(INFO) << "Using Secure Server Credentials";
+      grpc::SslCredentialsOptions ssl_opts;
+      if (FLAGS_ssl_cert.size() > 0) {
+        LOG(INFO) << "Using SSL Credentials";
+        auto cacert = riva::utils::files::ReadFileContentAsString(FLAGS_ssl_cert);
+        ssl_opts.pem_root_certs = cacert;
+      }
+      creds = grpc::SslCredentials(ssl_opts);
+    } else {
       LOG(INFO) << "Using Insecure Server Credentials";
       creds = grpc::InsecureChannelCredentials();
     }
