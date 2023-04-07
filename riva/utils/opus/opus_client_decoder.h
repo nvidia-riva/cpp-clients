@@ -101,10 +101,10 @@ class Decoder {
   }
 
   /**
- * If requested rate is not supported this helper computes nearest supported one.
- * @param rate
- * @return
- */
+   * If requested rate is not supported this helper computes nearest supported one.
+   * @param rate
+   * @return
+   */
   static int32_t AdjustRateIfUnsupported(int32_t rate);
 
  private:
