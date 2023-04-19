@@ -55,8 +55,7 @@ class StreamingS2SClient {
       std::string output_filename, std::string model_name, bool simulate_realtime,
       bool verbatim_transcripts, const std::string& boosted_phrases_file,
       float boosted_phrases_score, const std::string& tts_encoding,
-      const std::string& tts_audio_file, int tts_sample_rate, const std::string& tts_voice_name,
-      bool verbose);
+      const std::string& tts_audio_file, int tts_sample_rate, const std::string& tts_voice_name);
 
   ~StreamingS2SClient();
 
@@ -126,5 +125,4 @@ class StreamingS2SClient {
   std::string tts_audio_file_;
   std::string tts_voice_name_;
   int tts_sample_rate_;
-  bool verbose_;
 };
