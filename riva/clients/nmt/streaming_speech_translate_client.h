@@ -53,7 +53,7 @@ class StreamingSpeechTranslateClient {
       bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
       std::string output_filename, std::string model_name, bool simulate_realtime,
       bool verbatim_transcripts, const std::string& boosted_phrases_file,
-      float boosted_phrases_score);
+      float boosted_phrases_score, const std::string& nmt_text_file);
 
   ~StreamingSpeechTranslateClient();
 
@@ -121,4 +121,5 @@ class StreamingSpeechTranslateClient {
 
   std::vector<std::string> boosted_phrases_;
   float boosted_phrases_score_;
+  std::string nmt_text_file_;
 };

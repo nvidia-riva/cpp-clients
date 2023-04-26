@@ -72,7 +72,7 @@ DEFINE_bool(
     "normalization");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
 DEFINE_string(tts_encoding, "", "TTS output encoding, currently either PCM or OPUS");
-DEFINE_string(tts_audio_file, "s2s_output.wav", "TTS output file");
+DEFINE_string(tts_audio_file, "s2s_output.wav", "File containing translated audio for input speech");
 DEFINE_int32(tts_sample_rate, 44100, "TTS sample rate hz");
 DEFINE_string(tts_voice_name, "English-US.Female-1", "Desired TTS voice name");
 
