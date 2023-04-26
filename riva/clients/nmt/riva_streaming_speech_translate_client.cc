@@ -71,7 +71,7 @@ DEFINE_bool(
     "True returns text exactly as it was said with no normalization.  False applies text inverse "
     "normalization");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
-DEFINE_string(nmt_text_file, "s2t_output.txt", "NMT text file");
+DEFINE_string(nmt_text_file, "s2t_output.txt", "File containing translated text for input speech");
 
 void
 signal_handler(int signal_num)
