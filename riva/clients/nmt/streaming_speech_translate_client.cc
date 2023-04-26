@@ -52,11 +52,11 @@ MicrophoneThreadMain(
 
 StreamingSpeechTranslateClient::StreamingSpeechTranslateClient(
     std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
-    const std::string& source_language_code, const std::string& target_language_code, int32_t max_alternatives, bool profanity_filter,
-    bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
-    bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
-    std::string output_filename, std::string model_name, bool simulate_realtime,
-    bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score)
+    const std::string& source_language_code, const std::string& target_language_code, int32_t max_alternatives,
+    bool profanity_filter, bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
+    bool print_transcripts, int32_t chunk_duration_ms, bool interim_results, std::string output_filename,
+    std::string model_name, bool simulate_realtime, bool verbatim_transcripts, const std::string& boosted_phrases_file,
+    float boosted_phrases_score, const std::string& nmt_text_file)
     : print_latency_stats_(true), stub_(nr_nmt::RivaTranslation::NewStub(channel)),
       source_language_code_(source_language_code), target_language_code_(target_language_code),
       max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
@@ -64,8 +64,8 @@ StreamingSpeechTranslateClient::StreamingSpeechTranslateClient(
       separate_recognition_per_channel_(separate_recognition_per_channel),
       print_transcripts_(print_transcripts), chunk_duration_ms_(chunk_duration_ms),
       interim_results_(interim_results), total_audio_processed_(0.), num_streams_started_(0),
-      model_name_(model_name), simulate_realtime_(simulate_realtime),
-      verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score)
+      model_name_(model_name), simulate_realtime_(simulate_realtime), verbatim_transcripts_(verbatim_transcripts),
+      boosted_phrases_score_(boosted_phrases_score), nmt_text_file_(nmt_text_file)
 {
   num_active_streams_.store(0);
   num_streams_finished_.store(0);
@@ -292,6 +292,8 @@ StreamingSpeechTranslateClient::ReceiveResponses(
     std::cout << "ASR started... press `Ctrl-C' to stop recording\n\n";
     gotoxy(0, 5);
   }
+
+  std::ofstream result_file(nmt_text_file_);
   while (call->streamer->Read(&call->response)) {  // Returns false when no more to read.
     call->recv_times.push_back(std::chrono::steady_clock::now());
     for (int r = 0; r < call->response.results_size(); ++r) {
@@ -302,12 +304,15 @@ StreamingSpeechTranslateClient::ReceiveResponses(
         std::cout << "ASR started... press `Ctrl-C' to stop recording\n\n";
         gotoxy(0, 5);
       }
-      std::cout << "result: " << result.DebugString();
+      VLOG(1) << "result: " << result.DebugString();
       if (print_transcripts_) {
         call->AppendResult(result);
       }
+      std::cout << "translated text: \"" << result.alternatives(0).transcript() << "\"" << std::endl;
+      result_file << result.alternatives(0).transcript() << std::endl;
     }
   }
+  result_file.close();
   // grpc::Status status = call->streamer->Finish();
   // if (!status.ok()) {
   // Report the RPC failure.
