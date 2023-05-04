@@ -1,3 +1,4 @@
+
 /*
  * SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
@@ -51,20 +52,20 @@ MicrophoneThreadMain(
 
 StreamingSpeechTranslateClient::StreamingSpeechTranslateClient(
     std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
-    const std::string& language_code, int32_t max_alternatives, bool profanity_filter,
-    bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
-    bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
-    std::string output_filename, std::string model_name, bool simulate_realtime,
-    bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score)
+    const std::string& source_language_code, const std::string& target_language_code, int32_t max_alternatives,
+    bool profanity_filter, bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
+    bool print_transcripts, int32_t chunk_duration_ms, bool interim_results, std::string output_filename,
+    std::string model_name, bool simulate_realtime, bool verbatim_transcripts, const std::string& boosted_phrases_file,
+    float boosted_phrases_score, const std::string& nmt_text_file)
     : print_latency_stats_(true), stub_(nr_nmt::RivaTranslation::NewStub(channel)),
-      language_code_(language_code), max_alternatives_(max_alternatives),
-      profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
-      automatic_punctuation_(automatic_punctuation),
+      source_language_code_(source_language_code), target_language_code_(target_language_code),
+      max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
+      word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
       separate_recognition_per_channel_(separate_recognition_per_channel),
       print_transcripts_(print_transcripts), chunk_duration_ms_(chunk_duration_ms),
       interim_results_(interim_results), total_audio_processed_(0.), num_streams_started_(0),
-      model_name_(model_name), simulate_realtime_(simulate_realtime),
-      verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score)
+      model_name_(model_name), simulate_realtime_(simulate_realtime), verbatim_transcripts_(verbatim_transcripts),
+      boosted_phrases_score_(boosted_phrases_score), nmt_text_file_(nmt_text_file)
 {
   num_active_streams_.store(0);
   num_streams_finished_.store(0);
@@ -117,13 +118,13 @@ StreamingSpeechTranslateClient::GenerateRequests(std::shared_ptr<S2TClientCall> 
     if (first_write) {
       auto streaming_speech_translate_config = request.mutable_config();
       auto translation_config = streaming_speech_translate_config->mutable_translation_config();
-      translation_config->set_source_language_code(language_code_);
-      translation_config->set_target_language_code("en-US");
+      translation_config->set_source_language_code(source_language_code_);
+      translation_config->set_target_language_code(target_language_code_);
       auto streaming_asr_config = streaming_speech_translate_config->mutable_asr_config();
       streaming_asr_config->set_interim_results(interim_results_);
       auto config = streaming_asr_config->mutable_config();
       config->set_sample_rate_hertz(call->stream->wav->sample_rate);
-      config->set_language_code(language_code_);
+      config->set_language_code(source_language_code_);
       config->set_encoding(call->stream->wav->encoding);
       config->set_max_alternatives(max_alternatives_);
       config->set_profanity_filter(profanity_filter_);
@@ -291,6 +292,8 @@ StreamingSpeechTranslateClient::ReceiveResponses(
     std::cout << "ASR started... press `Ctrl-C' to stop recording\n\n";
     gotoxy(0, 5);
   }
+
+  std::ofstream result_file(nmt_text_file_);
   while (call->streamer->Read(&call->response)) {  // Returns false when no more to read.
     call->recv_times.push_back(std::chrono::steady_clock::now());
     for (int r = 0; r < call->response.results_size(); ++r) {
@@ -301,12 +304,15 @@ StreamingSpeechTranslateClient::ReceiveResponses(
         std::cout << "ASR started... press `Ctrl-C' to stop recording\n\n";
         gotoxy(0, 5);
       }
-      std::cout << "result: " << result.DebugString();
+      VLOG(1) << "result: " << result.DebugString();
       if (print_transcripts_) {
         call->AppendResult(result);
       }
+      std::cout << "translated text: \"" << result.alternatives(0).transcript() << "\"" << std::endl;
+      result_file << result.alternatives(0).transcript() << std::endl;
     }
   }
+  result_file.close();
   // grpc::Status status = call->streamer->Finish();
   // if (!status.ok()) {
   // Report the RPC failure.
@@ -346,7 +352,7 @@ StreamingSpeechTranslateClient::DoStreamingFromMicrophone(
   streaming_config->set_interim_results(interim_results_);
   auto config = streaming_config->mutable_config();
   config->set_sample_rate_hertz(samplerate);
-  config->set_language_code(language_code_);
+  config->set_language_code(source_language_code_);
   config->set_encoding(encoding);
   config->set_max_alternatives(max_alternatives_);
   config->set_profanity_filter(profanity_filter_);

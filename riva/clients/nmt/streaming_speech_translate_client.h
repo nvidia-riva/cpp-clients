@@ -48,12 +48,12 @@ class StreamingSpeechTranslateClient {
  public:
   StreamingSpeechTranslateClient(
       std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
-      const std::string& language_code, int32_t max_alternatives, bool profanity_filter,
-      bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
+      const std::string& source_language_code,const std::string& target_language_code, int32_t max_alternatives,
+      bool profanity_filter, bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
       bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
       std::string output_filename, std::string model_name, bool simulate_realtime,
       bool verbatim_transcripts, const std::string& boosted_phrases_file,
-      float boosted_phrases_score);
+      float boosted_phrases_score, const std::string& nmt_text_file);
 
   ~StreamingSpeechTranslateClient();
 
@@ -90,7 +90,8 @@ class StreamingSpeechTranslateClient {
   std::unique_ptr<nr_nmt::RivaTranslation::Stub> stub_;
   std::vector<double> int_latencies_, final_latencies_, latencies_;
 
-  std::string language_code_;
+  std::string source_language_code_;
+  std::string target_language_code_;
   int32_t max_alternatives_;
   bool profanity_filter_;
   int32_t channels_;
@@ -120,4 +121,5 @@ class StreamingSpeechTranslateClient {
 
   std::vector<std::string> boosted_phrases_;
   float boosted_phrases_score_;
+  std::string nmt_text_file_;
 };

@@ -62,7 +62,8 @@ DEFINE_string(
     output_filename, "final_transcripts.json",
     "Filename of .json file containing output transcripts");
 DEFINE_string(model_name, "", "Name of the TRTIS model to use");
-DEFINE_string(language_code, "en-US", "Language code of the model to use");
+DEFINE_string(source_language_code, "en-US", "Language code of inbound speech");
+DEFINE_string(target_language_code, "en-US", "Language code for the output text");
 DEFINE_string(boosted_words_file, "", "File with a list of words to boost. One line per word.");
 DEFINE_double(boosted_words_score, 10., "Score by which to boost the boosted words");
 DEFINE_bool(
@@ -70,6 +71,7 @@ DEFINE_bool(
     "True returns text exactly as it was said with no normalization.  False applies text inverse "
     "normalization");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
+DEFINE_string(nmt_text_file, "s2t_output.txt", "File containing translated text for input speech");
 
 void
 signal_handler(int signal_num)
@@ -107,10 +109,13 @@ main(int argc, char** argv)
   str_usage << "           --print_transcripts=<true|false> " << std::endl;
   str_usage << "           --output_filename=<string>" << std::endl;
   str_usage << "           --verbatim_transcripts=<true|false>" << std::endl;
-  str_usage << "           --language_code=<bcp 47 language code (such as en-US)>" << std::endl;
+  str_usage << "           --source_language_code=<bcp 47 language code (such as en-US)>" << std::endl;
+  str_usage << "           --target_language_code=<bcp 47 language code (such as en-US)>" << std::endl;
   str_usage << "           --boosted_words_file=<string>" << std::endl;
   str_usage << "           --boosted_words_score=<float>" << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
+  str_usage << "           --nmt_text_file=<filename>" << std::endl;
+
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -163,11 +168,11 @@ main(int argc, char** argv)
   }
 
   StreamingSpeechTranslateClient recognize_client(
-      grpc_channel, FLAGS_num_parallel_requests, FLAGS_language_code, FLAGS_max_alternatives,
-      FLAGS_profanity_filter, FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
+      grpc_channel, FLAGS_num_parallel_requests, FLAGS_source_language_code, FLAGS_target_language_code,
+      FLAGS_max_alternatives, FLAGS_profanity_filter, FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
       /* separate_recognition_per_channel*/ false, FLAGS_print_transcripts, FLAGS_chunk_duration_ms,
       FLAGS_interim_results, FLAGS_output_filename, FLAGS_model_name, FLAGS_simulate_realtime,
-      FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score);
+      FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score, FLAGS_nmt_text_file);
 
   if (FLAGS_audio_file.size()) {
     return recognize_client.DoStreamingFromFile(

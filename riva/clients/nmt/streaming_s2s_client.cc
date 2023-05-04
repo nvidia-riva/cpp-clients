@@ -53,7 +53,8 @@ MicrophoneThreadMain(
 
 StreamingS2SClient::StreamingS2SClient(
     std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
-    const std::string& language_code, int32_t max_alternatives, bool profanity_filter,
+    const std::string& source_language_code, const std::string& target_language_code,
+    int32_t max_alternatives, bool profanity_filter,
     bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
     bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
     std::string output_filename, std::string model_name, bool simulate_realtime,
@@ -61,9 +62,9 @@ StreamingS2SClient::StreamingS2SClient(
     const std::string& tts_encoding, const std::string& tts_audio_file, int tts_sample_rate,
     const std::string& tts_voice_name)
     : print_latency_stats_(true), stub_(nr_nmt::RivaTranslation::NewStub(channel)),
-      language_code_(language_code), max_alternatives_(max_alternatives),
-      profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
-      automatic_punctuation_(automatic_punctuation),
+      source_language_code_(source_language_code), target_language_code_(target_language_code),
+      max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
+      word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
       separate_recognition_per_channel_(separate_recognition_per_channel),
       print_transcripts_(print_transcripts), chunk_duration_ms_(chunk_duration_ms),
       interim_results_(interim_results), total_audio_processed_(0.), num_streams_started_(0),
@@ -125,8 +126,8 @@ StreamingS2SClient::GenerateRequests(std::shared_ptr<S2SClientCall> call)
 
       // set nmt config
       auto translation_config = streaming_s2s_config->mutable_translation_config();
-      translation_config->set_source_language_code(language_code_);
-      translation_config->set_target_language_code("en-US");
+      translation_config->set_source_language_code(source_language_code_);
+      translation_config->set_target_language_code(target_language_code_);
 
       // set tts config
       auto tts_config = streaming_s2s_config->mutable_tts_config();
@@ -141,14 +142,14 @@ StreamingS2SClient::GenerateRequests(std::shared_ptr<S2SClientCall> call)
       }
       tts_config->set_sample_rate_hz(rate);
       tts_config->set_voice_name(tts_voice_name_);
-      tts_config->set_language_code("en-US");
+      tts_config->set_language_code(target_language_code_);
 
       // set asr config
       auto streaming_asr_config = streaming_s2s_config->mutable_asr_config();
       streaming_asr_config->set_interim_results(interim_results_);
       auto config = streaming_asr_config->mutable_config();
       config->set_sample_rate_hertz(call->stream->wav->sample_rate);
-      config->set_language_code(language_code_);
+      config->set_language_code(source_language_code_);
       config->set_encoding(call->stream->wav->encoding);
       config->set_max_alternatives(max_alternatives_);
       config->set_profanity_filter(profanity_filter_);
@@ -318,6 +319,11 @@ StreamingS2SClient::ReceiveResponses(std::shared_ptr<S2SClientCall> call, bool a
   std::vector<int16_t> pcm_buffer;
   std::vector<unsigned char> opus_buffer;
   while (call->streamer->Read(&call->response)) {  // Returns false when no more to read.
+    if (!call->response.speech().audio().length()) {
+      // If the audio size is zero continue the loop for next sentence.
+      VLOG(1) << "Got 0 bytes back from server.Sentence Completed.";
+      continue;
+    }
     call->recv_times.push_back(std::chrono::steady_clock::now());
     auto audio = call->response.speech().audio();
     if (audio_device) {
@@ -390,7 +396,7 @@ StreamingS2SClient::DoStreamingFromMicrophone(const std::string& audio_device, b
   streaming_config->set_interim_results(interim_results_);
   auto config = streaming_config->mutable_config();
   config->set_sample_rate_hertz(samplerate);
-  config->set_language_code(language_code_);
+  config->set_language_code(source_language_code_);
   config->set_encoding(encoding);
   config->set_max_alternatives(max_alternatives_);
   config->set_profanity_filter(profanity_filter_);
