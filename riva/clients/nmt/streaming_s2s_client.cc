@@ -208,7 +208,6 @@ StreamingS2SClient::GenerateRequests(std::shared_ptr<S2SClientCall> call)
     if (offset == call->stream->wav->data.size()) {
       done = true;
       call->streamer->WritesDone();
-      grpc::Status status = call->streamer->Finish();
     }
   }
 
@@ -357,11 +356,11 @@ StreamingS2SClient::ReceiveResponses(std::shared_ptr<S2SClientCall> call, bool a
     opus_buffer.clear();
   }
 
-  // grpc::Status status = call->streamer->Finish();
-  // if (!status.ok()) {
-  // Report the RPC failure.
-  ///    std::cerr << status.error_message() << std::endl;
-  // }
+  grpc::Status status = call->streamer->Finish();
+  if (!status.ok()) {
+    // Report the RPC failure.
+    std::cerr << status.error_message() << std::endl;
+  }
 
   num_streams_finished_++;
 }

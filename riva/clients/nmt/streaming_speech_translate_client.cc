@@ -183,7 +183,6 @@ StreamingSpeechTranslateClient::GenerateRequests(std::shared_ptr<S2TClientCall> 
     if (offset == call->stream->wav->data.size()) {
       done = true;
       call->streamer->WritesDone();
-      grpc::Status status = call->streamer->Finish();
     }
   }
 
@@ -313,11 +312,12 @@ StreamingSpeechTranslateClient::ReceiveResponses(
     }
   }
   result_file.close();
-  // grpc::Status status = call->streamer->Finish();
-  // if (!status.ok()) {
-  // Report the RPC failure.
-  ///    std::cerr << status.error_message() << std::endl;
-  // }
+
+  grpc::Status status = call->streamer->Finish();
+  if (!status.ok()) {
+    // Report the RPC failure.
+    std::cerr << status.error_message() << std::endl;
+  }
 
   num_streams_finished_++;
 }
