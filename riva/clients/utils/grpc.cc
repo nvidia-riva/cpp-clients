@@ -73,13 +73,15 @@ CreateChannelCredentials(bool use_ssl, const std::string& ssl_cert)
   return creds;
 }
 
-void AddMetadata(grpc::ClientContext& context, std::string metadata) {
+void
+AddMetadata(grpc::ClientContext& context, std::string metadata)
+{
   if (!metadata.empty()) {
     auto key_value_pairs = split(metadata, ',');
     if (key_value_pairs.size() % 2) {
       throw std::runtime_error("Error: metadata must contain key value pairs.");
     }
-    for (size_t i = 0; i < key_value_pairs.size(); i+=2) {
+    for (size_t i = 0; i < key_value_pairs.size(); i += 2) {
       context.AddMetadata(key_value_pairs.at(i), key_value_pairs.at(i + 1));
     }
   }

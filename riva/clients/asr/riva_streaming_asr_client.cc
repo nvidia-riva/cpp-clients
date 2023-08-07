@@ -71,7 +71,9 @@ DEFINE_bool(
     "True returns text exactly as it was said with no normalization.  False applies text inverse "
     "normalization");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
-DEFINE_bool(use_ssl, false, "Whether to use SSL credentials or not. If ssl_cert is specified, "
+DEFINE_bool(
+    use_ssl, false,
+    "Whether to use SSL credentials or not. If ssl_cert is specified, "
     "this is assumed to be true");
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 
@@ -175,7 +177,8 @@ main(int argc, char** argv)
       FLAGS_profanity_filter, FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
       /* separate_recognition_per_channel*/ false, FLAGS_print_transcripts, FLAGS_chunk_duration_ms,
       FLAGS_interim_results, FLAGS_output_filename, FLAGS_model_name, FLAGS_simulate_realtime,
-      FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score, FLAGS_metadata);
+      FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score,
+      FLAGS_metadata);
 
   if (FLAGS_audio_file.size()) {
     return recognize_client.DoStreamingFromFile(

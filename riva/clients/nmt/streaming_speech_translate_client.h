@@ -28,10 +28,10 @@
 
 #include "client_call.h"
 #include "riva/clients/asr/riva_asr_client_helper.h"
+#include "riva/clients/utils/grpc.h"
 #include "riva/proto/riva_asr.grpc.pb.h"
 #include "riva/utils/thread_pool.h"
 #include "riva/utils/wav/wav_reader.h"
-#include "riva/clients/utils/grpc.h"
 
 using grpc::Status;
 using grpc::StatusCode;
@@ -49,12 +49,13 @@ class StreamingSpeechTranslateClient {
  public:
   StreamingSpeechTranslateClient(
       std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
-      const std::string& source_language_code,const std::string& target_language_code, int32_t max_alternatives,
-      bool profanity_filter, bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
-      bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
-      std::string output_filename, std::string model_name, bool simulate_realtime,
-      bool verbatim_transcripts, const std::string& boosted_phrases_file,
-      float boosted_phrases_score, const std::string& nmt_text_file, std::string metadata);
+      const std::string& source_language_code, const std::string& target_language_code,
+      int32_t max_alternatives, bool profanity_filter, bool word_time_offsets,
+      bool automatic_punctuation, bool separate_recognition_per_channel, bool print_transcripts,
+      int32_t chunk_duration_ms, bool interim_results, std::string output_filename,
+      std::string model_name, bool simulate_realtime, bool verbatim_transcripts,
+      const std::string& boosted_phrases_file, float boosted_phrases_score,
+      const std::string& nmt_text_file, std::string metadata);
 
   ~StreamingSpeechTranslateClient();
 

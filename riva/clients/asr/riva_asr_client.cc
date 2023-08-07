@@ -61,7 +61,9 @@ DEFINE_bool(
     "True returns text exactly as it was said with no normalization.  False applies text inverse "
     "normalization");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
-DEFINE_bool(use_ssl, false, "Whether to use SSL credentials or not. If ssl_cert is specified, "
+DEFINE_bool(
+    use_ssl, false,
+    "Whether to use SSL credentials or not. If ssl_cert is specified, "
     "this is assumed to be true");
 DEFINE_bool(speaker_diarization, false, "Flag that controls if speaker diarization is requested");
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
@@ -82,7 +84,8 @@ class RecognizeClient {
         speaker_diarization_(speaker_diarization), print_transcripts_(print_transcripts),
         done_sending_(false), num_requests_(0), num_responses_(0), num_failed_requests_(0),
         total_audio_processed_(0.), model_name_(model_name), output_filename_(output_filename),
-        verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score), metadata_(metadata)
+        verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
+        metadata_(metadata)
   {
     if (!output_filename.empty()) {
       output_file_.open(output_filename);

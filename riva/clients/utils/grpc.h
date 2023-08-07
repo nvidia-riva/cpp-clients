@@ -30,8 +30,7 @@ namespace riva::clients {
 /// @param timeout_ms The maximum time (in milliseconds) to wait for channel creation. Throws
 /// exception if time is exceeded
 
-std::shared_ptr<grpc::Channel>
-CreateChannelBlocking(
+std::shared_ptr<grpc::Channel> CreateChannelBlocking(
     const std::string& uri, const std::shared_ptr<grpc::ChannelCredentials> credentials,
     uint64_t timeout_ms = 10000);
 
@@ -39,8 +38,8 @@ CreateChannelBlocking(
 /// Returns shared ptr to GrpcChannelCredentials
 /// @param use_ssl Boolean flag that controls if ssl encryption should be used
 /// @param ssl_cert Path to the certificate file
-std::shared_ptr<grpc::ChannelCredentials>
-CreateChannelCredentials(bool use_ssl, const std::string& ssl_cert);
+std::shared_ptr<grpc::ChannelCredentials> CreateChannelCredentials(
+    bool use_ssl, const std::string& ssl_cert);
 
 void AddMetadata(grpc::ClientContext& context, std::string metadata);
 
