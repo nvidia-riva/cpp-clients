@@ -69,6 +69,7 @@ cc_library(
         "@com_github_gflags_gflags//:gflags",
         "@nvriva_common//riva/proto:riva_grpc_asr",
         "//riva/utils:thread_pool",
+        "//riva/clients/utils:grpc",
     ],
 )
 
@@ -100,7 +101,6 @@ cc_binary(
         "//riva/utils/files:files",
         "//riva/utils/wav:reader",
         "@glog//:glog",
-        "//riva/clients/utils:grpc",
     ] + select({
         "@platforms//cpu:aarch64": [
             "@alsa_aarch64//:libasound"

@@ -75,6 +75,7 @@ DEFINE_string(tts_encoding, "", "TTS output encoding, currently either PCM or OP
 DEFINE_string(tts_audio_file, "s2s_output.wav", "File containing translated audio for input speech");
 DEFINE_int32(tts_sample_rate, 44100, "TTS sample rate hz");
 DEFINE_string(tts_voice_name, "English-US.Female-1", "Desired TTS voice name");
+DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 
 void
 signal_handler(int signal_num)
@@ -184,7 +185,7 @@ main(int argc, char** argv)
       /* separate_recognition_per_channel*/ false, FLAGS_print_transcripts, FLAGS_chunk_duration_ms,
       FLAGS_interim_results, FLAGS_output_filename, FLAGS_model_name, FLAGS_simulate_realtime,
       FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score,
-      FLAGS_tts_encoding, FLAGS_tts_audio_file, FLAGS_tts_sample_rate, FLAGS_tts_voice_name);
+      FLAGS_tts_encoding, FLAGS_tts_audio_file, FLAGS_tts_sample_rate, FLAGS_tts_voice_name, FLAGS_metadata);
 
   if (FLAGS_audio_file.size()) {
     return recognize_client.DoStreamingFromFile(

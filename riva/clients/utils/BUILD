@@ -9,10 +9,12 @@ package(
 
 cc_library(
     name = "grpc",
+    srcs = ["grpc.cc"],
     hdrs = ["grpc.h"],
     linkopts = ["-lm"],
     deps = [
         "//riva/utils/files:files",
+        "//riva/utils:string_processing",
         "@com_github_gflags_gflags//:gflags",
         "@glog//:glog",
         "@com_github_grpc_grpc//:grpc++"

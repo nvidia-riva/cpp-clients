@@ -43,11 +43,11 @@ class NLPClient {
 
   NLPClient(
       PrepareFunc prepare_func, FillRequestFunc fill_request_func,
-      PrintResponseFunc print_response_func, bool print_results)
+      PrintResponseFunc print_response_func, bool print_results, std::string metadata)
       : prepare_func_(prepare_func), fill_request_func_(fill_request_func),
         print_response_func_(print_response_func), print_results_(print_results),
         total_sequences_processed_(0), done_sending_(false), num_requests_(0), num_responses_(0),
-        num_failed_requests_(0)
+        num_failed_requests_(0), metadata_(metadata)
   {
   }
 
@@ -108,6 +108,8 @@ class NLPClient {
 
     call->query = std::move(query);
     call->start_time = std::chrono::steady_clock::now();
+
+    riva::clients::AddMetadata(call->context, metadata_);
 
     // stub_->PrepareAsyncSayHello() creates an RPC object, returning
     // an instance to store in "call" but does not actually start the RPC
@@ -213,4 +215,5 @@ class NLPClient {
   uint32_t num_requests_;
   uint32_t num_responses_;
   uint32_t num_failed_requests_;
+  std::string metadata_;
 };

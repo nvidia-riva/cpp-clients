@@ -37,7 +37,7 @@ DEFINE_int32(num_iterations, 1, "Number of times to loop over text");
 DEFINE_int32(num_parallel_requests, 1, "Number of parallel requests");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
 DEFINE_int32(batch_size, 8, "batch size to use");
-
+DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 
 int
 translateBatch(
@@ -117,6 +117,7 @@ main(int argc, char** argv)
   str_usage << "           --tgt_language=<lang>" << std::endl;
   str_usage << "           --model_name=<model>" << std::endl;
   str_usage << "           --list_models" << std::endl;
+  str_usage << "           --metadata=<key,value,...>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
 
   if (argc < 2) {
@@ -164,6 +165,7 @@ main(int argc, char** argv)
   std::unique_ptr<nr_nmt::RivaTranslation::Stub> nmt(nr_nmt::RivaTranslation::NewStub(channel));
 
   grpc::ClientContext context;
+  riva::clients::AddMetadata(context, FLAGS_metadata);
 
   if (FLAGS_list_models) {
     nr_nmt::AvailableLanguageRequest request;

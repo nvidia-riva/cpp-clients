@@ -38,6 +38,7 @@ DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
 DEFINE_int32(num_iterations, 1, "Number of times to loop over strings");
 DEFINE_int32(parallel_requests, 10, "Number of in-flight requests to send");
 DEFINE_bool(print_results, true, "Print final classification results");
+DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 
 
 class Query {
@@ -97,6 +98,7 @@ main(int argc, char** argv)
   str_usage << "           --parallel_requests=<integer> " << std::endl;
   str_usage << "           --print_results=<true|false> " << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
+  str_usage << "           --metadata=<key,value,...>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -169,7 +171,7 @@ main(int argc, char** argv)
   };
 
   NLPClient<ClassifyTokenQuery, nr_nlp::TokenClassResponse, nr_nlp::TokenClassRequest> client(
-      prepare_func, fill_request_func, print_response_func, FLAGS_print_results);
+      prepare_func, fill_request_func, print_response_func, FLAGS_print_results, FLAGS_metadata);
 
   // Preload all wav files, sort by size to reduce tail effects
   std::vector<std::string> all_queries;

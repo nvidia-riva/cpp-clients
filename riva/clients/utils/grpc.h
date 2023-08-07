@@ -14,6 +14,7 @@
 #include <string>
 
 #include "riva/utils/files/files.h"
+#include "riva/utils/string_processing.h"
 
 using grpc::Status;
 using grpc::StatusCode;
@@ -32,47 +33,15 @@ namespace riva::clients {
 std::shared_ptr<grpc::Channel>
 CreateChannelBlocking(
     const std::string& uri, const std::shared_ptr<grpc::ChannelCredentials> credentials,
-    uint64_t timeout_ms = 10000)
-{
-  auto channel = grpc::CreateChannel(uri, credentials);
-
-  auto deadline = std::chrono::system_clock::now() + std::chrono::milliseconds(timeout_ms);
-  auto reached_required_state = channel->WaitForConnected(deadline);
-  auto state = channel->GetState(true);
-
-  if (!reached_required_state) {
-    DLOG(WARNING) << "Unable to establish connection to server. Current state: " << (int)state;
-    throw std::runtime_error(
-        "Unable to establish connection to server. Current state: " + std::to_string((int)state));
-  }
-
-  return channel;
-}
+    uint64_t timeout_ms = 10000);
 
 /// Utility function to create GRPC credentials
 /// Returns shared ptr to GrpcChannelCredentials
 /// @param use_ssl Boolean flag that controls if ssl encryption should be used
 /// @param ssl_cert Path to the certificate file
 std::shared_ptr<grpc::ChannelCredentials>
-CreateChannelCredentials(bool use_ssl, const std::string& ssl_cert)
-{
-  std::shared_ptr<grpc::ChannelCredentials> creds;
+CreateChannelCredentials(bool use_ssl, const std::string& ssl_cert);
 
-  if (use_ssl || !ssl_cert.empty()) {
-    grpc::SslCredentialsOptions ssl_opts;
-    if (!ssl_cert.empty()) {
-      auto cacert = riva::utils::files::ReadFileContentAsString(ssl_cert);
-      ssl_opts.pem_root_certs = cacert;
-    }
-    LOG(INFO) << "Using SSL Credentials";
-    creds = grpc::SslCredentials(ssl_opts);
-  } else {
-    LOG(INFO) << "Using Insecure Server Credentials";
-    creds = grpc::InsecureChannelCredentials();
-  }
-
-  return creds;
-}
-
+void AddMetadata(grpc::ClientContext& context, std::string metadata);
 
 }  // namespace riva::clients

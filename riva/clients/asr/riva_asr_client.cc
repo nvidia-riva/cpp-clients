@@ -64,6 +64,7 @@ DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
 DEFINE_bool(use_ssl, false, "Whether to use SSL credentials or not. If ssl_cert is specified, "
     "this is assumed to be true");
 DEFINE_bool(speaker_diarization, false, "Flag that controls if speaker diarization is requested");
+DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 
 class RecognizeClient {
  public:
@@ -73,7 +74,7 @@ class RecognizeClient {
       bool automatic_punctuation, bool separate_recognition_per_channel, bool print_transcripts,
       std::string output_filename, std::string model_name, bool ctm, bool verbatim_transcripts,
       const std::string& boosted_phrases_file, float boosted_phrases_score,
-      bool speaker_diarization)
+      bool speaker_diarization, std::string metadata)
       : stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)), language_code_(language_code),
         max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
         word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
@@ -81,7 +82,7 @@ class RecognizeClient {
         speaker_diarization_(speaker_diarization), print_transcripts_(print_transcripts),
         done_sending_(false), num_requests_(0), num_responses_(0), num_failed_requests_(0),
         total_audio_processed_(0.), model_name_(model_name), output_filename_(output_filename),
-        verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score)
+        verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score), metadata_(metadata)
   {
     if (!output_filename.empty()) {
       output_file_.open(output_filename);
@@ -221,6 +222,8 @@ class RecognizeClient {
     // Call object to store rpc data
     AsyncClientCall* call = new AsyncClientCall;
 
+    riva::clients::AddMetadata(call->context, metadata_);
+
     call->stream = std::move(stream);
 
     // stub_->PrepareAsyncSayHello() creates an RPC object, returning
@@ -342,7 +345,6 @@ class RecognizeClient {
   bool speaker_diarization_;
   bool print_transcripts_;
 
-
   std::mutex mutex_;
   bool done_sending_;
   uint32_t num_requests_;
@@ -359,6 +361,8 @@ class RecognizeClient {
 
   std::vector<std::string> boosted_phrases_;
   float boosted_phrases_score_;
+  std::string metadata_;
+
   void (RecognizeClient::*write_fn_)(const Results& result, const std::string& filename);
 };
 
@@ -387,6 +391,7 @@ main(int argc, char** argv)
   str_usage << "           --boosted_words_score=<float>" << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
   str_usage << "           --speaker_diarization=<true|false>" << std::endl;
+  str_usage << "           --metadata=<key,value,...>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -445,7 +450,7 @@ main(int argc, char** argv)
       FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
       /* separate_recognition_per_channel*/ false, FLAGS_print_transcripts, FLAGS_output_filename,
       FLAGS_model_name, FLAGS_output_ctm, FLAGS_verbatim_transcripts, FLAGS_boosted_words_file,
-      (float)FLAGS_boosted_words_score, FLAGS_speaker_diarization);
+      (float)FLAGS_boosted_words_score, FLAGS_speaker_diarization, FLAGS_metadata);
 
   // Preload all wav files, sort by size to reduce tail effects
   std::vector<std::shared_ptr<WaveData>> all_wav;

@@ -62,6 +62,7 @@ cc_library(
         "@com_github_gflags_gflags//:gflags",
         "@nvriva_common//riva/proto:riva_grpc_nmt",
         "//riva/utils:thread_pool",
+        "//riva/clients/utils:grpc",
     ],
 )
 cc_library(
@@ -87,6 +88,7 @@ cc_library(
         "@com_github_gflags_gflags//:gflags",
         "@nvriva_common//riva/proto:riva_grpc_nmt",
         "//riva/utils:thread_pool",
+        "//riva/clients/utils:grpc",
     ],
 )
 

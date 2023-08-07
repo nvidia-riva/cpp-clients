@@ -32,6 +32,7 @@
 #include "riva/utils/thread_pool.h"
 #include "riva/utils/wav/wav_reader.h"
 #include "riva/utils/wav/wav_writer.h"
+#include "riva/clients/utils/grpc.h"
 
 using grpc::Status;
 using grpc::StatusCode;
@@ -56,7 +57,7 @@ class StreamingS2SClient {
       std::string model_name, bool simulate_realtime, bool verbatim_transcripts,
       const std::string& boosted_phrases_file, float boosted_phrases_score,
       const std::string& tts_encoding, const std::string& tts_audio_file, int tts_sample_rate,
-      const std::string& tts_voice_name);
+      const std::string& tts_voice_name, const std::string metadata);
 
   ~StreamingS2SClient();
 
@@ -127,4 +128,5 @@ class StreamingS2SClient {
 
   std::vector<std::string> boosted_phrases_;
   float boosted_phrases_score_;
+  std::string metadata_;
 };

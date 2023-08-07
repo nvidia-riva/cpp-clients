@@ -37,6 +37,7 @@ DEFINE_string(
     language, "en-US",
     "Language code as per [BCP-47](https://www.rfc-editor.org/rfc/bcp/bcp47.txt) language tag.");
 DEFINE_string(voice_name, "", "Desired voice name");
+DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 
 static const std::string LC_enUS = "en-US";
 
@@ -57,6 +58,7 @@ main(int argc, char** argv)
   str_usage << "           --voice_name=<voice-name> " << std::endl;
   str_usage << "           --online=<true|false> " << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
+  str_usage << "           --metadata=<key,value,...>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -132,6 +134,7 @@ main(int argc, char** argv)
   // Send text content using Synthesize().
   grpc::ClientContext context;
   nr_tts::SynthesizeSpeechResponse response;
+  riva::clients::AddMetadata(context, FLAGS_metadata);
 
   if (!FLAGS_online) {  // batch inference
     auto start = std::chrono::steady_clock::now();

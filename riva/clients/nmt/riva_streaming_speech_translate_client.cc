@@ -72,6 +72,7 @@ DEFINE_bool(
     "normalization");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
 DEFINE_string(nmt_text_file, "s2t_output.txt", "File containing translated text for input speech");
+DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 
 void
 signal_handler(int signal_num)
@@ -115,6 +116,7 @@ main(int argc, char** argv)
   str_usage << "           --boosted_words_score=<float>" << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
   str_usage << "           --nmt_text_file=<filename>" << std::endl;
+  str_usage << "           --metadata=<key,value,...>" << std::endl;
 
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
@@ -172,7 +174,7 @@ main(int argc, char** argv)
       FLAGS_max_alternatives, FLAGS_profanity_filter, FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
       /* separate_recognition_per_channel*/ false, FLAGS_print_transcripts, FLAGS_chunk_duration_ms,
       FLAGS_interim_results, FLAGS_output_filename, FLAGS_model_name, FLAGS_simulate_realtime,
-      FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score, FLAGS_nmt_text_file);
+      FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score, FLAGS_nmt_text_file, FLAGS_metadata);
 
   if (FLAGS_audio_file.size()) {
     return recognize_client.DoStreamingFromFile(

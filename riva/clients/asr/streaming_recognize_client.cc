@@ -7,6 +7,7 @@
 #include "streaming_recognize_client.h"
 
 #include "riva/utils/opus/opus_client_decoder.h"
+#include "riva/clients/utils/grpc.h"
 
 #define clear_screen() printf("\033[H\033[J")
 #define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
@@ -57,7 +58,7 @@ StreamingRecognizeClient::StreamingRecognizeClient(
     bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
     bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
     std::string output_filename, std::string model_name, bool simulate_realtime,
-    bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score)
+    bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score, std::string metadata)
     : print_latency_stats_(true), stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)),
       language_code_(language_code), max_alternatives_(max_alternatives),
       profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
@@ -66,7 +67,7 @@ StreamingRecognizeClient::StreamingRecognizeClient(
       print_transcripts_(print_transcripts), chunk_duration_ms_(chunk_duration_ms),
       interim_results_(interim_results), total_audio_processed_(0.), num_streams_started_(0),
       model_name_(model_name), simulate_realtime_(simulate_realtime),
-      verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score)
+      verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score), metadata_(metadata)
 {
   num_active_streams_.store(0);
   num_streams_finished_.store(0);
@@ -91,6 +92,7 @@ StreamingRecognizeClient::StartNewStream(std::unique_ptr<Stream> stream)
 {
   std::shared_ptr<ClientCall> call =
       std::make_shared<ClientCall>(stream->corr_id, word_time_offsets_);
+  riva::clients::AddMetadata(call->context, metadata_);
   call->streamer = stub_->StreamingRecognize(&call->context);
   call->stream = std::move(stream);
 
