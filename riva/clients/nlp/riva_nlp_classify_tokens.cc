@@ -127,13 +127,8 @@ main(int argc, char** argv)
 
   std::shared_ptr<grpc::Channel> grpc_channel;
   try {
-    auto creds = riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_cert);
-    if (!FLAGS_metadata.empty()) {
-      auto call_creds =
-          grpc::MetadataCredentialsFromPlugin(std::unique_ptr<grpc::MetadataCredentialsPlugin>(
-              new riva::clients::CustomAuthenticator(FLAGS_metadata)));
-      creds = grpc::CompositeChannelCredentials(creds, call_creds);
-    }
+    auto creds =
+        riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_cert, FLAGS_metadata);
     grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
   }
   catch (const std::exception& e) {

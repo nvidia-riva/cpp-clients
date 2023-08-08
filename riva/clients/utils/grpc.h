@@ -78,7 +78,7 @@ CreateChannelBlocking(
 /// @param use_ssl Boolean flag that controls if ssl encryption should be used
 /// @param ssl_cert Path to the certificate file
 std::shared_ptr<grpc::ChannelCredentials>
-CreateChannelCredentials(bool use_ssl, const std::string& ssl_cert)
+CreateChannelCredentials(bool use_ssl, const std::string& ssl_cert, const std::string& metadata)
 {
   std::shared_ptr<grpc::ChannelCredentials> creds;
 
@@ -93,6 +93,13 @@ CreateChannelCredentials(bool use_ssl, const std::string& ssl_cert)
   } else {
     LOG(INFO) << "Using Insecure Server Credentials";
     creds = grpc::InsecureChannelCredentials();
+  }
+
+  if (!metadata.empty()) {
+    auto call_creds =
+        grpc::MetadataCredentialsFromPlugin(std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+            new riva::clients::CustomAuthenticator(metadata)));
+    creds = grpc::CompositeChannelCredentials(creds, call_creds);
   }
 
   return creds;
