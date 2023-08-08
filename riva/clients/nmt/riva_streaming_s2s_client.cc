@@ -125,6 +125,7 @@ main(int argc, char** argv)
   str_usage << "           --tts_audio_file=<filename>" << std::endl;
   str_usage << "           --tts_sample_rate=<rate hz>" << std::endl;
   str_usage << "           --tts_voice_name=<voice name>" << std::endl;
+  str_usage << "           --metadata=<key,value,...>" << std::endl;
 
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
