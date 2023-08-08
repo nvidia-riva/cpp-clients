@@ -48,6 +48,11 @@ DEFINE_int32(num_parallel_requests, 1, "Number of parallel requests to keep in f
 DEFINE_int32(throttle_milliseconds, 0, "Number of milliseconds to sleep for between TTS requests");
 DEFINE_int32(offset_milliseconds, 0, "Number of milliseconds to offset each parallel TTS requests");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificates file");
+DEFINE_bool(
+    use_ssl, false,
+    "Whether to use SSL credentials or not. If ssl_cert is specified, "
+    "this is assumed to be true");
+DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 
 static const std::string LC_enUS = "en-US";
 
@@ -235,6 +240,8 @@ main(int argc, char** argv)
   str_usage << "           --throttle_milliseconds=<throttle-milliseconds> " << std::endl;
   str_usage << "           --offset_milliseconds=<offset-milliseconds> " << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
+  str_usage << "           --metadata=<key,value,...>" << std::endl;
+
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -295,26 +302,23 @@ main(int argc, char** argv)
       count++;
     }
   }
-  std::shared_ptr<grpc::ChannelCredentials> creds;
-  if (FLAGS_ssl_cert.size() > 0) {
-    try {
-      auto cacert = riva::utils::files::ReadFileContentAsString(FLAGS_ssl_cert);
-      grpc::SslCredentialsOptions ssl_opts;
-      ssl_opts.pem_root_certs = cacert;
-      LOG(INFO) << "Using SSL Credentials";
-      creds = grpc::SslCredentials(ssl_opts);
-    }
-    catch (const std::exception& e) {
-      std::cout << "Failed to load SSL certificate: " << e.what() << std::endl;
-      return 1;
-    }
-  } else {
-    LOG(INFO) << "Using Insecure Server Credentials";
-    creds = grpc::InsecureChannelCredentials();
-  }
 
-  // Create the GRPC channel before starting timer
-  auto channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
+  std::shared_ptr<grpc::Channel> grpc_channel;
+  try {
+    auto creds = riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_cert);
+    if (!FLAGS_metadata.empty()) {
+      auto call_creds =
+          grpc::MetadataCredentialsFromPlugin(std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+              new riva::clients::CustomAuthenticator(FLAGS_metadata)));
+      creds = grpc::CompositeChannelCredentials(creds, call_creds);
+    }
+    grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
+  }
+  catch (const std::exception& e) {
+    std::cerr << "Error creating GRPC channel: " << e.what() << std::endl;
+    std::cerr << "Exiting." << std::endl;
+    return 1;
+  }
 
   // Create and start worker threads
   std::vector<std::thread> workers;
@@ -355,7 +359,7 @@ main(int argc, char** argv)
             usleep(usecs);
           }
 
-          auto tts = CreateTTS(channel);
+          auto tts = CreateTTS(grpc_channel);
           double time_to_first_chunk = 0.;
           auto time_to_next_chunk = new std::vector<double>();
           size_t num_samples = 0;
@@ -434,7 +438,7 @@ main(int argc, char** argv)
       results_num_samples.push_back(results_num_samples_thread);
       workers.push_back(std::thread([&, i]() {
         for (size_t s = 0; s < sentences[i].size(); s++) {
-          auto tts = CreateTTS(channel);
+          auto tts = CreateTTS(grpc_channel);
           size_t num_samples = synthesizeBatch(
               std::move(tts), sentences[i][s].second, FLAGS_language, rate, FLAGS_voice_name,
               std::to_string(sentences[i][s].first) + ".wav");

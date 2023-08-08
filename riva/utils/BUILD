@@ -17,3 +17,14 @@ cc_library(
     hdrs = ["stamping.h"],
     linkstamp = "stamping.cc"
 )
+
+cc_library(
+    name = "string_processing",
+    srcs = [],
+    hdrs = ["string_processing.h"],
+    includes = ["."],
+    linkopts = ["-lm"],
+    deps = [
+        "@com_google_absl//absl/strings",
+    ]
+)

@@ -37,6 +37,11 @@ DEFINE_string(
     language, "en-US",
     "Language code as per [BCP-47](https://www.rfc-editor.org/rfc/bcp/bcp47.txt) language tag.");
 DEFINE_string(voice_name, "", "Desired voice name");
+DEFINE_bool(
+    use_ssl, false,
+    "Whether to use SSL credentials or not. If ssl_cert is specified, "
+    "this is assumed to be true");
+DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 
 static const std::string LC_enUS = "en-US";
 
@@ -57,6 +62,7 @@ main(int argc, char** argv)
   str_usage << "           --voice_name=<voice-name> " << std::endl;
   str_usage << "           --online=<true|false> " << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
+  str_usage << "           --metadata=<key,value,...>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -85,28 +91,26 @@ main(int argc, char** argv)
     LOG(INFO) << "Using environment for " << riva_uri << std::endl;
     FLAGS_riva_uri = riva_uri;
   }
-  std::shared_ptr<grpc::ChannelCredentials> creds;
-  if (FLAGS_ssl_cert.size() > 0) {
-    try {
-      auto cacert = riva::utils::files::ReadFileContentAsString(FLAGS_ssl_cert);
-      grpc::SslCredentialsOptions ssl_opts;
-      ssl_opts.pem_root_certs = cacert;
-      LOG(INFO) << "Using SSL Credentials";
-      creds = grpc::SslCredentials(ssl_opts);
+
+  std::shared_ptr<grpc::Channel> grpc_channel;
+  try {
+    auto creds = riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_cert);
+    if (!FLAGS_metadata.empty()) {
+      auto call_creds =
+          grpc::MetadataCredentialsFromPlugin(std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+              new riva::clients::CustomAuthenticator(FLAGS_metadata)));
+      creds = grpc::CompositeChannelCredentials(creds, call_creds);
     }
-    catch (const std::exception& e) {
-      LOG(INFO) << "Failed to load SSL certificate: " << e.what() << std::endl;
-      return 1;
-    }
-  } else {
-    LOG(INFO) << "Using Insecure Server Credentials";
-    creds = grpc::InsecureChannelCredentials();
+    grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
+  }
+  catch (const std::exception& e) {
+    std::cerr << "Error creating GRPC channel: " << e.what() << std::endl;
+    std::cerr << "Exiting." << std::endl;
+    return 1;
   }
 
-  auto channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
-
   std::unique_ptr<nr_tts::RivaSpeechSynthesis::Stub> tts(
-      nr_tts::RivaSpeechSynthesis::NewStub(channel));
+      nr_tts::RivaSpeechSynthesis::NewStub(grpc_channel));
 
   // Parse command line arguments.
   nr_tts::SynthesizeSpeechRequest request;
