@@ -7,8 +7,8 @@ package(
     default_visibility = ["//visibility:public"],
 )
 cc_binary(
-    name = "riva_nmt_client",
-    srcs = ["riva_nmt_client.cc"],
+    name = "riva_nmt_t2t_client",
+    srcs = ["riva_nmt_t2t_client.cc"],
     deps = [
         "//riva/clients/utils:grpc",
         "@nvriva_common//riva/proto:riva_grpc_nmt",
@@ -91,8 +91,8 @@ cc_library(
 )
 
 cc_binary(
-    name = "riva_streaming_s2t_client",
-    srcs = ["riva_streaming_s2t_client.cc"],
+    name = "riva_nmt_streaming_s2t_client",
+    srcs = ["riva_nmt_streaming_s2t_client.cc"],
     deps = [
         "//riva/clients/asr:asr_client_helper",
         ":client_call",
@@ -115,8 +115,8 @@ cc_binary(
     ],
 )
 cc_binary(
-    name = "riva_streaming_s2s_client",
-    srcs = ["riva_streaming_s2s_client.cc"],
+    name = "riva_nmt_streaming_s2s_client",
+    srcs = ["riva_nmt_streaming_s2s_client.cc"],
     deps = [
         "//riva/clients/asr:asr_client_helper",
         ":client_call",
