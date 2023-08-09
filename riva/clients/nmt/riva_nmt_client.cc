@@ -28,15 +28,15 @@ DEFINE_string(
     text_file, "", "Text file with list of sentences to be TRANSLATED. Ignored if 'text' is set.");
 DEFINE_string(riva_uri, "localhost:50051", "Riva API server URI and port");
 DEFINE_string(text, "", "Text to translate");
-DEFINE_string(src_language, "en", "Source language");
-DEFINE_string(tgt_language, "zh", "Target langugae");
-DEFINE_string(model_name, "riva-nmt", "Model to use");
-DEFINE_bool(list_models, false, "returns available models from server");
-DEFINE_bool(print_line_numbers, false, "prepend line number to translated texts");
+DEFINE_string(source_language_code, "en-US", "Language code for the input text");
+DEFINE_string(target_language_code, "en-US", "Language code for the output text");
+DEFINE_string(model_name, "", "Model to use");
+DEFINE_bool(list_models, false, "List available models on server");
+DEFINE_bool(print_line_numbers, false, "Prepend line number to translated texts");
 DEFINE_int32(num_iterations, 1, "Number of times to loop over text");
 DEFINE_int32(num_parallel_requests, 1, "Number of parallel requests");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
-DEFINE_int32(batch_size, 8, "batch size to use");
+DEFINE_int32(batch_size, 8, "Batch size to use");
 DEFINE_bool(
     use_ssl, false,
     "Whether to use SSL credentials or not. If ssl_cert is specified, "
@@ -46,9 +46,9 @@ DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be
 int
 translateBatch(
     std::unique_ptr<nr_nmt::RivaTranslation::Stub> nmt,
-    std::queue<std::vector<std::pair<int, std::string>>>& work, const std::string tgt_lang,
-    const std::string src_lang, const std::string model_name, std::mutex& mtx,
-    std::vector<double>& latencies, std::mutex& lmtx)
+    std::queue<std::vector<std::pair<int, std::string>>>& work,
+    const std::string target_language_code, const std::string source_language_code,
+    const std::string model_name, std::mutex& mtx, std::vector<double>& latencies, std::mutex& lmtx)
 {
   while (1) {
     std::vector<std::pair<int, std::string>> pairs;
@@ -69,8 +69,8 @@ translateBatch(
     nr_nmt::TranslateTextRequest request;
     nr_nmt::TranslateTextResponse response;
     request.set_model(model_name);
-    request.set_source_language(src_lang);
-    request.set_target_language(tgt_lang);
+    request.set_source_language(source_language_code);
+    request.set_target_language(target_language_code);
     *request.mutable_texts() = {text.begin(), text.end()};
     // std::cout << request.DebugString() << std::endl;
 
@@ -117,8 +117,10 @@ main(int argc, char** argv)
   str_usage << "           --batch_size=<integer> " << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
   str_usage << "           --text=\"text to translate\"" << std::endl;
-  str_usage << "           --src_language=<lang>" << std::endl;
-  str_usage << "           --tgt_language=<lang>" << std::endl;
+  str_usage << "           --source_language_code=<bcp 47 language code (such as en-US)>"
+            << std::endl;
+  str_usage << "           --target_language_code=<bcp 47 language code (such as en-US)>"
+            << std::endl;
   str_usage << "           --model_name=<model>" << std::endl;
   str_usage << "           --list_models" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
@@ -177,8 +179,8 @@ main(int argc, char** argv)
     nr_nmt::TranslateTextRequest request;
     nr_nmt::TranslateTextResponse response;
     request.set_model(FLAGS_model_name);
-    request.set_source_language(FLAGS_src_language);
-    request.set_target_language(FLAGS_tgt_language);
+    request.set_source_language(FLAGS_source_language_code);
+    request.set_target_language(FLAGS_target_language_code);
 
     request.add_texts(FLAGS_text);
     grpc::Status rpc_status = nmt->TranslateText(&context, request, &response);
@@ -238,8 +240,8 @@ main(int argc, char** argv)
           std::unique_ptr<nr_nmt::RivaTranslation::Stub> nmt2(
               nr_nmt::RivaTranslation::NewStub(grpc_channel));
           translateBatch(
-              std::move(nmt2), inputs, FLAGS_tgt_language, FLAGS_src_language, FLAGS_model_name,
-              mtx, latencies, lmtx);
+              std::move(nmt2), inputs, FLAGS_target_language_code, FLAGS_source_language_code,
+              FLAGS_model_name, mtx, latencies, lmtx);
         }));
       }
 
@@ -247,15 +249,16 @@ main(int argc, char** argv)
     }
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> total = end - start;
-    std::cerr << FLAGS_model_name << "-" << FLAGS_batch_size << "-" << FLAGS_src_language << "-"
-              << FLAGS_tgt_language << ",count:" << count << ",total time: " << total.count()
+    std::cout << FLAGS_model_name << "-" << FLAGS_batch_size << "-" << FLAGS_source_language_code
+              << "-" << FLAGS_target_language_code << ",count:" << count
+              << ",total time: " << total.count()
               << ",requests/second: " << batch_count / total.count()
               << ",translations/second: " << count / total.count() << std::endl;
 
     std::sort(latencies.begin(), latencies.end());
     auto size = latencies.size();
 
-    std::cerr << "P90: " << latencies[static_cast<int>(0.9 * size)]
+    std::cout << "P90: " << latencies[static_cast<int>(0.9 * size)]
               << ",P95: " << latencies[static_cast<int>(0.95 * size)]
               << ",P99: " << latencies[static_cast<int>(0.99 * size)] << std::endl;
   }

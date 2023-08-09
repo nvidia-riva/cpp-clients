@@ -30,7 +30,7 @@
 #include "riva/utils/files/files.h"
 #include "riva/utils/stamping.h"
 #include "riva/utils/wav/wav_reader.h"
-#include "streaming_speech_translate_client.h"
+#include "streaming_s2t_client.h"
 
 using grpc::Status;
 using grpc::StatusCode;
@@ -62,7 +62,7 @@ DEFINE_string(
     output_filename, "final_transcripts.json",
     "Filename of .json file containing output transcripts");
 DEFINE_string(model_name, "", "Name of the TRTIS model to use");
-DEFINE_string(source_language_code, "en-US", "Language code of inbound speech");
+DEFINE_string(source_language_code, "en-US", "Language code for the input speech");
 DEFINE_string(target_language_code, "en-US", "Language code for the output text");
 DEFINE_string(boosted_words_file, "", "File with a list of words to boost. One line per word.");
 DEFINE_double(boosted_words_score, 10., "Score by which to boost the boosted words");
@@ -98,7 +98,7 @@ main(int argc, char** argv)
   FLAGS_logtostderr = 1;
 
   std::stringstream str_usage;
-  str_usage << "Usage: riva_streaming_speech_translate_client " << std::endl;
+  str_usage << "Usage: riva_streaming_s2t_client " << std::endl;
   str_usage << "           --audio_file=<filename or folder> " << std::endl;
   str_usage << "           --audio_device=<device_id (such as hw:5,0)> " << std::endl;
   str_usage << "           --automatic_punctuation=<true|false>" << std::endl;
@@ -164,7 +164,7 @@ main(int argc, char** argv)
     return 1;
   }
 
-  StreamingSpeechTranslateClient recognize_client(
+  StreamingS2TClient recognize_client(
       grpc_channel, FLAGS_num_parallel_requests, FLAGS_source_language_code,
       FLAGS_target_language_code, FLAGS_max_alternatives, FLAGS_profanity_filter,
       FLAGS_word_time_offsets, FLAGS_automatic_punctuation,

@@ -62,8 +62,8 @@ DEFINE_string(
     output_filename, "final_transcripts.json",
     "Filename of .json file containing output transcripts");
 DEFINE_string(model_name, "", "Name of the TRTIS model to use");
-DEFINE_string(source_language_code, "en-US", "Language code of the ASR model to use");
-DEFINE_string(target_language_code, "en-US", "Language code of the TTS model to use");
+DEFINE_string(source_language_code, "en-US", "Language code for the input speech");
+DEFINE_string(target_language_code, "en-US", "Language code for the output speech");
 DEFINE_string(boosted_words_file, "", "File with a list of words to boost. One line per word.");
 DEFINE_double(boosted_words_score, 10., "Score by which to boost the boosted words");
 DEFINE_bool(

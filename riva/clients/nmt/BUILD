@@ -8,7 +8,7 @@ package(
 )
 cc_binary(
     name = "riva_nmt_client",
-    srcs = ["riva_nmt.cc"],
+    srcs = ["riva_nmt_client.cc"],
     deps = [
         "//riva/clients/utils:grpc",
         "@nvriva_common//riva/proto:riva_grpc_nmt",
@@ -65,9 +65,9 @@ cc_library(
     ],
 )
 cc_library(
-    name = "streaming_speech_translate_client",
-    srcs = ["streaming_speech_translate_client.h",
-            "streaming_speech_translate_client.cc"
+    name = "streaming_s2t_client",
+    srcs = ["streaming_s2t_client.h",
+            "streaming_s2t_client.cc"
     ],
     deps = [
         "//riva/clients/asr:asr_client_helper",
@@ -91,12 +91,12 @@ cc_library(
 )
 
 cc_binary(
-    name = "riva_streaming_speech_translate_client",
-    srcs = ["riva_streaming_speech_translate_client.cc"],
+    name = "riva_streaming_s2t_client",
+    srcs = ["riva_streaming_s2t_client.cc"],
     deps = [
         "//riva/clients/asr:asr_client_helper",
         ":client_call",
-        ":streaming_speech_translate_client",
+        ":streaming_s2t_client",
         "@nvriva_common//riva/proto:riva_grpc_nmt",
         "//riva/utils/files:files",
         "//riva/utils/wav:reader",
