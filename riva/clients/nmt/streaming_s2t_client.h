@@ -44,9 +44,9 @@ typedef ClientCall<
     S2TClientCall;
 
 
-class StreamingSpeechTranslateClient {
+class StreamingS2TClient {
  public:
-  StreamingSpeechTranslateClient(
+  StreamingS2TClient(
       std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
       const std::string& source_language_code, const std::string& target_language_code,
       int32_t max_alternatives, bool profanity_filter, bool word_time_offsets,
@@ -56,7 +56,7 @@ class StreamingSpeechTranslateClient {
       const std::string& boosted_phrases_file, float boosted_phrases_score,
       const std::string& nmt_text_file);
 
-  ~StreamingSpeechTranslateClient();
+  ~StreamingS2TClient();
 
   uint32_t NumActiveStreams() { return num_active_streams_.load(); }
 

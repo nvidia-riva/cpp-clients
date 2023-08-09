@@ -5,7 +5,7 @@
  */
 
 
-#include "streaming_speech_translate_client.h"
+#include "streaming_s2t_client.h"
 
 #define clear_screen() printf("\033[H\033[J")
 #define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
@@ -50,7 +50,7 @@ MicrophoneThreadMain(
   }
 }
 
-StreamingSpeechTranslateClient::StreamingSpeechTranslateClient(
+StreamingS2TClient::StreamingS2TClient(
     std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
     const std::string& source_language_code, const std::string& target_language_code,
     int32_t max_alternatives, bool profanity_filter, bool word_time_offsets,
@@ -81,7 +81,7 @@ StreamingSpeechTranslateClient::StreamingSpeechTranslateClient(
   boosted_phrases_ = ReadBoostedPhrases(boosted_phrases_file);
 }
 
-StreamingSpeechTranslateClient::~StreamingSpeechTranslateClient()
+StreamingS2TClient::~StreamingS2TClient()
 {
   if (print_transcripts_) {
     output_file_.close();
@@ -89,7 +89,7 @@ StreamingSpeechTranslateClient::~StreamingSpeechTranslateClient()
 }
 
 void
-StreamingSpeechTranslateClient::StartNewStream(std::unique_ptr<Stream> stream)
+StreamingS2TClient::StartNewStream(std::unique_ptr<Stream> stream)
 {
   std::cout << "starting a new stream!" << std::endl;
   std::shared_ptr<S2TClientCall> call =
@@ -100,16 +100,16 @@ StreamingSpeechTranslateClient::StartNewStream(std::unique_ptr<Stream> stream)
   num_active_streams_++;
   num_streams_started_++;
 
-  auto gen_func = std::bind(&StreamingSpeechTranslateClient::GenerateRequests, this, call);
-  auto recv_func = std::bind(
-      &StreamingSpeechTranslateClient::ReceiveResponses, this, call, false /*audio_device*/);
+  auto gen_func = std::bind(&StreamingS2TClient::GenerateRequests, this, call);
+  auto recv_func =
+      std::bind(&StreamingS2TClient::ReceiveResponses, this, call, false /*audio_device*/);
 
   thread_pool_->Enqueue(gen_func);
   thread_pool_->Enqueue(recv_func);
 }
 
 void
-StreamingSpeechTranslateClient::GenerateRequests(std::shared_ptr<S2TClientCall> call)
+StreamingS2TClient::GenerateRequests(std::shared_ptr<S2TClientCall> call)
 {
   float audio_processed = 0.;
 
@@ -119,11 +119,15 @@ StreamingSpeechTranslateClient::GenerateRequests(std::shared_ptr<S2TClientCall> 
   while (!done) {
     nr_nmt::StreamingTranslateSpeechToTextRequest request;
     if (first_write) {
-      auto streaming_speech_translate_config = request.mutable_config();
-      auto translation_config = streaming_speech_translate_config->mutable_translation_config();
+      auto streaming_s2t_config = request.mutable_config();
+
+      // set nmt config
+      auto translation_config = streaming_s2t_config->mutable_translation_config();
       translation_config->set_source_language_code(source_language_code_);
       translation_config->set_target_language_code(target_language_code_);
-      auto streaming_asr_config = streaming_speech_translate_config->mutable_asr_config();
+
+      // set asr config
+      auto streaming_asr_config = streaming_s2t_config->mutable_asr_config();
       streaming_asr_config->set_interim_results(interim_results_);
       auto config = streaming_asr_config->mutable_config();
       config->set_sample_rate_hertz(call->stream->wav->sample_rate);
@@ -197,7 +201,7 @@ StreamingSpeechTranslateClient::GenerateRequests(std::shared_ptr<S2TClientCall> 
 }
 
 int
-StreamingSpeechTranslateClient::DoStreamingFromFile(
+StreamingS2TClient::DoStreamingFromFile(
     std::string& audio_file, int32_t num_iterations, int32_t num_parallel_requests)
 {
   // Preload all wav files, sort by size to reduce tail effects
@@ -258,8 +262,7 @@ StreamingSpeechTranslateClient::DoStreamingFromFile(
 }
 
 void
-StreamingSpeechTranslateClient::PostProcessResults(
-    std::shared_ptr<S2TClientCall> call, bool audio_device)
+StreamingS2TClient::PostProcessResults(std::shared_ptr<S2TClientCall> call, bool audio_device)
 {
   std::lock_guard<std::mutex> lock(latencies_mutex_);
   // it is possible we get one response more than the number of requests sent
@@ -286,8 +289,7 @@ StreamingSpeechTranslateClient::PostProcessResults(
 }
 
 void
-StreamingSpeechTranslateClient::ReceiveResponses(
-    std::shared_ptr<S2TClientCall> call, bool audio_device)
+StreamingS2TClient::ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool audio_device)
 {
   if (audio_device) {
     clear_screen();
@@ -327,8 +329,7 @@ StreamingSpeechTranslateClient::ReceiveResponses(
 }
 
 int
-StreamingSpeechTranslateClient::DoStreamingFromMicrophone(
-    const std::string& audio_device, bool& request_exit)
+StreamingS2TClient::DoStreamingFromMicrophone(const std::string& audio_device, bool& request_exit)
 {
   nr::AudioEncoding encoding = nr::LINEAR_PCM;
   int samplerate = 16000;
@@ -384,8 +385,7 @@ StreamingSpeechTranslateClient::DoStreamingFromMicrophone(
 }
 
 void
-StreamingSpeechTranslateClient::PrintLatencies(
-    std::vector<double>& latencies, const std::string& name)
+StreamingS2TClient::PrintLatencies(std::vector<double>& latencies, const std::string& name)
 {
   if (latencies.size() > 0) {
     std::sort(latencies.begin(), latencies.end());
@@ -411,7 +411,7 @@ StreamingSpeechTranslateClient::PrintLatencies(
 }
 
 int
-StreamingSpeechTranslateClient::PrintStats()
+StreamingS2TClient::PrintStats()
 {
   if (print_latency_stats_ && simulate_realtime_) {
     PrintLatencies(latencies_, "Latencies");

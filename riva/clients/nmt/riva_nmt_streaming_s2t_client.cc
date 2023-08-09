@@ -30,7 +30,7 @@
 #include "riva/utils/files/files.h"
 #include "riva/utils/stamping.h"
 #include "riva/utils/wav/wav_reader.h"
-#include "streaming_s2s_client.h"
+#include "streaming_s2t_client.h"
 
 using grpc::Status;
 using grpc::StatusCode;
@@ -62,8 +62,8 @@ DEFINE_string(
     output_filename, "final_transcripts.json",
     "Filename of .json file containing output transcripts");
 DEFINE_string(model_name, "", "Name of the TRTIS model to use");
-DEFINE_string(source_language_code, "en-US", "Language code of the ASR model to use");
-DEFINE_string(target_language_code, "en-US", "Language code of the TTS model to use");
+DEFINE_string(source_language_code, "en-US", "Language code for the input speech");
+DEFINE_string(target_language_code, "en-US", "Language code for the output text");
 DEFINE_string(boosted_words_file, "", "File with a list of words to boost. One line per word.");
 DEFINE_double(boosted_words_score, 10., "Score by which to boost the boosted words");
 DEFINE_bool(
@@ -71,11 +71,7 @@ DEFINE_bool(
     "True returns text exactly as it was said with no normalization.  False applies text inverse "
     "normalization");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
-DEFINE_string(tts_encoding, "", "TTS output encoding, currently either PCM or OPUS");
-DEFINE_string(
-    tts_audio_file, "s2s_output.wav", "File containing translated audio for input speech");
-DEFINE_int32(tts_sample_rate, 44100, "TTS sample rate hz");
-DEFINE_string(tts_voice_name, "English-US.Female-1", "Desired TTS voice name");
+DEFINE_string(nmt_text_file, "s2t_output.txt", "File containing translated text for input speech");
 DEFINE_bool(
     use_ssl, false,
     "Whether to use SSL credentials or not. If ssl_cert is specified, "
@@ -102,7 +98,7 @@ main(int argc, char** argv)
   FLAGS_logtostderr = 1;
 
   std::stringstream str_usage;
-  str_usage << "Usage: riva_streaming_s2s_client " << std::endl;
+  str_usage << "Usage: riva_nmt_streaming_s2t_client " << std::endl;
   str_usage << "           --audio_file=<filename or folder> " << std::endl;
   str_usage << "           --audio_device=<device_id (such as hw:5,0)> " << std::endl;
   str_usage << "           --automatic_punctuation=<true|false>" << std::endl;
@@ -125,11 +121,7 @@ main(int argc, char** argv)
   str_usage << "           --boosted_words_file=<string>" << std::endl;
   str_usage << "           --boosted_words_score=<float>" << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
-  str_usage << "           --tts_encoding=<opus|pcm>" << std::endl;
-  str_usage << "           --tts_audio_file=<filename>" << std::endl;
-  str_usage << "           --tts_sample_rate=<rate hz>" << std::endl;
-  str_usage << "           --tts_voice_name=<voice name>" << std::endl;
-  str_usage << "           --metadata=<key,value,...>" << std::endl;
+  str_usage << "           --nmt_text_file=<filename>" << std::endl;
 
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
@@ -172,19 +164,14 @@ main(int argc, char** argv)
     return 1;
   }
 
-  if (!FLAGS_tts_encoding.empty() && FLAGS_tts_encoding != "pcm" && FLAGS_tts_encoding != "opus") {
-    std::cerr << "Unsupported encoding: \'" << FLAGS_tts_encoding << "\'" << std::endl;
-    return -1;
-  }
-
-  StreamingS2SClient recognize_client(
+  StreamingS2TClient recognize_client(
       grpc_channel, FLAGS_num_parallel_requests, FLAGS_source_language_code,
       FLAGS_target_language_code, FLAGS_max_alternatives, FLAGS_profanity_filter,
       FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
       /* separate_recognition_per_channel*/ false, FLAGS_print_transcripts, FLAGS_chunk_duration_ms,
       FLAGS_interim_results, FLAGS_output_filename, FLAGS_model_name, FLAGS_simulate_realtime,
       FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score,
-      FLAGS_tts_encoding, FLAGS_tts_audio_file, FLAGS_tts_sample_rate, FLAGS_tts_voice_name);
+      FLAGS_nmt_text_file);
 
   if (FLAGS_audio_file.size()) {
     return recognize_client.DoStreamingFromFile(
