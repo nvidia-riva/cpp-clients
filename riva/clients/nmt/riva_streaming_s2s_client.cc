@@ -72,9 +72,15 @@ DEFINE_bool(
     "normalization");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
 DEFINE_string(tts_encoding, "", "TTS output encoding, currently either PCM or OPUS");
-DEFINE_string(tts_audio_file, "s2s_output.wav", "File containing translated audio for input speech");
+DEFINE_string(
+    tts_audio_file, "s2s_output.wav", "File containing translated audio for input speech");
 DEFINE_int32(tts_sample_rate, 44100, "TTS sample rate hz");
 DEFINE_string(tts_voice_name, "English-US.Female-1", "Desired TTS voice name");
+DEFINE_bool(
+    use_ssl, false,
+    "Whether to use SSL credentials or not. If ssl_cert is specified, "
+    "this is assumed to be true");
+DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 
 void
 signal_handler(int signal_num)
@@ -112,8 +118,10 @@ main(int argc, char** argv)
   str_usage << "           --print_transcripts=<true|false> " << std::endl;
   str_usage << "           --output_filename=<string>" << std::endl;
   str_usage << "           --verbatim_transcripts=<true|false>" << std::endl;
-  str_usage << "           --source_language_code=<bcp 47 language code (such as en-US)>" << std::endl;
-  str_usage << "           --target_language_code=<bcp 47 language code (such as en-US)>" << std::endl;
+  str_usage << "           --source_language_code=<bcp 47 language code (such as en-US)>"
+            << std::endl;
+  str_usage << "           --target_language_code=<bcp 47 language code (such as en-US)>"
+            << std::endl;
   str_usage << "           --boosted_words_file=<string>" << std::endl;
   str_usage << "           --boosted_words_score=<float>" << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
@@ -121,6 +129,7 @@ main(int argc, char** argv)
   str_usage << "           --tts_audio_file=<filename>" << std::endl;
   str_usage << "           --tts_sample_rate=<rate hz>" << std::endl;
   str_usage << "           --tts_voice_name=<voice name>" << std::endl;
+  str_usage << "           --metadata=<key,value,...>" << std::endl;
 
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
@@ -153,18 +162,8 @@ main(int argc, char** argv)
 
   std::shared_ptr<grpc::Channel> grpc_channel;
   try {
-    std::shared_ptr<grpc::ChannelCredentials> creds;
-    if (FLAGS_ssl_cert.size() > 0) {
-      auto cacert = riva::utils::files::ReadFileContentAsString(FLAGS_ssl_cert);
-      grpc::SslCredentialsOptions ssl_opts;
-      ssl_opts.pem_root_certs = cacert;
-      LOG(INFO) << "Using SSL Credentials";
-      creds = grpc::SslCredentials(ssl_opts);
-    } else {
-      LOG(INFO) << "Using Insecure Server Credentials";
-      creds = grpc::InsecureChannelCredentials();
-    }
-
+    auto creds =
+        riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_cert, FLAGS_metadata);
     grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
   }
   catch (const std::exception& e) {
@@ -179,8 +178,9 @@ main(int argc, char** argv)
   }
 
   StreamingS2SClient recognize_client(
-    grpc_channel, FLAGS_num_parallel_requests, FLAGS_source_language_code, FLAGS_target_language_code,
-    FLAGS_max_alternatives, FLAGS_profanity_filter, FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
+      grpc_channel, FLAGS_num_parallel_requests, FLAGS_source_language_code,
+      FLAGS_target_language_code, FLAGS_max_alternatives, FLAGS_profanity_filter,
+      FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
       /* separate_recognition_per_channel*/ false, FLAGS_print_transcripts, FLAGS_chunk_duration_ms,
       FLAGS_interim_results, FLAGS_output_filename, FLAGS_model_name, FLAGS_simulate_realtime,
       FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score,

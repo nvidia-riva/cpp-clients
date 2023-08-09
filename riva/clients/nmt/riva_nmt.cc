@@ -37,7 +37,11 @@ DEFINE_int32(num_iterations, 1, "Number of times to loop over text");
 DEFINE_int32(num_parallel_requests, 1, "Number of parallel requests");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
 DEFINE_int32(batch_size, 8, "batch size to use");
-
+DEFINE_bool(
+    use_ssl, false,
+    "Whether to use SSL credentials or not. If ssl_cert is specified, "
+    "this is assumed to be true");
+DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 
 int
 translateBatch(
@@ -141,27 +145,21 @@ main(int argc, char** argv)
     FLAGS_riva_uri = riva_uri;
   }
 
-  std::shared_ptr<grpc::ChannelCredentials> creds;
-  if (FLAGS_ssl_cert.size() > 0) {
-    try {
-      auto cacert = riva::utils::files::ReadFileContentAsString(FLAGS_ssl_cert);
-      grpc::SslCredentialsOptions ssl_opts;
-      ssl_opts.pem_root_certs = cacert;
-      LOG(INFO) << "Using SSL Credentials";
-      creds = grpc::SslCredentials(ssl_opts);
-    }
-    catch (const std::exception& e) {
-      std::cout << "Failed to load SSL certificate: " << e.what() << std::endl;
-      return 1;
-    }
-  } else {
-    creds = grpc::InsecureChannelCredentials();
+  std::shared_ptr<grpc::Channel> grpc_channel;
+  try {
+    auto creds =
+        riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_cert, FLAGS_metadata);
+    grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
+  }
+  catch (const std::exception& e) {
+    std::cerr << "Error creating GRPC channel: " << e.what() << std::endl;
+    std::cerr << "Exiting." << std::endl;
+    return 1;
   }
 
-  // Do initialization prior to anytiming
-
-  auto channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
-  std::unique_ptr<nr_nmt::RivaTranslation::Stub> nmt(nr_nmt::RivaTranslation::NewStub(channel));
+  // Do initialization prior to anything
+  std::unique_ptr<nr_nmt::RivaTranslation::Stub> nmt(
+      nr_nmt::RivaTranslation::NewStub(grpc_channel));
 
   grpc::ClientContext context;
 
@@ -238,7 +236,7 @@ main(int argc, char** argv)
       for (int i = 0; i < FLAGS_num_parallel_requests; i++) {
         workers.push_back(std::thread([&, i]() {
           std::unique_ptr<nr_nmt::RivaTranslation::Stub> nmt2(
-              nr_nmt::RivaTranslation::NewStub(channel));
+              nr_nmt::RivaTranslation::NewStub(grpc_channel));
           translateBatch(
               std::move(nmt2), inputs, FLAGS_tgt_language, FLAGS_src_language, FLAGS_model_name,
               mtx, latencies, lmtx);

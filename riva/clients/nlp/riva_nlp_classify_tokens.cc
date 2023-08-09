@@ -38,6 +38,11 @@ DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
 DEFINE_int32(num_iterations, 1, "Number of times to loop over strings");
 DEFINE_int32(parallel_requests, 10, "Number of in-flight requests to send");
 DEFINE_bool(print_results, true, "Print final classification results");
+DEFINE_bool(
+    use_ssl, false,
+    "Whether to use SSL credentials or not. If ssl_cert is specified, "
+    "this is assumed to be true");
+DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 
 
 class Query {
@@ -97,6 +102,7 @@ main(int argc, char** argv)
   str_usage << "           --parallel_requests=<integer> " << std::endl;
   str_usage << "           --print_results=<true|false> " << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
+  str_usage << "           --metadata=<key,value,...>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -118,27 +124,20 @@ main(int argc, char** argv)
     std::cout << "Using environment for " << riva_uri << std::endl;
     FLAGS_riva_uri = riva_uri;
   }
-  std::shared_ptr<grpc::ChannelCredentials> creds;
-  if (FLAGS_ssl_cert.size() > 0) {
-    try {
-      auto cacert = riva::utils::files::ReadFileContentAsString(FLAGS_ssl_cert);
-      grpc::SslCredentialsOptions ssl_opts;
-      ssl_opts.pem_root_certs = cacert;
-      LOG(INFO) << "Using SSL Credentials";
-      creds = grpc::SslCredentials(ssl_opts);
-    }
-    catch (const std::exception& e) {
-      std::cout << "Failed to load SSL certificate: " << e.what() << std::endl;
-      return 1;
-    }
-  } else {
-    LOG(INFO) << "Using Insecure Server Credentials";
-    creds = grpc::InsecureChannelCredentials();
+
+  std::shared_ptr<grpc::Channel> grpc_channel;
+  try {
+    auto creds =
+        riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_cert, FLAGS_metadata);
+    grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
+  }
+  catch (const std::exception& e) {
+    std::cerr << "Error creating GRPC channel: " << e.what() << std::endl;
+    std::cerr << "Exiting." << std::endl;
+    return 1;
   }
 
-  auto channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
-
-  auto stub = nr_nlp::RivaLanguageUnderstanding::NewStub(channel);
+  auto stub = nr_nlp::RivaLanguageUnderstanding::NewStub(grpc_channel);
 
   auto prepare_func = [&stub](
       grpc::ClientContext * context, const nr_nlp::TokenClassRequest& request,

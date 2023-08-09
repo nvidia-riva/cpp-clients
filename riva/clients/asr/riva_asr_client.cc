@@ -61,9 +61,12 @@ DEFINE_bool(
     "True returns text exactly as it was said with no normalization.  False applies text inverse "
     "normalization");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
-DEFINE_bool(use_ssl, false, "Whether to use SSL credentials or not. If ssl_cert is specified, "
+DEFINE_bool(
+    use_ssl, false,
+    "Whether to use SSL credentials or not. If ssl_cert is specified, "
     "this is assumed to be true");
 DEFINE_bool(speaker_diarization, false, "Flag that controls if speaker diarization is requested");
+DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 
 class RecognizeClient {
  public:
@@ -387,6 +390,7 @@ main(int argc, char** argv)
   str_usage << "           --boosted_words_score=<float>" << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
   str_usage << "           --speaker_diarization=<true|false>" << std::endl;
+  str_usage << "           --metadata=<key,value,...>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -417,21 +421,8 @@ main(int argc, char** argv)
 
   std::shared_ptr<grpc::Channel> grpc_channel;
   try {
-    std::shared_ptr<grpc::ChannelCredentials> creds;
-    if (FLAGS_ssl_cert.size() > 0 || FLAGS_use_ssl) {
-      LOG(INFO) << "Using Secure Server Credentials";
-      grpc::SslCredentialsOptions ssl_opts;
-      if (FLAGS_ssl_cert.size() > 0) {
-        LOG(INFO) << "Using SSL Credentials";
-        auto cacert = riva::utils::files::ReadFileContentAsString(FLAGS_ssl_cert);
-        ssl_opts.pem_root_certs = cacert;
-      }
-      creds = grpc::SslCredentials(ssl_opts);
-    } else {
-      LOG(INFO) << "Using Insecure Server Credentials";
-      creds = grpc::InsecureChannelCredentials();
-    }
-
+    auto creds =
+        riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_cert, FLAGS_metadata);
     grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
   }
   catch (const std::exception& e) {
