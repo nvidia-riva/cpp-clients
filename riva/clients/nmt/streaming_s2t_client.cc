@@ -53,47 +53,32 @@ MicrophoneThreadMain(
 StreamingS2TClient::StreamingS2TClient(
     std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
     const std::string& source_language_code, const std::string& target_language_code,
-    int32_t max_alternatives, bool profanity_filter, bool word_time_offsets,
-    bool automatic_punctuation, bool separate_recognition_per_channel, bool print_transcripts,
-    int32_t chunk_duration_ms, bool interim_results, std::string output_filename,
-    std::string model_name, bool simulate_realtime, bool verbatim_transcripts,
+    bool profanity_filter, bool automatic_punctuation, bool separate_recognition_per_channel,
+    int32_t chunk_duration_ms, bool simulate_realtime, bool verbatim_transcripts,
     const std::string& boosted_phrases_file, float boosted_phrases_score,
     const std::string& nmt_text_file)
     : print_latency_stats_(true), stub_(nr_nmt::RivaTranslation::NewStub(channel)),
       source_language_code_(source_language_code), target_language_code_(target_language_code),
-      max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
-      word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
+      profanity_filter_(profanity_filter), automatic_punctuation_(automatic_punctuation),
       separate_recognition_per_channel_(separate_recognition_per_channel),
-      print_transcripts_(print_transcripts), chunk_duration_ms_(chunk_duration_ms),
-      interim_results_(interim_results), total_audio_processed_(0.), num_streams_started_(0),
-      model_name_(model_name), simulate_realtime_(simulate_realtime),
-      verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
-      nmt_text_file_(nmt_text_file)
+      chunk_duration_ms_(chunk_duration_ms), total_audio_processed_(0.), num_streams_started_(0),
+      simulate_realtime_(simulate_realtime), verbatim_transcripts_(verbatim_transcripts),
+      boosted_phrases_score_(boosted_phrases_score), nmt_text_file_(nmt_text_file)
 {
   num_active_streams_.store(0);
   num_streams_finished_.store(0);
   thread_pool_.reset(new ThreadPool(4 * num_parallel_requests));
 
-  if (print_transcripts_) {
-    output_file_.open(output_filename);
-  }
-
   boosted_phrases_ = ReadBoostedPhrases(boosted_phrases_file);
 }
 
-StreamingS2TClient::~StreamingS2TClient()
-{
-  if (print_transcripts_) {
-    output_file_.close();
-  }
-}
+StreamingS2TClient::~StreamingS2TClient() {}
 
 void
 StreamingS2TClient::StartNewStream(std::unique_ptr<Stream> stream)
 {
   std::cout << "starting a new stream!" << std::endl;
-  std::shared_ptr<S2TClientCall> call =
-      std::make_shared<S2TClientCall>(stream->corr_id, word_time_offsets_);
+  std::shared_ptr<S2TClientCall> call = std::make_shared<S2TClientCall>(stream->corr_id, false);
   call->streamer = stub_->StreamingTranslateSpeechToText(&call->context);
   call->stream = std::move(stream);
 
@@ -128,23 +113,20 @@ StreamingS2TClient::GenerateRequests(std::shared_ptr<S2TClientCall> call)
 
       // set asr config
       auto streaming_asr_config = streaming_s2t_config->mutable_asr_config();
-      streaming_asr_config->set_interim_results(interim_results_);
+      streaming_asr_config->set_interim_results(false);
       auto config = streaming_asr_config->mutable_config();
       config->set_sample_rate_hertz(call->stream->wav->sample_rate);
       config->set_language_code(source_language_code_);
       config->set_encoding(call->stream->wav->encoding);
-      config->set_max_alternatives(max_alternatives_);
+      config->set_max_alternatives(1);
       config->set_profanity_filter(profanity_filter_);
       config->set_audio_channel_count(call->stream->wav->channels);
-      config->set_enable_word_time_offsets(word_time_offsets_);
+      config->set_enable_word_time_offsets(false);
       config->set_enable_automatic_punctuation(automatic_punctuation_);
       config->set_enable_separate_recognition_per_channel(separate_recognition_per_channel_);
       auto custom_config = config->mutable_custom_configuration();
       (*custom_config)["test_key"] = "test_value";
       config->set_verbatim_transcripts(verbatim_transcripts_);
-      if (model_name_ != "") {
-        config->set_model(model_name_);
-      }
 
       nr_asr::SpeechContext* speech_context = config->add_speech_contexts();
       *(speech_context->mutable_phrases()) = {boosted_phrases_.begin(), boosted_phrases_.end()};
@@ -283,9 +265,6 @@ StreamingS2TClient::PostProcessResults(std::shared_ptr<S2TClientCall> call, bool
       latencies_.push_back(lat);
     }
   }
-  if (print_transcripts_) {
-    call->PrintResult(audio_device, output_file_);
-  }
 }
 
 void
@@ -309,9 +288,6 @@ StreamingS2TClient::ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool a
         gotoxy(0, 5);
       }
       VLOG(1) << "result: " << result.DebugString();
-      if (print_transcripts_) {
-        call->AppendResult(result);
-      }
       std::cout << "translated text: \"" << result.alternatives(0).transcript() << "\""
                 << std::endl;
       result_file << result.alternatives(0).transcript() << std::endl;
@@ -346,29 +322,31 @@ StreamingS2TClient::DoStreamingFromMicrophone(const std::string& audio_device, b
   }
   std::cout << "Using device:" << audio_device << std::endl;
 
-  std::shared_ptr<S2TClientCall> call = std::make_shared<S2TClientCall>(1, word_time_offsets_);
+  std::shared_ptr<S2TClientCall> call = std::make_shared<S2TClientCall>(1, false);
   call->streamer = stub_->StreamingTranslateSpeechToText(&call->context);
 
   // Send first request
   nr_nmt::StreamingTranslateSpeechToTextRequest request;
   auto speech_translate_config = request.mutable_config();
 
+  // set nmt config
+  auto translation_config = speech_translate_config->mutable_translation_config();
+  translation_config->set_source_language_code(source_language_code_);
+  translation_config->set_target_language_code(target_language_code_);
+
   auto streaming_config = speech_translate_config->mutable_asr_config();
-  streaming_config->set_interim_results(interim_results_);
+  streaming_config->set_interim_results(false);
   auto config = streaming_config->mutable_config();
   config->set_sample_rate_hertz(samplerate);
   config->set_language_code(source_language_code_);
   config->set_encoding(encoding);
-  config->set_max_alternatives(max_alternatives_);
+  config->set_max_alternatives(1);
   config->set_profanity_filter(profanity_filter_);
   config->set_audio_channel_count(channels);
-  config->set_enable_word_time_offsets(word_time_offsets_);
+  config->set_enable_word_time_offsets(false);
   config->set_enable_automatic_punctuation(automatic_punctuation_);
   config->set_enable_separate_recognition_per_channel(separate_recognition_per_channel_);
   config->set_verbatim_transcripts(verbatim_transcripts_);
-  if (model_name_ != "") {
-    config->set_model(model_name_);
-  }
   call->streamer->Write(request);
 
   std::thread microphone_thread(
