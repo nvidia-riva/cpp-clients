@@ -49,10 +49,8 @@ class StreamingS2TClient {
   StreamingS2TClient(
       std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
       const std::string& source_language_code, const std::string& target_language_code,
-      int32_t max_alternatives, bool profanity_filter, bool word_time_offsets,
-      bool automatic_punctuation, bool separate_recognition_per_channel, bool print_transcripts,
-      int32_t chunk_duration_ms, bool interim_results, std::string output_filename,
-      std::string model_name, bool simulate_realtime, bool verbatim_transcripts,
+      bool profanity_filter, bool automatic_punctuation, bool separate_recognition_per_channel,
+      int32_t chunk_duration_ms, bool simulate_realtime, bool verbatim_transcripts,
       const std::string& boosted_phrases_file, float boosted_phrases_score,
       const std::string& nmt_text_file);
 
@@ -93,15 +91,11 @@ class StreamingS2TClient {
 
   std::string source_language_code_;
   std::string target_language_code_;
-  int32_t max_alternatives_;
   bool profanity_filter_;
   int32_t channels_;
-  bool word_time_offsets_;
   bool automatic_punctuation_;
   bool separate_recognition_per_channel_;
-  bool print_transcripts_;
   int32_t chunk_duration_ms_;
-  bool interim_results_;
 
   std::mutex curr_tasks_mutex_;
 
@@ -114,9 +108,7 @@ class StreamingS2TClient {
 
   std::unique_ptr<ThreadPool> thread_pool_;
 
-  std::ofstream output_file_;
 
-  std::string model_name_;
   bool simulate_realtime_;
   bool verbatim_transcripts_;
 
