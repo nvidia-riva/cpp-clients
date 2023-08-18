@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: MIT
  */
 
-
 #include "streaming_s2s_client.h"
 
 #include "riva/utils/opus/opus_client_decoder.h"
@@ -59,9 +58,9 @@ StreamingS2SClient::StreamingS2SClient(
     const std::string& boosted_phrases_file, float boosted_phrases_score,
     const std::string& tts_encoding, const std::string& tts_audio_file, int tts_sample_rate,
     const std::string& tts_voice_name)
-    : print_latency_stats_(true), stub_(nr_nmt::RivaTranslation::NewStub(channel)),
-      source_language_code_(source_language_code), target_language_code_(target_language_code),
-      profanity_filter_(profanity_filter), automatic_punctuation_(automatic_punctuation),
+    : stub_(nr_nmt::RivaTranslation::NewStub(channel)), source_language_code_(source_language_code),
+      target_language_code_(target_language_code), profanity_filter_(profanity_filter),
+      automatic_punctuation_(automatic_punctuation),
       separate_recognition_per_channel_(separate_recognition_per_channel),
       chunk_duration_ms_(chunk_duration_ms), total_audio_processed_(0.), num_streams_started_(0),
       simulate_realtime_(simulate_realtime), verbatim_transcripts_(verbatim_transcripts),
@@ -185,6 +184,8 @@ StreamingS2SClient::GenerateRequests(std::shared_ptr<S2SClientCall> call)
       }
     }
     call->send_times.push_back(std::chrono::steady_clock::now());
+    // std::time_t end_time = std::chrono::system_clock::to_time_t(call->send_times.back());
+    // std::cout << &call << "Send time" << std::ctime(&end_time);
     call->streamer->Write(request);
 
     // Set write done to true so next call will lead to WritesDone
@@ -198,7 +199,6 @@ StreamingS2SClient::GenerateRequests(std::shared_ptr<S2SClientCall> call)
     std::lock_guard<std::mutex> lock(latencies_mutex_);
     total_audio_processed_ += audio_processed;
   }
-  num_active_streams_--;
 }
 
 int
@@ -266,23 +266,14 @@ void
 StreamingS2SClient::PostProcessResults(std::shared_ptr<S2SClientCall> call, bool audio_device)
 {
   std::lock_guard<std::mutex> lock(latencies_mutex_);
-  // it is possible we get one response more than the number of requests sent
-  // in the case where files are perfect multiple of chunk size
-  if (call->recv_times.size() != call->send_times.size() &&
-      call->recv_times.size() != call->send_times.size() + 1) {
-    print_latency_stats_ = false;
-  } else {
-    for (uint32_t time_cnt = 0; time_cnt < call->send_times.size(); ++time_cnt) {
-      double lat = std::chrono::duration<double, std::milli>(
-                       call->recv_times[time_cnt] - call->send_times[time_cnt])
-                       .count();
-      if (call->recv_final_flags[time_cnt]) {
-        final_latencies_.push_back(lat);
-      } else {
-        int_latencies_.push_back(lat);
-      }
-      latencies_.push_back(lat);
-    }
+  // the latency for the s2s would be for an individual file as the difference between the last
+  // chunk sent to the first chunk of audio recieved.
+  if (simulate_realtime_) {
+    double lat =
+        std::chrono::duration<double, std::milli>(call->recv_times[0] - call->send_times.back())
+            .count();
+    std::cout << "Latency:" << lat << std::endl;
+    latencies_.push_back(lat);
   }
 }
 
@@ -340,8 +331,11 @@ StreamingS2SClient::ReceiveResponses(std::shared_ptr<S2SClientCall> call, bool a
   if (!status.ok()) {
     // Report the RPC failure.
     std::cerr << status.error_message() << std::endl;
+  } else {
+    PostProcessResults(call, audio_device);
   }
-
+  // A stream would be marked as complete when both ASR and TTS are complete
+  num_active_streams_--;
   num_streams_finished_++;
 }
 
@@ -448,18 +442,13 @@ StreamingS2SClient::PrintLatencies(std::vector<double>& latencies, const std::st
 int
 StreamingS2SClient::PrintStats()
 {
-  if (print_latency_stats_ && simulate_realtime_) {
+  if (simulate_realtime_) {
     PrintLatencies(latencies_, "Latencies");
-    PrintLatencies(int_latencies_, "Intermediate latencies");
-    PrintLatencies(final_latencies_, "Final latencies");
     return 0;
   } else {
-    std::cout
-        << "Not printing latency statistics because the client is run without the "
-           "--simulate_realtime option and/or the number of requests sent is not equal to "
-           "number of requests received. To get latency statistics, run with --simulate_realtime "
-           "and set the --chunk_duration_ms to be the same as the server chunk duration"
-        << std::endl;
+    std::cout << "To get latency statistics, run with --simulate_realtime "
+                 "and set the --chunk_duration_ms to be the same as the server chunk duration"
+              << std::endl;
     return 1;
   }
 }
