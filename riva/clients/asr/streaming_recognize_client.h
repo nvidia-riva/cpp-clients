@@ -43,10 +43,10 @@ class StreamingRecognizeClient {
   StreamingRecognizeClient(
       std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
       const std::string& language_code, int32_t max_alternatives, bool profanity_filter,
-      bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
-      bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
-      std::string output_filename, std::string model_name, bool simulate_realtime,
-      bool verbatim_transcripts, const std::string& boosted_phrases_file,
+      bool remove_profane_words, bool word_time_offsets, bool automatic_punctuation,
+      bool separate_recognition_per_channel, bool print_transcripts, int32_t chunk_duration_ms,
+      bool interim_results, std::string output_filename, std::string model_name,
+      bool simulate_realtime, bool verbatim_transcripts, const std::string& boosted_phrases_file,
       float boosted_phrases_score);
 
   ~StreamingRecognizeClient();
@@ -87,6 +87,7 @@ class StreamingRecognizeClient {
   std::string language_code_;
   int32_t max_alternatives_;
   bool profanity_filter_;
+  bool remove_profane_words_;
   int32_t channels_;
   bool word_time_offsets_;
   bool automatic_punctuation_;

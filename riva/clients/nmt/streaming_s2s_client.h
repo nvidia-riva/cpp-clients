@@ -50,11 +50,11 @@ class StreamingS2SClient {
   StreamingS2SClient(
       std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
       const std::string& source_language_code, const std::string& target_language_code_,
-      bool profanity_filter, bool automatic_punctuation, bool separate_recognition_per_channel,
-      int32_t chunk_duration_ms, bool simulate_realtime, bool verbatim_transcripts,
-      const std::string& boosted_phrases_file, float boosted_phrases_score,
-      const std::string& tts_encoding, const std::string& tts_audio_file, int tts_sample_rate,
-      const std::string& tts_voice_name);
+      bool profanity_filter, bool remove_profane_words, bool automatic_punctuation,
+      bool separate_recognition_per_channel, int32_t chunk_duration_ms, bool simulate_realtime,
+      bool verbatim_transcripts, const std::string& boosted_phrases_file,
+      float boosted_phrases_score, const std::string& tts_encoding,
+      const std::string& tts_audio_file, int tts_sample_rate, const std::string& tts_voice_name);
 
   ~StreamingS2SClient();
 
@@ -82,13 +82,11 @@ class StreamingS2SClient {
 
   std::mutex latencies_mutex_;
 
-  bool print_latency_stats_;
-
  private:
   // Out of the passed in Channel comes the stub, stored here, our view of the
   // server's exposed services.
   std::unique_ptr<nr_nmt::RivaTranslation::Stub> stub_;
-  std::vector<double> int_latencies_, final_latencies_, latencies_;
+  std::vector<double> latencies_;
   std::string tts_encoding_;
   std::string tts_audio_file_;
   std::string tts_voice_name_;
@@ -97,6 +95,7 @@ class StreamingS2SClient {
   int tts_sample_rate_;
 
   bool profanity_filter_;
+  bool remove_profane_words_;
   int32_t channels_;
   bool automatic_punctuation_;
   bool separate_recognition_per_channel_;
