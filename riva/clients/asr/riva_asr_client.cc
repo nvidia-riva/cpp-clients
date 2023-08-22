@@ -44,6 +44,8 @@ DEFINE_int32(
     "Maximum number of alternative transcripts to return (up to limit configured on server)");
 DEFINE_bool(
     profanity_filter, false, "Flag to control profanity filtering for the generated transcripts");
+DEFINE_bool(
+    remove_profane_words, false, "Flag that marks removal of profane words from the transcripts");
 DEFINE_bool(automatic_punctuation, true, "Flag that controls if transcript should be punctuated");
 DEFINE_bool(word_time_offsets, true, "Flag that controls if word time stamps are requested");
 DEFINE_string(riva_uri, "localhost:50051", "URI to access riva-server");
@@ -72,14 +74,15 @@ class RecognizeClient {
  public:
   RecognizeClient(
       std::shared_ptr<grpc::Channel> channel, const std::string& language_code,
-      int32_t max_alternatives, bool profanity_filter, bool word_time_offsets,
-      bool automatic_punctuation, bool separate_recognition_per_channel, bool print_transcripts,
-      std::string output_filename, std::string model_name, bool ctm, bool verbatim_transcripts,
-      const std::string& boosted_phrases_file, float boosted_phrases_score,
-      bool speaker_diarization)
+      int32_t max_alternatives, bool profanity_filter, bool remove_profane_words,
+      bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
+      bool print_transcripts, std::string output_filename, std::string model_name, bool ctm,
+      bool verbatim_transcripts, const std::string& boosted_phrases_file,
+      float boosted_phrases_score, bool speaker_diarization)
       : stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)), language_code_(language_code),
         max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
-        word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
+        remove_profane_words_(remove_profane_words), word_time_offsets_(word_time_offsets),
+        automatic_punctuation_(automatic_punctuation),
         separate_recognition_per_channel_(separate_recognition_per_channel),
         speaker_diarization_(speaker_diarization), print_transcripts_(print_transcripts),
         done_sending_(false), num_requests_(0), num_responses_(0), num_failed_requests_(0),
@@ -193,7 +196,13 @@ class RecognizeClient {
     config->set_encoding(wav->encoding);
     config->set_language_code(language_code_);
     config->set_max_alternatives(max_alternatives_);
-    config->set_profanity_filter(profanity_filter_);
+    config->set_profanity_filter(nr_asr::PROFANITY_OFF);
+    if (profanity_filter_) {
+      config->set_profanity_filter(nr_asr::PROFANITY_MASK);
+    }
+    if (remove_profane_words_) {
+      config->set_profanity_filter(nr_asr::PROFANITY_REMOVE);
+    }
     config->set_audio_channel_count(wav->channels);
     config->set_enable_word_time_offsets(word_time_offsets_);
     config->set_enable_automatic_punctuation(automatic_punctuation_);
@@ -338,6 +347,7 @@ class RecognizeClient {
   std::string language_code_;
   int32_t max_alternatives_;
   bool profanity_filter_;
+  bool remove_profane_words_;
   int32_t channels_;
   bool word_time_offsets_;
   bool automatic_punctuation_;
@@ -377,6 +387,7 @@ main(int argc, char** argv)
   str_usage << "           --automatic_punctuation=<true|false>" << std::endl;
   str_usage << "           --max_alternatives=<integer>" << std::endl;
   str_usage << "           --profanity_filter=<true|false>" << std::endl;
+  str_usage << "           --remove_profane_words=<true|false>" << std::endl;
   str_usage << "           --word_time_offsets=<true|false>" << std::endl;
   str_usage << "           --riva_uri=<server_name:port> " << std::endl;
   str_usage << "           --num_iterations=<integer> " << std::endl;
@@ -433,7 +444,7 @@ main(int argc, char** argv)
 
   RecognizeClient recognize_client(
       grpc_channel, FLAGS_language_code, FLAGS_max_alternatives, FLAGS_profanity_filter,
-      FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
+      FLAGS_remove_profane_words, FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
       /* separate_recognition_per_channel*/ false, FLAGS_print_transcripts, FLAGS_output_filename,
       FLAGS_model_name, FLAGS_output_ctm, FLAGS_verbatim_transcripts, FLAGS_boosted_words_file,
       (float)FLAGS_boosted_words_score, FLAGS_speaker_diarization);

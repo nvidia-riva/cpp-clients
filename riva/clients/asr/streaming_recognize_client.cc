@@ -54,14 +54,15 @@ MicrophoneThreadMain(
 StreamingRecognizeClient::StreamingRecognizeClient(
     std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
     const std::string& language_code, int32_t max_alternatives, bool profanity_filter,
-    bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
-    bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
-    std::string output_filename, std::string model_name, bool simulate_realtime,
-    bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score)
+    bool remove_profane_words, bool word_time_offsets, bool automatic_punctuation,
+    bool separate_recognition_per_channel, bool print_transcripts, int32_t chunk_duration_ms,
+    bool interim_results, std::string output_filename, std::string model_name,
+    bool simulate_realtime, bool verbatim_transcripts, const std::string& boosted_phrases_file,
+    float boosted_phrases_score)
     : print_latency_stats_(true), stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)),
       language_code_(language_code), max_alternatives_(max_alternatives),
-      profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
-      automatic_punctuation_(automatic_punctuation),
+      profanity_filter_(profanity_filter), remove_profane_words_(remove_profane_words),
+      word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
       separate_recognition_per_channel_(separate_recognition_per_channel),
       print_transcripts_(print_transcripts), chunk_duration_ms_(chunk_duration_ms),
       interim_results_(interim_results), total_audio_processed_(0.), num_streams_started_(0),
@@ -123,7 +124,13 @@ StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
       config->set_language_code(language_code_);
       config->set_encoding(call->stream->wav->encoding);
       config->set_max_alternatives(max_alternatives_);
-      config->set_profanity_filter(profanity_filter_);
+      config->set_profanity_filter(nr_asr::PROFANITY_OFF);
+      if (profanity_filter_) {
+        config->set_profanity_filter(nr_asr::PROFANITY_MASK);
+      }
+      if (remove_profane_words_) {
+        config->set_profanity_filter(nr_asr::PROFANITY_REMOVE);
+      }
       config->set_audio_channel_count(call->stream->wav->channels);
       config->set_enable_word_time_offsets(word_time_offsets_);
       config->set_enable_automatic_punctuation(automatic_punctuation_);
@@ -376,7 +383,13 @@ StreamingRecognizeClient::DoStreamingFromMicrophone(
   config->set_language_code(language_code_);
   config->set_encoding(encoding);
   config->set_max_alternatives(max_alternatives_);
-  config->set_profanity_filter(profanity_filter_);
+  config->set_profanity_filter(nr_asr::PROFANITY_OFF);
+  if (profanity_filter_) {
+    config->set_profanity_filter(nr_asr::PROFANITY_MASK);
+  }
+  if (remove_profane_words_) {
+    config->set_profanity_filter(nr_asr::PROFANITY_REMOVE);
+  }
   config->set_audio_channel_count(channels);
   config->set_enable_word_time_offsets(word_time_offsets_);
   config->set_enable_automatic_punctuation(automatic_punctuation_);

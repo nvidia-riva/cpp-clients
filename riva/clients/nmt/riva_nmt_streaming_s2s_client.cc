@@ -44,6 +44,8 @@ DEFINE_string(
 DEFINE_bool(
     profanity_filter, false,
     "Flag that controls if generated transcripts should be filtered for the profane words");
+DEFINE_bool(
+    remove_profane_words, false, "Flag that controls if profane word need to be removed as well");
 DEFINE_bool(automatic_punctuation, true, "Flag that controls if transcript should be punctuated");
 DEFINE_bool(
     simulate_realtime, false, "Flag that controls if audio files should be sent in realtime");
@@ -97,6 +99,7 @@ main(int argc, char** argv)
   str_usage << "           --audio_device=<device_id (such as hw:5,0)> " << std::endl;
   str_usage << "           --automatic_punctuation=<true|false>" << std::endl;
   str_usage << "           --profanity_filter=<true|false>" << std::endl;
+  str_usage << "           --remove_profane_words=<true|false>" << std::endl;
   str_usage << "           --riva_uri=<server_name:port> " << std::endl;
   str_usage << "           --chunk_duration_ms=<integer> " << std::endl;
   str_usage << "           --simulate_realtime=<true|false> " << std::endl;
@@ -159,7 +162,8 @@ main(int argc, char** argv)
 
   StreamingS2SClient recognize_client(
       grpc_channel, FLAGS_num_parallel_requests, FLAGS_source_language_code,
-      FLAGS_target_language_code, FLAGS_profanity_filter, FLAGS_automatic_punctuation,
+      FLAGS_target_language_code, FLAGS_profanity_filter, FLAGS_remove_profane_words,
+      FLAGS_automatic_punctuation,
       /* separate_recognition_per_channel*/ false, FLAGS_chunk_duration_ms, FLAGS_simulate_realtime,
       FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score,
       FLAGS_tts_encoding, FLAGS_tts_audio_file, FLAGS_tts_sample_rate, FLAGS_tts_voice_name);
