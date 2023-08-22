@@ -272,7 +272,7 @@ StreamingS2SClient::PostProcessResults(std::shared_ptr<S2SClientCall> call, bool
     double lat =
         std::chrono::duration<double, std::milli>(call->recv_times[0] - call->send_times.back())
             .count();
-    std::cout << "Latency:" << lat << std::endl;
+    VLOG(1) << "Latency:" << lat << std::endl;
     latencies_.push_back(lat);
   }
 }
