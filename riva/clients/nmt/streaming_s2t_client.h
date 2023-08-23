@@ -81,13 +81,11 @@ class StreamingS2TClient {
 
   std::mutex latencies_mutex_;
 
-  bool print_latency_stats_;
-
  private:
   // Out of the passed in Channel comes the stub, stored here, our view of the
   // server's exposed services.
   std::unique_ptr<nr_nmt::RivaTranslation::Stub> stub_;
-  std::vector<double> int_latencies_, final_latencies_, latencies_;
+  std::vector<double> latencies_;
 
   std::string source_language_code_;
   std::string target_language_code_;
