@@ -123,6 +123,7 @@ main(int argc, char** argv)
             << std::endl;
   str_usage << "           --model_name=<model>" << std::endl;
   str_usage << "           --list_models" << std::endl;
+  str_usage << "           --metadata=<key,value,...>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
 
   if (argc < 2) {
