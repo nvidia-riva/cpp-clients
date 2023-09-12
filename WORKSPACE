@@ -70,7 +70,7 @@ grpc_extra_deps()
 git_repository(
      name = "nvriva_common",
      remote = "https://github.com/nvidia-riva/common.git",
-     commit = "93d035ab191a806a932b301def16520c1f1e2f6f"
+     commit = "dcbd3d631aba81f4a20c40e48a5b7f1b3de57f94"
 )
 
 http_archive(
