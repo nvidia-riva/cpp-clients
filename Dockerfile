@@ -8,7 +8,8 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
     libasound2 \
-    libogg0
+    libogg0 \
+    ca-certificates
 
 FROM base AS builddep
 ARG BAZEL_VERSION
