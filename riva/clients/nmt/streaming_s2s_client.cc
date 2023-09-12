@@ -184,8 +184,6 @@ StreamingS2SClient::GenerateRequests(std::shared_ptr<S2SClientCall> call)
       }
     }
     call->send_times.push_back(std::chrono::steady_clock::now());
-    // std::time_t end_time = std::chrono::system_clock::to_time_t(call->send_times.back());
-    // std::cout << &call << "Send time" << std::ctime(&end_time);
     call->streamer->Write(request);
 
     // Set write done to true so next call will lead to WritesDone
