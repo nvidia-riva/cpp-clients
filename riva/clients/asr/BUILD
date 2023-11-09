@@ -55,6 +55,7 @@ cc_library(
         ":client_call",
         "//riva/utils/wav:reader",
         "//riva/utils/opus",
+        "//riva/clients/utils:grpc",
         "@glog//:glog",
     ] + select({
         "@platforms//cpu:aarch64": [
@@ -100,7 +101,6 @@ cc_binary(
         "//riva/utils/files:files",
         "//riva/utils/wav:reader",
         "@glog//:glog",
-        "//riva/clients/utils:grpc",
     ] + select({
         "@platforms//cpu:aarch64": [
             "@alsa_aarch64//:libasound"

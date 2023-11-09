@@ -80,9 +80,12 @@ CreateChannelBlocking(
 std::shared_ptr<grpc::ChannelCredentials>
 CreateChannelCredentials(bool use_ssl, const std::string& ssl_cert, const std::string& metadata)
 {
+  // std::cout << "Dbg 1" << std::endl;
   std::shared_ptr<grpc::ChannelCredentials> creds;
+  // std::cout << "Dbg 2" << std::endl;
 
   if (use_ssl || !ssl_cert.empty()) {
+    // std::cout << "Dbg 3" << std::endl;
     grpc::SslCredentialsOptions ssl_opts;
     if (!ssl_cert.empty()) {
       auto cacert = riva::utils::files::ReadFileContentAsString(ssl_cert);
@@ -91,17 +94,21 @@ CreateChannelCredentials(bool use_ssl, const std::string& ssl_cert, const std::s
     LOG(INFO) << "Using SSL Credentials";
     creds = grpc::SslCredentials(ssl_opts);
   } else {
+    // std::cout << "Dbg 4" << std::endl;
     LOG(INFO) << "Using Insecure Server Credentials";
     creds = grpc::InsecureChannelCredentials();
   }
 
+  // std::cout << "Dbg 5" << std::endl;
   if (!metadata.empty()) {
+    // std::cout << "Dbg 6" << std::endl;
     auto call_creds =
         grpc::MetadataCredentialsFromPlugin(std::unique_ptr<grpc::MetadataCredentialsPlugin>(
             new riva::clients::CustomAuthenticator(metadata)));
     creds = grpc::CompositeChannelCredentials(creds, call_creds);
   }
 
+  // std::cout << "Dbg 7" << std::endl;
   return creds;
 }
 

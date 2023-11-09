@@ -41,13 +41,13 @@ namespace nr_asr = nvidia::riva::asr;
 class StreamingRecognizeClient {
  public:
   StreamingRecognizeClient(
-      std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
-      const std::string& language_code, int32_t max_alternatives, bool profanity_filter,
-      bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
-      bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
-      std::string output_filename, std::string model_name, bool simulate_realtime,
-      bool verbatim_transcripts, const std::string& boosted_phrases_file,
-      float boosted_phrases_score);
+      bool use_ssl, const std::string& ssl_cert, const std::string& metadata,
+      const std::string& riva_uri, int32_t num_parallel_requests, const std::string& language_code,
+      int32_t max_alternatives, bool profanity_filter, bool word_time_offsets,
+      bool automatic_punctuation, bool separate_recognition_per_channel, bool print_transcripts,
+      int32_t chunk_duration_ms, bool interim_results, std::string output_filename,
+      std::string model_name, bool simulate_realtime, bool verbatim_transcripts,
+      const std::string& boosted_phrases_file, float boosted_phrases_score);
 
   ~StreamingRecognizeClient();
 
@@ -84,6 +84,10 @@ class StreamingRecognizeClient {
   std::unique_ptr<nr_asr::RivaSpeechRecognition::Stub> stub_;
   std::vector<double> int_latencies_, final_latencies_, latencies_;
 
+  bool use_ssl_;
+  std::string ssl_cert_;
+  std::string metadata_;
+  std::string riva_uri_;
   std::string language_code_;
   int32_t max_alternatives_;
   bool profanity_filter_;

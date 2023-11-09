@@ -6,6 +6,7 @@
 
 #include "streaming_recognize_client.h"
 
+#include "riva/clients/utils/grpc.h"
 #include "riva/utils/opus/opus_client_decoder.h"
 
 #define clear_screen() printf("\033[H\033[J")
@@ -52,16 +53,17 @@ MicrophoneThreadMain(
 }
 
 StreamingRecognizeClient::StreamingRecognizeClient(
-    std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
-    const std::string& language_code, int32_t max_alternatives, bool profanity_filter,
-    bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
-    bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
-    std::string output_filename, std::string model_name, bool simulate_realtime,
-    bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score)
-    : print_latency_stats_(true), stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)),
-      language_code_(language_code), max_alternatives_(max_alternatives),
-      profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
-      automatic_punctuation_(automatic_punctuation),
+    bool use_ssl, const std::string& ssl_cert, const std::string& metadata,
+    const std::string& riva_uri, int32_t num_parallel_requests, const std::string& language_code,
+    int32_t max_alternatives, bool profanity_filter, bool word_time_offsets,
+    bool automatic_punctuation, bool separate_recognition_per_channel, bool print_transcripts,
+    int32_t chunk_duration_ms, bool interim_results, std::string output_filename,
+    std::string model_name, bool simulate_realtime, bool verbatim_transcripts,
+    const std::string& boosted_phrases_file, float boosted_phrases_score)
+    : use_ssl_(use_ssl), ssl_cert_(ssl_cert), metadata_(metadata), riva_uri_(riva_uri),
+      print_latency_stats_(true), language_code_(language_code),
+      max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
+      word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
       separate_recognition_per_channel_(separate_recognition_per_channel),
       print_transcripts_(print_transcripts), chunk_duration_ms_(chunk_duration_ms),
       interim_results_(interim_results), total_audio_processed_(0.), num_streams_started_(0),
@@ -89,10 +91,24 @@ StreamingRecognizeClient::~StreamingRecognizeClient()
 void
 StreamingRecognizeClient::StartNewStream(std::unique_ptr<Stream> stream)
 {
+  std::shared_ptr<grpc::Channel> grpc_channel;
+  try {
+    // std::cout << "Debug # " << use_ssl_ << " # " << ssl_cert_ << " # " << metadata_ << " #"
+    //          << std::endl;
+    auto creds = riva::clients::CreateChannelCredentials(use_ssl_, ssl_cert_, metadata_);
+    grpc_channel = riva::clients::CreateChannelBlocking(riva_uri_, creds);
+    std::cout << "Created new grpc channel" << std::endl;
+  }
+  catch (const std::exception& e) {
+    std::cerr << "Error creating GRPC channel: " << e.what() << std::endl;
+    std::cerr << "Exiting." << std::endl;
+  }
+  auto grpc_stub_ = nr_asr::RivaSpeechRecognition::NewStub(grpc_channel);
+
   std::shared_ptr<ClientCall> call =
       std::make_shared<ClientCall>(stream->corr_id, word_time_offsets_);
-  call->streamer = stub_->StreamingRecognize(&call->context);
   call->stream = std::move(stream);
+  call->streamer = grpc_stub_->StreamingRecognize(&call->context);
 
   num_active_streams_++;
   num_streams_started_++;
