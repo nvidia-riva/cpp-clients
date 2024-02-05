@@ -60,7 +60,7 @@ DEFINE_bool(
     verbatim_transcripts, true,
     "True returns text exactly as it was said with no normalization.  False applies text inverse "
     "normalization");
-DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
+DEFINE_string(ssl_cert, "", "Path to SSL client certificates file");
 DEFINE_string(tts_encoding, "", "TTS output encoding, currently either PCM or OPUS");
 DEFINE_string(
     tts_audio_file, "s2s_output.wav", "File containing translated audio for input speech");

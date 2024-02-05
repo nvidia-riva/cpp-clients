@@ -19,6 +19,7 @@
 #include "riva/utils/files/files.h"
 #include "riva/utils/opus/opus_client_decoder.h"
 #include "riva/utils/stamping.h"
+#include "riva/utils/wav/wav_reader.h"
 #include "riva/utils/wav/wav_writer.h"
 
 using grpc::Status;
@@ -30,7 +31,7 @@ DEFINE_string(text, "", "Text to be synthesized");
 DEFINE_string(audio_file, "output.wav", "Output file");
 DEFINE_string(audio_encoding, "pcm", "Audio encoding (pcm or opus)");
 DEFINE_string(riva_uri, "localhost:50051", "Riva API server URI and port");
-DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
+DEFINE_string(ssl_cert, "", "Path to SSL client certificates file");
 DEFINE_int32(rate, 44100, "Sample rate for the TTS output");
 DEFINE_bool(online, false, "Whether synthesis should be online or batch");
 DEFINE_string(
@@ -42,6 +43,10 @@ DEFINE_bool(
     "Whether to use SSL credentials or not. If ssl_cert is specified, "
     "this is assumed to be true");
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
+DEFINE_string(
+    zero_shot_audio_prompt, "",
+    "Input audio file for Zero Shot Model. Audio length between 0-3 seconds.");
+DEFINE_int32(zero_shot_quality, 20, "Required quality of output audio, ranges between 1-40.");
 
 static const std::string LC_enUS = "en-US";
 
@@ -63,6 +68,8 @@ main(int argc, char** argv)
   str_usage << "           --online=<true|false> " << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
   str_usage << "           --metadata=<key,value,...>" << std::endl;
+  str_usage << "           --zero_shot_audio_prompt=<filename>" << std::endl;
+  str_usage << "           --zero_shot_quality=<quality>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -127,6 +134,32 @@ main(int argc, char** argv)
 
   request.set_sample_rate_hz(rate);
   request.set_voice_name(FLAGS_voice_name);
+  if (not FLAGS_zero_shot_audio_prompt.empty()) {
+    auto zero_shot_data = request.mutable_zero_shot_data();
+    std::vector<std::shared_ptr<WaveData>> audio_prompt;
+    LoadWavData(audio_prompt, FLAGS_zero_shot_audio_prompt);
+    if (audio_prompt.size() != 1) {
+      LOG(ERROR) << "Unsupported number of audio prompts. Need exactly 1 audio prompt."
+                 << std::endl;
+      return -1;
+    }
+    if (audio_prompt[0]->encoding != nr::LINEAR_PCM && audio_prompt[0]->encoding != nr::OGGOPUS) {
+      std::cerr << "Unsupported encoding for zero shot prompt: \'" << audio_prompt[0]->encoding
+                << "\'" << std::endl;
+      LOG(ERROR) << "Unsupported encoding for zero shot prompt: \'" << audio_prompt[0]->encoding
+                 << "\'";
+      return -1;
+    }
+    zero_shot_data->set_audio_prompt(&audio_prompt[0]->data[0], audio_prompt[0]->data.size());
+    int32_t zero_shot_sample_rate = audio_prompt[0]->sample_rate;
+    zero_shot_data->set_encoding(audio_prompt[0]->encoding);
+    if (audio_prompt[0]->encoding == nr::OGGOPUS) {
+      zero_shot_sample_rate =
+          riva::utils::opus::Decoder::AdjustRateIfUnsupported(zero_shot_sample_rate);
+    }
+    zero_shot_data->set_sample_rate_hz(zero_shot_sample_rate);
+    zero_shot_data->set_quality(FLAGS_zero_shot_quality);
+  }
 
   // Send text content using Synthesize().
   grpc::ClientContext context;

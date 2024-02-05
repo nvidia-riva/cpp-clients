@@ -73,7 +73,7 @@ class StreamingS2TClient {
 
   void ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool audio_device);
 
-  int DoStreamingFromMicrophone(const std::string& auido_device, bool& request_exit);
+  int DoStreamingFromMicrophone(const std::string& audio_device, bool& request_exit);
 
   void PrintLatencies(std::vector<double>& latencies, const std::string& name);
 

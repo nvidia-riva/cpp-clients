@@ -265,7 +265,7 @@ StreamingS2SClient::PostProcessResults(std::shared_ptr<S2SClientCall> call, bool
 {
   std::lock_guard<std::mutex> lock(latencies_mutex_);
   // the latency for the s2s would be for an individual file as the difference between the last
-  // chunk sent to the first chunk of audio recieved.
+  // chunk sent to the first chunk of audio received.
   if (simulate_realtime_) {
     double lat =
         std::chrono::duration<double, std::milli>(call->recv_times[0] - call->send_times.back())

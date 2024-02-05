@@ -35,7 +35,7 @@ DEFINE_bool(list_models, false, "List available models on server");
 DEFINE_bool(print_line_numbers, false, "Prepend line number to translated texts");
 DEFINE_int32(num_iterations, 1, "Number of times to loop over text");
 DEFINE_int32(num_parallel_requests, 1, "Number of parallel requests");
-DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
+DEFINE_string(ssl_cert, "", "Path to SSL client certificates file");
 DEFINE_int32(batch_size, 8, "Batch size to use");
 DEFINE_bool(
     use_ssl, false,
