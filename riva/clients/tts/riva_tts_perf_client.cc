@@ -23,6 +23,7 @@
 #include "riva/utils/files/files.h"
 #include "riva/utils/opus/opus_client_decoder.h"
 #include "riva/utils/stamping.h"
+#include "riva/utils/wav/wav_reader.h"
 #include "riva/utils/wav/wav_writer.h"
 
 using grpc::Status;
@@ -53,6 +54,10 @@ DEFINE_bool(
     "Whether to use SSL credentials or not. If ssl_cert is specified, "
     "this is assumed to be true");
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
+DEFINE_string(
+    zero_shot_audio_prompt, "",
+    "Input audio file for Zero Shot Model. Audio length between 0-3 seconds.");
+DEFINE_int32(zero_shot_quality, 20, "Required quality of output audio, ranges between 1-40.");
 
 static const std::string LC_enUS = "en-US";
 
@@ -68,7 +73,8 @@ CreateTTS(std::shared_ptr<grpc::Channel> channel)
 size_t
 synthesizeBatch(
     std::unique_ptr<nr_tts::RivaSpeechSynthesis::Stub> tts, std::string text, std::string language,
-    uint32_t rate, std::string voice_name, std::string filepath)
+    uint32_t rate, std::string voice_name, std::string filepath,
+    std::string zero_shot_prompt_filename, int32_t zero_shot_quality)
 {
   // Parse command line arguments.
   nr_tts::SynthesizeSpeechRequest request;
@@ -84,6 +90,33 @@ synthesizeBatch(
   } else {
     std::cerr << "Unsupported encoding: \'" << FLAGS_audio_encoding << "\'" << std::endl;
     return -1;
+  }
+
+  if (not zero_shot_prompt_filename.empty()) {
+    auto zero_shot_data = request.mutable_zero_shot_data();
+    std::vector<std::shared_ptr<WaveData>> audio_prompt;
+    LoadWavData(audio_prompt, zero_shot_prompt_filename);
+    if (audio_prompt.size() != 1) {
+      LOG(ERROR) << "Unsupported number of audio prompts. Need exactly 1 audio prompt.";
+      return -1;
+    }
+
+    if (audio_prompt[0]->encoding != nr::LINEAR_PCM && audio_prompt[0]->encoding != nr::OGGOPUS) {
+      std::cerr << "Unsupported encoding for zero shot prompt: \'" << audio_prompt[0]->encoding
+                << "\'" << std::endl;
+      LOG(ERROR) << "Unsupported encoding for zero shot prompt: \'" << audio_prompt[0]->encoding
+                 << "\'";
+      return -1;
+    }
+    zero_shot_data->set_audio_prompt(&audio_prompt[0]->data[0], audio_prompt[0]->data.size());
+    int32_t zero_shot_sample_rate = audio_prompt[0]->sample_rate;
+    zero_shot_data->set_encoding(audio_prompt[0]->encoding);
+    if (audio_prompt[0]->encoding == nr::OGGOPUS) {
+      zero_shot_sample_rate =
+          riva::utils::opus::Decoder::AdjustRateIfUnsupported(zero_shot_sample_rate);
+    }
+    zero_shot_data->set_sample_rate_hz(zero_shot_sample_rate);
+    zero_shot_data->set_quality(zero_shot_quality);
   }
 
   // Send text content using Synthesize().
@@ -125,7 +158,8 @@ void
 synthesizeOnline(
     std::unique_ptr<nr_tts::RivaSpeechSynthesis::Stub> tts, std::string text, std::string language,
     uint32_t rate, std::string voice_name, double* time_to_first_chunk,
-    std::vector<double>* time_to_next_chunk, size_t* num_samples, std::string filepath)
+    std::vector<double>* time_to_next_chunk, size_t* num_samples, std::string filepath,
+    std::string zero_shot_prompt_filename, int32_t zero_shot_quality)
 {
   nr_tts::SynthesizeSpeechRequest request;
   request.set_text(text);
@@ -143,6 +177,35 @@ synthesizeOnline(
     return;
   }
   request.set_encoding(ae);
+
+  if (not zero_shot_prompt_filename.empty()) {
+    auto zero_shot_data = request.mutable_zero_shot_data();
+    std::vector<std::shared_ptr<WaveData>> audio_prompt;
+    LoadWavData(audio_prompt, zero_shot_prompt_filename);
+    if (audio_prompt.size() != 1) {
+      LOG(ERROR) << "Unsupported number of audio prompts. Need exactly 1 audio prompt."
+                 << std::endl;
+      return;
+    }
+
+    if (audio_prompt[0]->encoding != nr::LINEAR_PCM && audio_prompt[0]->encoding != nr::OGGOPUS) {
+      LOG(ERROR) << "Unsupported encoding for zero shot prompt: \'" << audio_prompt[0]->encoding
+                 << "\'";
+      std::cerr << "Unsupported encoding for zero shot prompt: \'" << audio_prompt[0]->encoding
+                << "\'" << std::endl;
+      return;
+    }
+    zero_shot_data->set_audio_prompt(&audio_prompt[0]->data[0], audio_prompt[0]->data.size());
+    int32_t zero_shot_sample_rate = audio_prompt[0]->sample_rate;
+    zero_shot_data->set_encoding(audio_prompt[0]->encoding);
+    if (audio_prompt[0]->encoding == nr::OGGOPUS) {
+      zero_shot_sample_rate =
+          riva::utils::opus::Decoder::AdjustRateIfUnsupported(zero_shot_sample_rate);
+    }
+    zero_shot_data->set_sample_rate_hz(zero_shot_sample_rate);
+    zero_shot_data->set_quality(zero_shot_quality);
+  }
+
 
   // Send text content using SynthesizeOnline().
   grpc::ClientContext context;
@@ -241,6 +304,8 @@ main(int argc, char** argv)
   str_usage << "           --offset_milliseconds=<offset-milliseconds> " << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
   str_usage << "           --metadata=<key,value,...>" << std::endl;
+  str_usage << "           --zero_shot_audio_prompt=<filename>" << std::endl;
+  str_usage << "           --zero_shot_quality=<quality>" << std::endl;
 
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
@@ -361,7 +426,8 @@ main(int argc, char** argv)
           synthesizeOnline(
               std::move(tts), sentences[i][s].second, FLAGS_language, rate, FLAGS_voice_name,
               &time_to_first_chunk, time_to_next_chunk, &num_samples,
-              std::to_string(sentences[i][s].first) + ".wav");
+              std::to_string(sentences[i][s].first) + ".wav", FLAGS_zero_shot_audio_prompt,
+              FLAGS_zero_shot_quality);
           latencies_first_chunk[i]->push_back(time_to_first_chunk);
           latencies_next_chunks[i]->insert(
               latencies_next_chunks[i]->end(), time_to_next_chunk->begin(),
@@ -436,7 +502,8 @@ main(int argc, char** argv)
           auto tts = CreateTTS(grpc_channel);
           size_t num_samples = synthesizeBatch(
               std::move(tts), sentences[i][s].second, FLAGS_language, rate, FLAGS_voice_name,
-              std::to_string(sentences[i][s].first) + ".wav");
+              std::to_string(sentences[i][s].first) + ".wav", FLAGS_zero_shot_audio_prompt,
+              FLAGS_zero_shot_quality);
           results_num_samples[i]->push_back(num_samples);
         }
       }));

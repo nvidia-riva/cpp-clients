@@ -36,7 +36,7 @@ DEFINE_string(model_name, "", "Model name to test");
 DEFINE_string(language_code, "en-US", "Punctuation model language code");
 DEFINE_string(queries, "", "Path to a file with one input sentence per line");
 DEFINE_string(output, "", "Path to output file");
-DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
+DEFINE_string(ssl_cert, "", "Path to SSL client certificates file");
 DEFINE_int32(num_iterations, 1, "Number of times to loop over strings");
 DEFINE_int32(parallel_requests, 10, "Number of in-flight requests to send");
 DEFINE_bool(print_results, true, "Print final classification results");

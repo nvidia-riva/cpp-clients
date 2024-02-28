@@ -60,7 +60,7 @@ DEFINE_bool(
     verbatim_transcripts, true,
     "True returns text exactly as it was said with no normalization.  False applies text inverse "
     "normalization");
-DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
+DEFINE_string(ssl_cert, "", "Path to SSL client certificates file");
 DEFINE_string(nmt_text_file, "s2t_output.txt", "File containing translated text for input speech");
 DEFINE_bool(
     use_ssl, false,

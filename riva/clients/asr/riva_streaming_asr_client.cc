@@ -70,7 +70,7 @@ DEFINE_bool(
     verbatim_transcripts, true,
     "True returns text exactly as it was said with no normalization.  False applies text inverse "
     "normalization");
-DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
+DEFINE_string(ssl_cert, "", "Path to SSL client certificates file");
 DEFINE_bool(
     use_ssl, false,
     "Whether to use SSL credentials or not. If ssl_cert is specified, "

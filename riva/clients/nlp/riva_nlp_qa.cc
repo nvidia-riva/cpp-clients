@@ -34,7 +34,7 @@ namespace nr_nlp = nvidia::riva::nlp;
 DEFINE_string(riva_uri, "localhost:50051", "URI to access riva-server");
 DEFINE_string(questions, "", "Path to a file with one question per line");
 DEFINE_string(contexts, "", "Path to a file with one context per line");
-DEFINE_string(ssl_cert, "", "Path to SSL client certificatates file");
+DEFINE_string(ssl_cert, "", "Path to SSL client certificates file");
 DEFINE_int32(num_iterations, 1, "Number of times to loop over strings");
 DEFINE_int32(parallel_requests, 10, "Number of in-flight requests to send");
 DEFINE_bool(print_results, true, "Print final classification results");
