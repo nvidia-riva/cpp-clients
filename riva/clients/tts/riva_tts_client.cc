@@ -186,7 +186,7 @@ main(int argc, char** argv)
       LoadWavData(audio_prompt, FLAGS_zero_shot_audio_prompt);
     }
     catch (const std::exception& e) {
-      std::cerr << "Unable to load audio file: " << e.what() << std::endl;
+      LOG(ERROR) << "Unable to load audio file: " << e.what() << std::endl;
       return 1;
     }
     if (audio_prompt.size() != 1) {
