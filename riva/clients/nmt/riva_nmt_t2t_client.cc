@@ -218,8 +218,10 @@ main(int argc, char** argv)
         inputs.push(batch);
         batch.clear();
       }
-      batch.push_back(make_pair(count, str));
-      count++;
+      if (!str.empty()) {
+        batch.push_back(make_pair(count, str));
+        count++;
+      }
     }
 
 
