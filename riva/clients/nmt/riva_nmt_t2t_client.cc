@@ -139,6 +139,20 @@ main(int argc, char** argv)
     return 1;
   }
 
+  if (FLAGS_batch_size <= 0) {
+    LOG(ERROR) << "Invalid batch size: " << FLAGS_batch_size;
+    return 1;
+  }
+
+  if (FLAGS_num_iterations <= 0) {
+    LOG(ERROR) << "Invalid num iterations: " << FLAGS_num_iterations;
+    return 1;
+  }
+
+  if (FLAGS_num_parallel_requests <= 0) {
+    LOG(ERROR) << "Invalid num parallel requests: " << FLAGS_num_parallel_requests;
+    return 1;
+  }
 
   bool flag_set = gflags::GetCommandLineFlagInfoOrDie("riva_uri").is_default;
   const char* riva_uri = getenv("RIVA_URI");
@@ -211,10 +225,8 @@ main(int argc, char** argv)
       return 1;
     }
 
-    int bs = FLAGS_batch_size;
-
     while (std::getline(nmt_file, str)) {
-      if (count && count % bs == 0) {
+      if ((batch.size() > 0) && ((int)batch.size() == FLAGS_batch_size)) {
         inputs.push(batch);
         batch.clear();
       }
@@ -224,10 +236,15 @@ main(int argc, char** argv)
       }
     }
 
-
     if (batch.size() > 0) {
       inputs.push(batch);
     }
+
+    if (!inputs.size()) {
+      LOG(ERROR) << "No text to process";
+      return 1;
+    }
+
     auto batch_count = inputs.size();
 
     auto start = std::chrono::steady_clock::now();
