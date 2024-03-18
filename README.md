@@ -12,9 +12,7 @@ NVIDIA Riva is a GPU-accelerated SDK for building Speech AI applications that ar
     - `riva_tts_client`
     - `riva_tts_perf_client`
 - **Natural Language Processing (NLP)**
-    - `riva_nlp_classify_tokens`
     - `riva_nlp_punct`
-    - `riva_nlp_qa`
 
 ## Requirements
 
@@ -112,39 +110,19 @@ Other options and information can be found by running the clients with `-help`
 
 ### NLP Client
 
-Riva comes with 3 NLP clients.
-1. `riva_nlp_classify_tokens` for Token Classification (NER)
-2. `riva_nlp_punct` for Punctuation
-3. `riva_nlp_qa` for Question and Answering
+Riva comes with `riva_nlp_punct` NLP client for Punctuation. The `examples` folder contains example queries to test out the API.
 
-The `examples` folder contains example queries to test out all 3 API's.
-
-To run the NER or Punctuation clients, simply pass in a text file containing queries using the `--queries` flag
+To run the Punctuation client, simply pass in a text file containing queries using the `--queries` flag
 
 ```
-$ riva_nlp_classify_tokens --queries=examples/token_queries.txt
-Done sending 1 requests
-0: jensen huang [PER (0.997211)], nvidia corporation [ORG (0.970043)], santa clara [LOC (0.997773)], california [LOC (0.996258)],
-```
-
-```
-$ riva_nlp_punct --queries=examples/punctuation_queries.txt      Done sending 3 requests
+$ riva_nlp_punct --queries=examples/punctuation_queries.txt
+Done sending 3 requests
 1: Punct text: Do you have any red Nvidia shirts?
 0: Punct text: Add punctuation to this sentence.
 2: Punct text: I need one cpu, four gpus and lots of memory for my new computer. It's going to be very cool.
 ```
 
-To run the QA client, pass in a text file containing the contexts (1 per line) using the `--contexts` flag, and pass in the corresponding questions (1 per line) using the `--questions` flag
-```
-$ riva_nlp_qa --contexts=examples/qa_contexts.txt --questions=/work/examples/qa_questions.txt
-Done sending 2 requests
-0: Answer: northern Kazakhstan
-Score: 0.736824
-1: Answer: Chris Malachowsky,
-Score: 0.90164
-```
-
-Other options and information can be found by running the clients with `-help` 
+Other options and information can be found by running the client with `-help`
 
 ## Documentation
 
