@@ -218,7 +218,7 @@ main(int argc, char** argv)
     std::string str;
     int count = 0;
     std::vector<std::pair<int, std::string>> batch;
-    std::queue<std::vector<std::pair<int, std::string>>> inputs;
+    std::vector<std::vector<std::pair<int, std::string>>> all_requests;
     std::ifstream nmt_file(FLAGS_text_file);
     if (nmt_file.fail()) {
       LOG(ERROR) << FLAGS_text_file << " failed to load, please check file " << std::endl;
@@ -227,7 +227,7 @@ main(int argc, char** argv)
 
     while (std::getline(nmt_file, str)) {
       if ((batch.size() > 0) && ((int)batch.size() == FLAGS_batch_size)) {
-        inputs.push(batch);
+        all_requests.push_back(batch);
         batch.clear();
       }
       if (!str.empty()) {
@@ -237,15 +237,15 @@ main(int argc, char** argv)
     }
 
     if (batch.size() > 0) {
-      inputs.push(batch);
+      all_requests.push_back(batch);
     }
 
-    if (!inputs.size()) {
+    if (!all_requests.size()) {
       LOG(ERROR) << "No text to process";
       return 1;
     }
 
-    auto batch_count = inputs.size();
+    auto request_count = all_requests.size();
 
     auto start = std::chrono::steady_clock::now();
     std::mutex mtx;   // queue
@@ -253,14 +253,19 @@ main(int argc, char** argv)
     std::vector<double> latencies;
 
     for (int iters = 0; iters < FLAGS_num_iterations; iters++) {
+      std::queue<std::vector<std::pair<int, std::string>>> request_queue;
       std::vector<std::thread> workers;
+
+      for (auto &request : all_requests) {
+        request_queue.push(request);
+      }
 
       for (int i = 0; i < FLAGS_num_parallel_requests; i++) {
         workers.push_back(std::thread([&, i]() {
           std::unique_ptr<nr_nmt::RivaTranslation::Stub> nmt2(
               nr_nmt::RivaTranslation::NewStub(grpc_channel));
           translateBatch(
-              std::move(nmt2), inputs, FLAGS_target_language_code, FLAGS_source_language_code,
+              std::move(nmt2), request_queue, FLAGS_target_language_code, FLAGS_source_language_code,
               FLAGS_model_name, mtx, latencies, lmtx);
         }));
       }
@@ -269,18 +274,18 @@ main(int argc, char** argv)
     }
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> total = end - start;
-    std::cout << FLAGS_model_name << "-" << FLAGS_batch_size << "-" << FLAGS_source_language_code
+    LOG(INFO) << FLAGS_model_name << "-" << FLAGS_batch_size << "-" << FLAGS_source_language_code
               << "-" << FLAGS_target_language_code << ",count:" << count
               << ",total time: " << total.count()
-              << ",requests/second: " << batch_count / total.count()
-              << ",translations/second: " << count / total.count() << std::endl;
+              << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
+              << ",translations/second: " << FLAGS_num_iterations * count / total.count();
 
     std::sort(latencies.begin(), latencies.end());
     auto size = latencies.size();
 
-    std::cout << "P90: " << latencies[static_cast<int>(0.9 * size)]
+    LOG(INFO) << "P90: " << latencies[static_cast<int>(0.9 * size)]
               << ",P95: " << latencies[static_cast<int>(0.95 * size)]
-              << ",P99: " << latencies[static_cast<int>(0.99 * size)] << std::endl;
+              << ",P99: " << latencies[static_cast<int>(0.99 * size)];
   }
 
 
