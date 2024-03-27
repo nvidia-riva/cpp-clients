@@ -137,7 +137,13 @@ main(int argc, char** argv)
   if (not FLAGS_zero_shot_audio_prompt.empty()) {
     auto zero_shot_data = request.mutable_zero_shot_data();
     std::vector<std::shared_ptr<WaveData>> audio_prompt;
-    LoadWavData(audio_prompt, FLAGS_zero_shot_audio_prompt);
+    try {
+      LoadWavData(audio_prompt, FLAGS_zero_shot_audio_prompt);
+    }
+    catch (const std::exception& e) {
+      LOG(ERROR) << "Unable to load audio file: " << e.what() << std::endl;
+      return 1;
+    }
     if (audio_prompt.size() != 1) {
       LOG(ERROR) << "Unsupported number of audio prompts. Need exactly 1 audio prompt."
                  << std::endl;
