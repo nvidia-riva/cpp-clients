@@ -57,7 +57,8 @@ StreamingRecognizeClient::StreamingRecognizeClient(
     bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
     bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
     std::string output_filename, std::string model_name, bool simulate_realtime,
-    bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score)
+    bool verbatim_transcripts, const std::string& boosted_phrases_file,
+    float boosted_phrases_score, int32_t async_delay_ms)
     : print_latency_stats_(true), stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)),
       language_code_(language_code), max_alternatives_(max_alternatives),
       profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
@@ -66,7 +67,8 @@ StreamingRecognizeClient::StreamingRecognizeClient(
       print_transcripts_(print_transcripts), chunk_duration_ms_(chunk_duration_ms),
       interim_results_(interim_results), total_audio_processed_(0.), num_streams_started_(0),
       model_name_(model_name), simulate_realtime_(simulate_realtime),
-      verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score)
+      verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
+      async_delay_ms_(async_delay_ms)
 {
   num_active_streams_.store(0);
   num_streams_finished_.store(0);
@@ -195,6 +197,7 @@ int
 StreamingRecognizeClient::DoStreamingFromFile(
     std::string& audio_file, int32_t num_iterations, int32_t num_parallel_requests)
 {
+  std::cout << "check async_delay_ms is : " << async_delay_ms_;
   // Preload all wav files, sort by size to reduce tail effects
   std::vector<std::shared_ptr<WaveData>> all_wav;
   try {
@@ -218,17 +221,32 @@ StreamingRecognizeClient::DoStreamingFromFile(
     }
   }
 
+ ;
+ 
   // Ensure there's also num_parallel_requests in flight
   uint32_t all_wav_i = 0;
   auto start_time = std::chrono::steady_clock::now();
+  
+  uint32_t initial_streams = 0;
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> dis(1, async_delay_ms_);
+  
   while (true) {
     while (NumActiveStreams() < (uint32_t)num_parallel_requests && all_wav_i < all_wav_max) {
+      if(async_delay_ms_>0){	    
+        if(initial_streams < (uint32_t)num_parallel_requests) {	
+          std::this_thread::sleep_for(std::chrono::milliseconds(dis(gen)));
+          initial_streams++;	    
+        }
+      }
+      
       std::unique_ptr<Stream> stream(new Stream(all_wav_repeated[all_wav_i], all_wav_i));
       StartNewStream(std::move(stream));
       ++all_wav_i;
     }
-
-    // Break if no more tasks to add
+  
+   //  Break if no more tasks to add
     if (NumStreamsFinished() == all_wav_max) {
       break;
     }
@@ -424,6 +442,8 @@ StreamingRecognizeClient::PrintLatencies(std::vector<double>& latencies, const s
     std::cout << "\t\tMedian\t\t90th\t\t95th\t\t99th\t\tAvg\n";
     std::cout << "\t\t" << median << "\t\t" << lat_90 << "\t\t" << lat_95 << "\t\t" << lat_99
               << "\t\t" << avg << std::endl;
+ 
+  //std::cout << "MKJ-check build";
   }
 }
 
