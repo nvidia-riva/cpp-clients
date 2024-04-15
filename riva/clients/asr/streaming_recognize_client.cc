@@ -442,8 +442,6 @@ StreamingRecognizeClient::PrintLatencies(std::vector<double>& latencies, const s
     std::cout << "\t\tMedian\t\t90th\t\t95th\t\t99th\t\tAvg\n";
     std::cout << "\t\t" << median << "\t\t" << lat_90 << "\t\t" << lat_95 << "\t\t" << lat_99
               << "\t\t" << avg << std::endl;
- 
-  //std::cout << "MKJ-check build";
   }
 }
 
