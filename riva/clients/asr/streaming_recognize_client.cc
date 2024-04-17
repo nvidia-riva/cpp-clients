@@ -197,7 +197,6 @@ int
 StreamingRecognizeClient::DoStreamingFromFile(
     std::string& audio_file, int32_t num_iterations, int32_t num_parallel_requests)
 {
-  std::cout << "check async_delay_ms is : " << async_delay_ms_;
   // Preload all wav files, sort by size to reduce tail effects
   std::vector<std::shared_ptr<WaveData>> all_wav;
   try {
