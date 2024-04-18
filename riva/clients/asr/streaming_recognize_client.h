@@ -25,7 +25,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
-
+#include <random>
 #include "client_call.h"
 #include "riva/proto/riva_asr.grpc.pb.h"
 #include "riva/utils/thread_pool.h"
@@ -47,7 +47,7 @@ class StreamingRecognizeClient {
       bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
       std::string output_filename, std::string model_name, bool simulate_realtime,
       bool verbatim_transcripts, const std::string& boosted_phrases_file,
-      float boosted_phrases_score);
+      float boosted_phrases_score, int32_t async_delay_ms);
 
   ~StreamingRecognizeClient();
 
@@ -114,4 +114,5 @@ class StreamingRecognizeClient {
 
   std::vector<std::string> boosted_phrases_;
   float boosted_phrases_score_;
+  int32_t async_delay_ms_;
 };
