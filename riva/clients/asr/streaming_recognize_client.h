@@ -47,7 +47,8 @@ class StreamingRecognizeClient {
       bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
       std::string output_filename, std::string model_name, bool simulate_realtime,
       bool verbatim_transcripts, const std::string& boosted_phrases_file,
-      float boosted_phrases_score);
+      float boosted_phrases_score, int32_t set_endpoint_start_history, float endpoint_start_threshold, 
+      int32_t endpoint_reset_history,int32_t endpoint_response_history,float endpoint_stop_threshold);
 
   ~StreamingRecognizeClient();
 
@@ -114,4 +115,10 @@ class StreamingRecognizeClient {
 
   std::vector<std::string> boosted_phrases_;
   float boosted_phrases_score_;
+
+  int32_t endpoint_start_history_;
+  float endpoint_start_threshold_;
+  int32_t endpoint_reset_history_;
+  int32_t endpoint_response_history_;
+  float endpoint_stop_threshold_;
 };

@@ -76,6 +76,11 @@ DEFINE_bool(
     "Whether to use SSL credentials or not. If ssl_cert is specified, "
     "this is assumed to be true");
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
+DEFINE_int32(endpoint_start_history,0, "Value to detect and initiate start of speech utterance");
+DEFINE_double(endpoint_start_threshold,0., "Threshold value to determine at what percentage start of speech is initiated");
+DEFINE_int32(endpoint_reset_history,0, "Value to detect endpoint and reset decoder");
+DEFINE_int32(endpoint_response_history,0, "Value to detect endpoint and generate an intermediate final transcript");
+DEFINE_double(endpoint_stop_threshold,0., "Threshold value to determine when endpoint detected");
 
 void
 signal_handler(int signal_num)
@@ -118,6 +123,11 @@ main(int argc, char** argv)
   str_usage << "           --boosted_words_score=<float>" << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
   str_usage << "           --metadata=<key,value,...>" << std::endl;
+  str_usage << "           --endpoint_start_history=<int>" << std::endl;
+  str_usage << "           --endpoint_start_threshold=<double>" << std::endl;
+  str_usage << "           --endpoint_reset_history=<int>" << std::endl;
+  str_usage << "           --endpoint_response_history=<int>" << std::endl;
+  str_usage << "           --endpointStopThreshold=<double>" <<  std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -164,7 +174,9 @@ main(int argc, char** argv)
       FLAGS_profanity_filter, FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
       /* separate_recognition_per_channel*/ false, FLAGS_print_transcripts, FLAGS_chunk_duration_ms,
       FLAGS_interim_results, FLAGS_output_filename, FLAGS_model_name, FLAGS_simulate_realtime,
-      FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score);
+      FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score, 
+      FLAGS_endpoint_start_history, FLAGS_endpoint_start_threshold, FLAGS_endpoint_reset_history, 
+      FLAGS_endpoint_response_history, FLAGS_endpoint_stop_threshold);
 
   if (FLAGS_audio_file.size()) {
     return recognize_client.DoStreamingFromFile(
