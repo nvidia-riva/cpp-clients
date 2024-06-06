@@ -124,10 +124,10 @@ main(int argc, char** argv)
   str_usage << "           --ssl_cert=<filename>" << std::endl;
   str_usage << "           --metadata=<key,value,...>" << std::endl;
   str_usage << "           --endpoint_start_history=<int>" << std::endl;
-  str_usage << "           --endpoint_start_threshold=<double>" << std::endl;
+  str_usage << "           --endpoint_start_threshold=<float>" << std::endl;
   str_usage << "           --endpoint_reset_history=<int>" << std::endl;
   str_usage << "           --endpoint_response_history=<int>" << std::endl;
-  str_usage << "           --endpointStopThreshold=<double>" <<  std::endl;
+  str_usage << "           --endpoint_stop_threshold=<float>" <<  std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
