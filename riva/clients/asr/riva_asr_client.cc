@@ -468,7 +468,7 @@ main(int argc, char** argv)
       FLAGS_model_name, FLAGS_output_ctm, FLAGS_verbatim_transcripts, FLAGS_boosted_words_file,
       (float)FLAGS_boosted_words_score, FLAGS_speaker_diarization, FLAGS_start_history, 
       FLAGS_start_threshold, FLAGS_stop_history, FLAGS_stop_history_eou,
-      FLAGS_stop_history_threshold);
+      FLAGS_stop_threshold);
 
   // Preload all wav files, sort by size to reduce tail effects
   std::vector<std::shared_ptr<WaveData>> all_wav;
