@@ -145,14 +145,14 @@ StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
       speech_context->set_boost(boosted_phrases_score_);
 
       // Set the endpoint parameters
-      // Get a mutable reference to the EOUConfig message
-      auto* eou_config = config->mutable_eou_config();
+      // Get a mutable reference to the Endpointing config message
+      auto* endpointing_config = config->mutable_endpointing_config();
       
-      eou_config->set_start_history(start_history_);
-      eou_config->set_start_threshold(start_threshold_);
-      eou_config->set_stop_history(stop_history_);
-      eou_config->set_stop_history_eou(stop_history_eou_);
-      eou_config->set_stop_threshold(stop_threshold_);
+      endpointing_config->set_start_history(start_history_);
+      endpointing_config->set_start_threshold(start_threshold_);
+      endpointing_config->set_stop_history(stop_history_);
+      endpointing_config->set_stop_history_eou(stop_history_eou_);
+      endpointing_config->set_stop_threshold(stop_threshold_);
 
       call->streamer->Write(request);
       first_write = false;
