@@ -7,7 +7,10 @@
 #include <glog/logging.h>
 #include <grpcpp/grpcpp.h>
 #include <strings.h>
+#include <iomanip>
+#include <sstream>
 
+#include <boost/algorithm/string.hpp>
 #include <algorithm>
 #include <chrono>
 #include <fstream>
@@ -58,6 +61,7 @@ DEFINE_string(
     zero_shot_audio_prompt, "",
     "Input audio file for Zero Shot Model. Audio length between 0-3 seconds.");
 DEFINE_int32(zero_shot_quality, 20, "Required quality of output audio, ranges between 1-40.");
+DEFINE_string(user_dictionary, "", " User dictionary containing graph-to-phone custom words");
 
 static const std::string LC_enUS = "en-US";
 
@@ -69,12 +73,52 @@ CreateTTS(std::shared_ptr<grpc::Channel> channel)
   return tts;
 }
 
+std::string 
+ReadUserDictionaryFile(const std::string& dictionary_file)
+{
+  std::string dictionary_string;
+  if (!dictionary_file.empty()) {
+    std::ifstream infile(dictionary_file);
+
+    if (infile.is_open()) {
+      std::string line;
+      bool is_first_line = true;
+
+      while (std::getline(infile, line)) {
+        if (is_first_line) {
+          // Skip the first line it may contains headers
+          is_first_line = false;
+          continue;
+        }
+
+        std::istringstream iss(line);
+        std::string key, value;
+
+        if (std::getline(iss, key, ' ') && std::getline(iss, value)) {
+          // Trim leading and trailing whitespace from key and value
+          boost::trim(key);
+          boost::trim(value);
+
+          // Append the key-value pair to the dictionary string
+          if (!dictionary_string.empty()) {
+            dictionary_string += ",";
+          }
+          dictionary_string += key + "  "  + value;
+        }
+      }
+    } else {
+      std::string err = "Could not open file " + dictionary_file;
+      throw std::runtime_error(err);
+    }
+  }
+  return dictionary_string;
+}
 
 size_t
 synthesizeBatch(
     std::unique_ptr<nr_tts::RivaSpeechSynthesis::Stub> tts, std::string text, std::string language,
     uint32_t rate, std::string voice_name, std::string filepath,
-    std::string zero_shot_prompt_filename, int32_t zero_shot_quality)
+    std::string zero_shot_prompt_filename, int32_t zero_shot_quality, std::string user_dictionary)
 {
   // Parse command line arguments.
   nr_tts::SynthesizeSpeechRequest request;
@@ -91,6 +135,9 @@ synthesizeBatch(
     std::cerr << "Unsupported encoding: \'" << FLAGS_audio_encoding << "\'" << std::endl;
     return -1;
   }
+
+  user_dictionary = ReadUserDictionaryFile(user_dictionary);
+  request.set_user_dictionary(user_dictionary);
 
   if (not zero_shot_prompt_filename.empty()) {
     auto zero_shot_data = request.mutable_zero_shot_data();
@@ -306,6 +353,7 @@ main(int argc, char** argv)
   str_usage << "           --metadata=<key,value,...>" << std::endl;
   str_usage << "           --zero_shot_audio_prompt=<filename>" << std::endl;
   str_usage << "           --zero_shot_quality=<quality>" << std::endl;
+  str_usage << "           --user_dictionary=<filename> " << std::endl;
 
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
@@ -503,7 +551,7 @@ main(int argc, char** argv)
           size_t num_samples = synthesizeBatch(
               std::move(tts), sentences[i][s].second, FLAGS_language, rate, FLAGS_voice_name,
               std::to_string(sentences[i][s].first) + ".wav", FLAGS_zero_shot_audio_prompt,
-              FLAGS_zero_shot_quality);
+              FLAGS_zero_shot_quality, FLAGS_user_dictionary);
           results_num_samples[i]->push_back(num_samples);
         }
       }));
