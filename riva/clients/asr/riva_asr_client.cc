@@ -67,11 +67,11 @@ DEFINE_bool(
     "this is assumed to be true");
 DEFINE_bool(speaker_diarization, false, "Flag that controls if speaker diarization is requested");
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
-DEFINE_int32(start_history,0, "Value to detect and initiate start of speech utterance");
-DEFINE_double(start_threshold,0., "Threshold value to determine at what percentage start of speech is initiated");
-DEFINE_int32(stop_history,0, "Value to detect endpoint and reset decoder");
-DEFINE_int32(stop_history_eou,0, "Value to detect endpoint and generate an intermediate final transcript");
-DEFINE_double(stop_threshold,0., "Threshold value to determine when endpoint detected");
+DEFINE_int32(start_history,-1, "Value to detect and initiate start of speech utterance");
+DEFINE_double(start_threshold,-1., "Threshold value to determine at what percentage start of speech is initiated");
+DEFINE_int32(stop_history,-1, "Value to detect endpoint and reset decoder");
+DEFINE_int32(stop_history_eou,-1, "Value to detect endpoint and generate an intermediate final transcript");
+DEFINE_double(stop_threshold,-1., "Threshold value to determine when endpoint detected");
 
 class RecognizeClient {
  public:
