@@ -147,12 +147,26 @@ StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
       // Set the endpoint parameters
       // Get a mutable reference to the Endpointing config message
       auto* endpointing_config = config->mutable_endpointing_config();
-      
-      endpointing_config->set_start_history(start_history_);
-      endpointing_config->set_start_threshold(start_threshold_);
-      endpointing_config->set_stop_history(stop_history_);
-      endpointing_config->set_stop_history_eou(stop_history_eou_);
-      endpointing_config->set_stop_threshold(stop_threshold_);
+        
+      if (start_history_ > 0) {
+          endpointing_config->set_start_history(start_history_);
+      }
+
+      if (start_threshold_ > 0) {
+          endpointing_config->set_start_threshold(start_threshold_);
+      }
+
+      if (stop_history_ > 0) {
+          endpointing_config->set_stop_history(stop_history_);
+      }
+
+      if (stop_history_eou_ > 0) {
+          endpointing_config->set_stop_history_eou(stop_history_eou_);
+      }
+
+      if (stop_threshold_ > 0) {
+          endpointing_config->set_stop_threshold(stop_threshold_);
+      }
 
       call->streamer->Write(request);
       first_write = false;

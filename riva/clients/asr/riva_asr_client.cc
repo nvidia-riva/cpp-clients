@@ -228,11 +228,25 @@ class RecognizeClient {
     // Get a mutable reference to the Endpointing config message
     auto* endpointing_config = config->mutable_endpointing_config();
     
-    endpointing_config->set_start_history(start_history_);
-    endpointing_config->set_start_threshold(start_threshold_);
-    endpointing_config->set_stop_history(stop_history_);
-    endpointing_config->set_stop_history_eou(stop_history_eou_);
-    endpointing_config->set_stop_threshold(stop_threshold_);
+    if (start_history_ > 0) {
+        endpointing_config->set_start_history(start_history_);
+    }
+
+    if (start_threshold_ > 0) {
+        endpointing_config->set_start_threshold(start_threshold_);
+    }
+
+    if (stop_history_ > 0) {
+        endpointing_config->set_stop_history(stop_history_);
+    }
+
+    if (stop_history_eou_ > 0) {
+        endpointing_config->set_stop_history_eou(stop_history_eou_);
+    }
+
+    if (stop_threshold_ > 0) {
+        endpointing_config->set_stop_threshold(stop_threshold_);
+    }
 
     {
       std::lock_guard<std::mutex> lock(mutex_);
@@ -438,31 +452,6 @@ main(int argc, char** argv)
 
   if (FLAGS_max_alternatives < 1) {
     std::cerr << "max_alternatives must be greater than or equal to 1." << std::endl;
-    return 1;
-  }
-    
-  if( FLAGS_start_history < 0 && FLAGS_start_history != -1 ) {
-    std::cout << "start_history must be set to positive integer value" << std::endl;
-    return 1;
-  }
-  
-  if( FLAGS_start_threshold < 0 && FLAGS_start_threshold != -1 ) {
-    std::cout << "start_threshold must be set to positive value" << std::endl;
-    return 1;
-  }
-  
-  if( FLAGS_stop_history < 0 && FLAGS_stop_history != -1 ) {
-    std::cout << "stop_history must be set to positive value" << std::endl;
-    return 1;
-  }
-  
-  if( FLAGS_stop_history_eou < 0 && FLAGS_stop_history_eou != -1 ) {
-    std::cout << "stop_history_eou must be set to positive value" << std::endl;
-    return 1;
-  }
-  
-  if( FLAGS_stop_threshold < 0 && FLAGS_stop_threshold != -1 ) {
-    std::cout << "stop_threshold must be set to positive value" << std::endl;
     return 1;
   }
   
