@@ -231,23 +231,18 @@ class RecognizeClient {
     if (start_history_ > 0) {
         endpointing_config->set_start_history(start_history_);
     }
-
     if (start_threshold_ > 0) {
         endpointing_config->set_start_threshold(start_threshold_);
     }
-
     if (stop_history_ > 0) {
         endpointing_config->set_stop_history(stop_history_);
     }
-
     if (stop_history_eou_ > 0) {
         endpointing_config->set_stop_history_eou(stop_history_eou_);
     }
-
     if (stop_threshold_ > 0) {
         endpointing_config->set_stop_threshold(stop_threshold_);
     }
-
     {
       std::lock_guard<std::mutex> lock(mutex_);
       curr_tasks_.emplace(stream->corr_id);
