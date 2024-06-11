@@ -440,7 +440,32 @@ main(int argc, char** argv)
     std::cerr << "max_alternatives must be greater than or equal to 1." << std::endl;
     return 1;
   }
-
+    
+  if( FLAGS_start_history < 0 && FLAGS_start_history != -1 ) {
+    std::cout << "start_history must be set to positive integer value" << std::endl;
+    return 1;
+  }
+  
+  if( FLAGS_start_threshold < 0 && FLAGS_start_threshold != -1 ) {
+    std::cout << "start_threshold must be set to positive value" << std::endl;
+    return 1;
+  }
+  
+  if( FLAGS_stop_history < 0 && FLAGS_stop_history != -1 ) {
+    std::cout << "stop_history must be set to positive value" << std::endl;
+    return 1;
+  }
+  
+  if( FLAGS_stop_history_eou < 0 && FLAGS_stop_history_eou != -1 ) {
+    std::cout << "stop_history_eou must be set to positive value" << std::endl;
+    return 1;
+  }
+  
+  if( FLAGS_stop_threshold < 0 && FLAGS_stop_threshold != -1 ) {
+    std::cout << "stop_threshold must be set to positive value" << std::endl;
+    return 1;
+  }
+  
   bool flag_set = gflags::GetCommandLineFlagInfoOrDie("riva_uri").is_default;
   const char* riva_uri = getenv("RIVA_URI");
 

@@ -76,11 +76,11 @@ DEFINE_bool(
     "Whether to use SSL credentials or not. If ssl_cert is specified, "
     "this is assumed to be true");
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
-DEFINE_int32(start_history,0, "Value to detect and initiate start of speech utterance");
-DEFINE_double(start_threshold,0., "Threshold value to determine at what percentage start of speech is initiated");
-DEFINE_int32(stop_history,0, "Value to detect endpoint and reset decoder");
-DEFINE_int32(stop_history_eou,0, "Value to detect endpoint and generate an intermediate final transcript");
-DEFINE_double(stop_threshold,0., "Threshold value to determine when endpoint detected");
+DEFINE_int32(start_history,-1, "Value to detect and initiate start of speech utterance");
+DEFINE_double(start_threshold,-1., "Threshold value to determine at what percentage start of speech is initiated");
+DEFINE_int32(stop_history,-1, "Value to detect endpoint and reset decoder");
+DEFINE_int32(stop_history_eou,-1, "Value to detect endpoint and generate an intermediate final transcript");
+DEFINE_double(stop_threshold,-1., "Threshold value to determine when endpoint detected");
 
 void
 signal_handler(int signal_num)
@@ -146,6 +146,31 @@ main(int argc, char** argv)
 
   if (FLAGS_max_alternatives < 1) {
     std::cerr << "max_alternatives must be greater than or equal to 1." << std::endl;
+    return 1;
+  }
+
+  if( FLAGS_start_history <= 0 && FLAGS_start_history != -1 ) {
+    std::cout << "start_history must be set positive value" << std::endl;
+    return 1;
+  }
+  
+  if( FLAGS_start_threshold <= 0 && FLAGS_start_threshold != -1 ) {
+    std::cout << "start_threshold must be set positive value" << std::endl;
+    return 1;
+  }
+  
+  if( FLAGS_stop_history <= 0 && FLAGS_stop_history != -1 ) {
+    std::cout << "stop_history must be set positive value" << std::endl;
+    return 1;
+  }
+  
+  if( FLAGS_stop_history_eou <= 0 && FLAGS_stop_history_eou != -1 ) {
+    std::cout << "stop_history_eou must be set positive value" << std::endl;
+    return 1;
+  }
+  
+  if( FLAGS_stop_threshold <= 0 && FLAGS_stop_threshold != -1 ) {
+    std::cout << "stop_threshold must be set positive value" << std::endl;
     return 1;
   }
 
