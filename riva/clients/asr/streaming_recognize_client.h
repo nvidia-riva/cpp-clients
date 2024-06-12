@@ -59,7 +59,9 @@ class StreamingRecognizeClient {
   float TotalAudioProcessed() { return total_audio_processed_; }
 
   void StartNewStream(std::unique_ptr<Stream> stream);
-
+  
+  void UpdateEndpointingConfig(nr_asr::RecognitionConfig* config);
+  
   void GenerateRequests(std::shared_ptr<ClientCall> call);
 
   int DoStreamingFromFile(

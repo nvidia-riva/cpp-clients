@@ -111,6 +111,33 @@ StreamingRecognizeClient::StartNewStream(std::unique_ptr<Stream> stream)
 }
 
 void
+StreamingRecognizeClient::UpdateEndpointingConfig(nr_asr::RecognitionConfig* config)
+{
+  if (!(start_history_ > 0 || start_threshold_ > 0 || stop_history_ > 0 || stop_history_eou_ > 0 || stop_threshold_ > 0)) {
+      return; 
+  }
+  // Set the endpoint parameters
+  // Get a mutable reference to the Endpointing config message
+  auto* endpointing_config = config->mutable_endpointing_config();
+
+  if (start_history_ > 0) {
+      endpointing_config->set_start_history(start_history_);
+  }
+  if (start_threshold_ > 0) {
+      endpointing_config->set_start_threshold(start_threshold_);
+  }
+  if (stop_history_ > 0) {
+      endpointing_config->set_stop_history(stop_history_);
+  }
+  if (stop_history_eou_ > 0) {
+      endpointing_config->set_stop_history_eou(stop_history_eou_);
+  }
+  if (stop_threshold_ > 0) {
+      endpointing_config->set_stop_threshold(stop_threshold_);
+  }
+}
+
+void
 StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
 {
   float audio_processed = 0.;
@@ -145,24 +172,7 @@ StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
       speech_context->set_boost(boosted_phrases_score_);
 
       // Set the endpoint parameters
-      // Get a mutable reference to the Endpointing config message
-      auto* endpointing_config = config->mutable_endpointing_config();
-        
-      if (start_history_ > 0) {
-          endpointing_config->set_start_history(start_history_);
-      }
-      if (start_threshold_ > 0) {
-          endpointing_config->set_start_threshold(start_threshold_);
-      }
-      if (stop_history_ > 0) {
-          endpointing_config->set_stop_history(stop_history_);
-      }
-      if (stop_history_eou_ > 0) {
-          endpointing_config->set_stop_history_eou(stop_history_eou_);
-      }
-      if (stop_threshold_ > 0) {
-          endpointing_config->set_stop_threshold(stop_threshold_);
-      }
+      UpdateEndpointingConfig(config);
 
       call->streamer->Write(request);
       first_write = false;
