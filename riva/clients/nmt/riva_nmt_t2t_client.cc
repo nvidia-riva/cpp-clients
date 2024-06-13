@@ -32,7 +32,6 @@ DEFINE_string(source_language_code, "en-US", "Language code for the input text")
 DEFINE_string(target_language_code, "en-US", "Language code for the output text");
 DEFINE_string(model_name, "", "Model to use");
 DEFINE_bool(list_models, false, "List available models on server");
-DEFINE_bool(print_line_numbers, false, "Prepend line number to translated texts");
 DEFINE_int32(num_iterations, 1, "Number of times to loop over text");
 DEFINE_int32(num_parallel_requests, 1, "Number of parallel requests");
 DEFINE_string(ssl_cert, "", "Path to SSL client certificates file");
@@ -48,7 +47,8 @@ translateBatch(
     std::unique_ptr<nr_nmt::RivaTranslation::Stub> nmt,
     std::queue<std::vector<std::pair<int, std::string>>>& work,
     const std::string target_language_code, const std::string source_language_code,
-    const std::string model_name, std::mutex& mtx, std::vector<double>& latencies, std::mutex& lmtx)
+    const std::string model_name, std::mutex& mtx, std::vector<double>& latencies, std::mutex& lmtx,
+    std::vector<nr_nmt::TranslateTextResponse>& responses)
 {
   while (1) {
     std::vector<std::pair<int, std::string>> pairs;
@@ -68,6 +68,7 @@ translateBatch(
     grpc::ClientContext context;
     nr_nmt::TranslateTextRequest request;
     nr_nmt::TranslateTextResponse response;
+
     request.set_model(model_name);
     request.set_source_language(source_language_code);
     request.set_target_language(target_language_code);
@@ -79,24 +80,12 @@ translateBatch(
     if (!rpc_status.ok()) {
       LOG(ERROR) << rpc_status.error_message();
     }
+    responses.push_back(response);
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> duration = end - start;
     {
       std::lock_guard<std::mutex> lguard(lmtx);
       latencies.push_back(duration.count());
-    }
-    // auto untranslated = text.begin();
-
-    auto current_line = pairs[0].first;
-    for (auto i : response.translations()) {
-      // std::cout << *untranslated << "->" << i.text() << std::endl;
-      // untranslated++;
-      if (FLAGS_print_line_numbers) {
-        std::cout << current_line << ":" << i.text() << std::endl;
-      } else {
-        std::cout << i.text() << std::endl;
-      }
-      current_line++;
     }
   }
 }
@@ -255,6 +244,7 @@ main(int argc, char** argv)
     for (int iters = 0; iters < FLAGS_num_iterations; iters++) {
       std::queue<std::vector<std::pair<int, std::string>>> request_queue;
       std::vector<std::thread> workers;
+      std::vector<std::vector<nr_nmt::TranslateTextResponse>> responses(FLAGS_num_parallel_requests);
 
       for (auto &request : all_requests) {
         request_queue.push(request);
@@ -266,11 +256,19 @@ main(int argc, char** argv)
               nr_nmt::RivaTranslation::NewStub(grpc_channel));
           translateBatch(
               std::move(nmt2), request_queue, FLAGS_target_language_code, FLAGS_source_language_code,
-              FLAGS_model_name, mtx, latencies, lmtx);
+              FLAGS_model_name, mtx, latencies, lmtx, responses.at(i));
         }));
       }
 
       std::for_each(workers.begin(), workers.end(), [](std::thread& worker) { worker.join(); });
+
+      for (int i = 0; i < FLAGS_num_parallel_requests; i++) {
+        for (auto response : responses.at(i))
+        for (auto i : response.translations()) {
+          std::cout << i.text() << std::endl;
+        }
+      }
+
     }
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> total = end - start;
