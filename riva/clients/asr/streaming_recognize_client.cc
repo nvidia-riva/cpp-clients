@@ -57,7 +57,9 @@ StreamingRecognizeClient::StreamingRecognizeClient(
     bool word_time_offsets, bool automatic_punctuation, bool separate_recognition_per_channel,
     bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
     std::string output_filename, std::string model_name, bool simulate_realtime,
-    bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score)
+    bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score,
+    int32_t start_history, float start_threshold, int32_t stop_history, 
+    int32_t stop_history_eou, float stop_threshold)
     : print_latency_stats_(true), stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)),
       language_code_(language_code), max_alternatives_(max_alternatives),
       profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
@@ -66,7 +68,10 @@ StreamingRecognizeClient::StreamingRecognizeClient(
       print_transcripts_(print_transcripts), chunk_duration_ms_(chunk_duration_ms),
       interim_results_(interim_results), total_audio_processed_(0.), num_streams_started_(0),
       model_name_(model_name), simulate_realtime_(simulate_realtime),
-      verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score)
+      verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
+      start_history_(start_history), start_threshold_(start_threshold),
+      stop_history_(stop_history), stop_history_eou_(stop_history), 
+      stop_threshold_(stop_threshold)
 {
   num_active_streams_.store(0);
   num_streams_finished_.store(0);
@@ -106,6 +111,33 @@ StreamingRecognizeClient::StartNewStream(std::unique_ptr<Stream> stream)
 }
 
 void
+StreamingRecognizeClient::UpdateEndpointingConfig(nr_asr::RecognitionConfig* config)
+{
+  if (!(start_history_ > 0 || start_threshold_ > 0 || stop_history_ > 0 || stop_history_eou_ > 0 || stop_threshold_ > 0)) {
+      return; 
+  }
+  // Set the endpoint parameters
+  // Get a mutable reference to the Endpointing config message
+  auto* endpointing_config = config->mutable_endpointing_config();
+
+  if (start_history_ > 0) {
+      endpointing_config->set_start_history(start_history_);
+  }
+  if (start_threshold_ > 0) {
+      endpointing_config->set_start_threshold(start_threshold_);
+  }
+  if (stop_history_ > 0) {
+      endpointing_config->set_stop_history(stop_history_);
+  }
+  if (stop_history_eou_ > 0) {
+      endpointing_config->set_stop_history_eou(stop_history_eou_);
+  }
+  if (stop_threshold_ > 0) {
+      endpointing_config->set_stop_threshold(stop_threshold_);
+  }
+}
+
+void
 StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
 {
   float audio_processed = 0.;
@@ -138,6 +170,9 @@ StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
       nr_asr::SpeechContext* speech_context = config->add_speech_contexts();
       *(speech_context->mutable_phrases()) = {boosted_phrases_.begin(), boosted_phrases_.end()};
       speech_context->set_boost(boosted_phrases_score_);
+
+      // Set the endpoint parameters
+      UpdateEndpointingConfig(config);
 
       call->streamer->Write(request);
       first_write = false;
