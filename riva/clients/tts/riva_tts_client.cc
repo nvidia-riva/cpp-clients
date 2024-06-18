@@ -13,7 +13,10 @@
 #include <iostream>
 #include <iterator>
 #include <string>
+#include <iomanip>
+#include <sstream>
 
+#include <boost/algorithm/string.hpp>
 #include "riva/clients/utils/grpc.h"
 #include "riva/proto/riva_tts.grpc.pb.h"
 #include "riva/utils/files/files.h"
@@ -47,8 +50,50 @@ DEFINE_string(
     zero_shot_audio_prompt, "",
     "Input audio file for Zero Shot Model. Audio length between 0-3 seconds.");
 DEFINE_int32(zero_shot_quality, 20, "Required quality of output audio, ranges between 1-40.");
+DEFINE_string(user_dictionary, "", " User dictionary containing graph-to-phone custom words");
 
 static const std::string LC_enUS = "en-US";
+
+std::string 
+ReadUserDictionaryFile(const std::string& dictionary_file)
+{
+  std::string dictionary_string;
+  if (!dictionary_file.empty()) {
+    std::ifstream infile(dictionary_file);
+
+    if (infile.is_open()) {
+      std::string line;
+      bool is_first_line = true;
+
+      while (std::getline(infile, line)) {
+        if (is_first_line) {
+          // Skip the first line it may contains headers
+          is_first_line = false;
+          continue;
+        }
+
+        std::istringstream iss(line);
+        std::string key, value;
+
+        if (std::getline(iss, key, ' ') && std::getline(iss, value)) {
+          // Trim leading and trailing whitespace from key and value
+          boost::trim(key);
+          boost::trim(value);
+
+          // Append the key-value pair to the dictionary string
+          if (!dictionary_string.empty()) {
+            dictionary_string += ",";
+          }
+          dictionary_string += key + "  "  + value;
+        }
+      }
+    } else {
+      std::string err = "Could not open file " + dictionary_file;
+      throw std::runtime_error(err);
+    }
+  }
+  return dictionary_string;
+}
 
 int
 main(int argc, char** argv)
@@ -70,6 +115,7 @@ main(int argc, char** argv)
   str_usage << "           --metadata=<key,value,...>" << std::endl;
   str_usage << "           --zero_shot_audio_prompt=<filename>" << std::endl;
   str_usage << "           --zero_shot_quality=<quality>" << std::endl;
+  str_usage << "           --user_dictionary=<filename> " << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -131,6 +177,9 @@ main(int argc, char** argv)
   if (FLAGS_audio_encoding == "opus") {
     rate = riva::utils::opus::Decoder::AdjustRateIfUnsupported(FLAGS_rate);
   }
+
+  std::string user_dictionary = ReadUserDictionaryFile(FLAGS_user_dictionary);
+  request.set_user_dictionary(user_dictionary);
 
   request.set_sample_rate_hz(rate);
   request.set_voice_name(FLAGS_voice_name);
