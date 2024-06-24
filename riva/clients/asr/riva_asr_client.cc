@@ -94,7 +94,7 @@ class RecognizeClient {
         verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score), 
         start_history_(start_history), start_threshold_(start_threshold),
         stop_history_(stop_history), stop_history_eou_(stop_history_eou), 
-        stop_threshold_(stop_threshold)
+        stop_threshold_(stop_threshold), stop_eou_threshold_(stop_eou_threshold)
   {
     if (!output_filename.empty()) {
       output_file_.open(output_filename);
@@ -408,6 +408,7 @@ class RecognizeClient {
   int32_t stop_history_;
   int32_t stop_history_eou_;
   float stop_threshold_;
+  float stop_eou_threshold_;
 };
 
 int
