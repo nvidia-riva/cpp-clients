@@ -14,7 +14,7 @@ ClientCall::ClientCall(uint32_t corr_id, bool word_time_offsets)
 }
 
 void
-ClientCall::AppendResult(const nr_asr::StreamingRecognitionResult& result)
+ClientCall::AppendResult(const nr_asr::StreamingRecognitionResult& result, bool verbose)
 {
   bool is_final = result.is_final();
   if (latest_result_.final_transcripts.size() < 1) {
@@ -32,6 +32,9 @@ ClientCall::AppendResult(const nr_asr::StreamingRecognitionResult& result)
       latest_result_.final_transcripts[a] += result.alternatives(a).transcript();
       latest_result_.final_scores[a] += result.alternatives(a).confidence();
     }
+    if (verbose){
+      DLOG(INFO) << "Final transcript: " << result.alternatives(0).transcript();
+    }
     if (word_time_offsets_) {
       if (num_alternatives > 0) {
         for (int a = 0; a < num_alternatives; ++a) {
@@ -43,6 +46,9 @@ ClientCall::AppendResult(const nr_asr::StreamingRecognitionResult& result)
     }
   } else {
     if (result.alternatives_size() > 0) {
+      if (verbose && result.stability() == 1){
+        DLOG(INFO) << "Intermediate transcript: " << result.alternatives(0).transcript();
+      }
       latest_result_.partial_transcript += result.alternatives(0).transcript();
       if (word_time_offsets_) {
         for (int w = 0; w < result.alternatives(0).words_size(); ++w) {

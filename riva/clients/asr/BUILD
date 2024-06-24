@@ -41,6 +41,7 @@ cc_library(
         ":asr_client_helper",
         "@com_github_grpc_grpc//:grpc++",
         "@nvriva_common//riva/proto:riva_grpc_asr",
+        "@glog//:glog",
         "//riva/utils/wav:reader",
     ],
 )

@@ -59,7 +59,7 @@ StreamingRecognizeClient::StreamingRecognizeClient(
     std::string output_filename, std::string model_name, bool simulate_realtime,
     bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score,
     int32_t start_history, float start_threshold, int32_t stop_history,
-    int32_t stop_history_eou, float stop_threshold, float stop_eou_threshold)
+    int32_t stop_history_eou, float stop_threshold, float stop_eou_threshold, bool verbose)
     : print_latency_stats_(true), stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)),
       language_code_(language_code), max_alternatives_(max_alternatives),
       profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
@@ -71,7 +71,7 @@ StreamingRecognizeClient::StreamingRecognizeClient(
       verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
       start_history_(start_history), start_threshold_(start_threshold),
       stop_history_(stop_history), stop_history_eou_(stop_history_eou),
-      stop_threshold_(stop_threshold), stop_eou_threshold_(stop_eou_threshold)
+      stop_threshold_(stop_threshold), stop_eou_threshold_(stop_eou_threshold), verbose_(verbose)
 {
   num_active_streams_.store(0);
   num_streams_finished_.store(0);
@@ -359,7 +359,7 @@ StreamingRecognizeClient::ReceiveResponses(std::shared_ptr<ClientCall> call, boo
 
       call->latest_result_.audio_processed = result.audio_processed();
       if (print_transcripts_) {
-        call->AppendResult(result);
+        call->AppendResult(result, verbose_);
       }
     }
 

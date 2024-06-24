@@ -6,6 +6,7 @@
 #pragma once
 
 #include <grpcpp/grpcpp.h>
+#include <glog/logging.h>
 #include <strings.h>
 
 #include <atomic>
@@ -37,7 +38,7 @@ class ClientCall {
  public:
   ClientCall(uint32_t _corr_id, bool word_time_offsets);
 
-  void AppendResult(const nr_asr::StreamingRecognitionResult& result);
+  void AppendResult(const nr_asr::StreamingRecognitionResult& result, bool verbose=false);
 
   void PrintResult(bool audio_device, std::ofstream& output_file);
 
