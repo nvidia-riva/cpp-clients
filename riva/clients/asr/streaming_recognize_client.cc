@@ -58,8 +58,8 @@ StreamingRecognizeClient::StreamingRecognizeClient(
     bool print_transcripts, int32_t chunk_duration_ms, bool interim_results,
     std::string output_filename, std::string model_name, bool simulate_realtime,
     bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score,
-    int32_t start_history, float start_threshold, int32_t stop_history, 
-    int32_t stop_history_eou, float stop_threshold)
+    int32_t start_history, float start_threshold, int32_t stop_history,
+    int32_t stop_history_eou, float stop_threshold, float stop_eou_threshold)
     : print_latency_stats_(true), stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)),
       language_code_(language_code), max_alternatives_(max_alternatives),
       profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
@@ -70,8 +70,8 @@ StreamingRecognizeClient::StreamingRecognizeClient(
       model_name_(model_name), simulate_realtime_(simulate_realtime),
       verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
       start_history_(start_history), start_threshold_(start_threshold),
-      stop_history_(stop_history), stop_history_eou_(stop_history), 
-      stop_threshold_(stop_threshold)
+      stop_history_(stop_history), stop_history_eou_(stop_history_eou),
+      stop_threshold_(stop_threshold), stop_eou_threshold_(stop_eou_threshold)
 {
   num_active_streams_.store(0);
   num_streams_finished_.store(0);
@@ -113,7 +113,7 @@ StreamingRecognizeClient::StartNewStream(std::unique_ptr<Stream> stream)
 void
 StreamingRecognizeClient::UpdateEndpointingConfig(nr_asr::RecognitionConfig* config)
 {
-  if (!(start_history_ > 0 || start_threshold_ > 0 || stop_history_ > 0 || stop_history_eou_ > 0 || stop_threshold_ > 0)) {
+  if (!(start_history_ > 0 || start_threshold_ > 0 || stop_history_ > 0 || stop_history_eou_ > 0 || stop_threshold_ > 0 || stop_eou_threshold_ > 0)) {
       return; 
   }
   // Set the endpoint parameters
@@ -134,6 +134,9 @@ StreamingRecognizeClient::UpdateEndpointingConfig(nr_asr::RecognitionConfig* con
   }
   if (stop_threshold_ > 0) {
       endpointing_config->set_stop_threshold(stop_threshold_);
+  }
+  if (stop_eou_threshold_ > 0) {
+      endpointing_config->set_stop_eou_threshold(stop_eou_threshold_);
   }
 }
 

@@ -81,6 +81,7 @@ DEFINE_double(start_threshold,-1., "Threshold value to determine at what percent
 DEFINE_int32(stop_history,-1, "Value to detect endpoint and reset decoder");
 DEFINE_int32(stop_history_eou,-1, "Value to detect endpoint and generate an intermediate final transcript");
 DEFINE_double(stop_threshold,-1., "Threshold value to determine when endpoint detected");
+DEFINE_double(stop_eou_threshold,-1., "Threshold value for likelihood of blanks before detecting end of utterance");
 
 void
 signal_handler(int signal_num)
@@ -128,6 +129,7 @@ main(int argc, char** argv)
   str_usage << "           --stop_history=<int>" << std::endl;
   str_usage << "           --stop_history_eou=<int>" << std::endl;
   str_usage << "           --stop_threshold=<float>" <<  std::endl;
+  str_usage << "           --stop_eou_threshold=<float>" <<  std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -176,7 +178,7 @@ main(int argc, char** argv)
       FLAGS_interim_results, FLAGS_output_filename, FLAGS_model_name, FLAGS_simulate_realtime,
       FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score, 
       FLAGS_start_history, FLAGS_start_threshold, FLAGS_stop_history, 
-      FLAGS_stop_history_eou, FLAGS_stop_threshold);
+      FLAGS_stop_history_eou, FLAGS_stop_threshold, FLAGS_stop_eou_threshold);
 
   if (FLAGS_audio_file.size()) {
     return recognize_client.DoStreamingFromFile(
