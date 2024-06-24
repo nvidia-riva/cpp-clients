@@ -83,7 +83,7 @@ class RecognizeClient {
       std::string output_filename, std::string model_name, bool ctm, bool verbatim_transcripts,
       const std::string& boosted_phrases_file, float boosted_phrases_score,
       bool speaker_diarization, int32_t start_history, float start_threshold, 
-      int32_t stop_history, int32_t stop_history_eou, float stop_threshold)
+      int32_t stop_history, int32_t stop_history_eou, float stop_threshold, float stop_eou_threshold)
       : stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)), language_code_(language_code),
         max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
         word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
