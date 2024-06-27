@@ -265,7 +265,7 @@ class RecognizeClient {
   void UpdateEndpointingConfig(nr_asr::RecognitionConfig* config)
   {
     if (!(start_history_ > 0 || start_threshold_ > 0 || stop_history_ > 0 ||
-          stop_history_eou_ > 0 || stop_threshold_ > 0)) {
+          stop_history_eou_ > 0 || stop_threshold_ > 0 || stop_threshold_eou_ > 0)) {
       return;
     }
 
@@ -280,11 +280,14 @@ class RecognizeClient {
     if (stop_history_ > 0) {
       endpointing_config->set_stop_history(stop_history_);
     }
+    if (stop_threshold_ > 0) {
+      endpointing_config->set_stop_threshold(stop_threshold_);
+    }
     if (stop_history_eou_ > 0) {
       endpointing_config->set_stop_history_eou(stop_history_eou_);
     }
-    if (stop_threshold_ > 0) {
-      endpointing_config->set_stop_threshold(stop_threshold_);
+    if (stop_threshold_eou_ > 0) {
+      endpointing_config->set_stop_threshold_eou(stop_threshold_eou_);
     }
   }
   // Loop while listening for completed responses.
