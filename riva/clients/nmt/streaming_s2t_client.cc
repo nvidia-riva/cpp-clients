@@ -104,6 +104,7 @@ StreamingS2TClient::GenerateRequests(std::shared_ptr<S2TClientCall> call)
   while (!done) {
     nr_nmt::StreamingTranslateSpeechToTextRequest request;
     if (first_write) {
+      VLOG(1) << "Setting up s2t config.";
       auto streaming_s2t_config = request.mutable_config();
 
       // set nmt config
@@ -252,7 +253,7 @@ StreamingS2TClient::PostProcessResults(std::shared_ptr<S2TClientCall> call, bool
     double lat =
         std::chrono::duration<double, std::milli>(call->recv_times[0] - call->send_times.back())
             .count();
-    VLOG(1)<< "Latency:" << lat << std::endl;
+    VLOG(1) << "Latency:" << lat << std::endl;
     latencies_.push_back(lat);
   }
 }
@@ -277,7 +278,7 @@ StreamingS2TClient::ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool a
         std::cout << "ASR started... press `Ctrl-C' to stop recording\n\n";
         gotoxy(0, 5);
       }
-      VLOG(1) << "result: " << result.DebugString();
+      VLOG(1) << "Result: " << result.DebugString();
       std::cout << "translated text: \"" << result.alternatives(0).transcript() << "\""
                 << std::endl;
       result_file << result.alternatives(0).transcript() << std::endl;
