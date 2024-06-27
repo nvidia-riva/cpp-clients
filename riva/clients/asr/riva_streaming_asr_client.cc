@@ -76,14 +76,16 @@ DEFINE_bool(
     "Whether to use SSL credentials or not. If ssl_cert is specified, "
     "this is assumed to be true");
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
-DEFINE_int32(start_history, -1, "Value to detect and initiate start of speech utterance");
+DEFINE_int32(
+    start_history, -1, "Value (in milliseconds) to detect and initiate start of speech utterance");
 DEFINE_double(
     start_threshold, -1.,
     "Threshold value to determine at what percentage start of speech is initiated");
-DEFINE_int32(stop_history, -1, "Value to detect endpoint and reset decoder");
-DEFINE_int32(
-    stop_history_eou, -1, "Value to detect endpoint and generate an intermediate final transcript");
+DEFINE_int32(stop_history, -1, "Value (in milliseconds) to detect endpoint and reset decoder");
 DEFINE_double(stop_threshold, -1., "Threshold value to determine when endpoint detected");
+DEFINE_int32(
+    stop_history_eou, -1,
+    "Value (in milliseconds) to detect endpoint and generate an intermediate final transcript");
 DEFINE_double(
     stop_threshold_eou, -1.,
     "Threshold value for likelihood of blanks before detecting end of utterance");
