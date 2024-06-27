@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <glog/logging.h>
 #include <grpcpp/grpcpp.h>
 #include <strings.h>
 

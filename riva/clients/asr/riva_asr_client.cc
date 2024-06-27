@@ -67,11 +67,17 @@ DEFINE_bool(
     "this is assumed to be true");
 DEFINE_bool(speaker_diarization, false, "Flag that controls if speaker diarization is requested");
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
-DEFINE_int32(start_history,-1, "Value to detect and initiate start of speech utterance");
-DEFINE_double(start_threshold,-1., "Threshold value to determine at what percentage start of speech is initiated");
-DEFINE_int32(stop_history,-1, "Value to detect endpoint and reset decoder");
-DEFINE_int32(stop_history_eou,-1, "Value to detect endpoint and generate an intermediate final transcript");
-DEFINE_double(stop_threshold,-1., "Threshold value to determine when endpoint detected");
+DEFINE_int32(start_history, -1, "Value to detect and initiate start of speech utterance");
+DEFINE_double(
+    start_threshold, -1.,
+    "Threshold value to determine at what percentage start of speech is initiated");
+DEFINE_int32(stop_history, -1, "Value to detect endpoint and reset decoder");
+DEFINE_int32(
+    stop_history_eou, -1, "Value to detect endpoint and generate an intermediate final transcript");
+DEFINE_double(stop_threshold, -1., "Threshold value to determine when endpoint detected");
+DEFINE_double(
+    stop_threshold_eou, -1.,
+    "Threshold value for likelihood of blanks before detecting end of utterance");
 
 class RecognizeClient {
  public:
@@ -81,8 +87,8 @@ class RecognizeClient {
       bool automatic_punctuation, bool separate_recognition_per_channel, bool print_transcripts,
       std::string output_filename, std::string model_name, bool ctm, bool verbatim_transcripts,
       const std::string& boosted_phrases_file, float boosted_phrases_score,
-      bool speaker_diarization, int32_t start_history, float start_threshold, 
-      int32_t stop_history, int32_t stop_history_eou, float stop_threshold)
+      bool speaker_diarization, int32_t start_history, float start_threshold, int32_t stop_history,
+      int32_t stop_history_eou, float stop_threshold, float stop_threshold_eou)
       : stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)), language_code_(language_code),
         max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
         word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
@@ -90,10 +96,10 @@ class RecognizeClient {
         speaker_diarization_(speaker_diarization), print_transcripts_(print_transcripts),
         done_sending_(false), num_requests_(0), num_responses_(0), num_failed_requests_(0),
         total_audio_processed_(0.), model_name_(model_name), output_filename_(output_filename),
-        verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score), 
+        verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
         start_history_(start_history), start_threshold_(start_threshold),
-        stop_history_(stop_history), stop_history_eou_(stop_history_eou), 
-        stop_threshold_(stop_threshold)
+        stop_history_(stop_history), stop_history_eou_(stop_history_eou),
+        stop_threshold_(stop_threshold), stop_threshold_eou_(stop_threshold_eou)
   {
     if (!output_filename.empty()) {
       output_file_.open(output_filename);
@@ -223,10 +229,10 @@ class RecognizeClient {
     speech_context->set_boost(boosted_phrases_score_);
 
     request.set_audio(&wav->data[0], wav->data.size());
-    
+
     // Set the endpoint parameters
     UpdateEndpointingConfig(config);
-   
+
     {
       std::lock_guard<std::mutex> lock(mutex_);
       curr_tasks_.emplace(stream->corr_id);
@@ -258,26 +264,30 @@ class RecognizeClient {
   // Get a mutable reference to the Endpointing config message
   void UpdateEndpointingConfig(nr_asr::RecognitionConfig* config)
   {
-    if (!(start_history_ > 0 || start_threshold_ > 0 || stop_history_ > 0 || stop_history_eou_ > 0 || stop_threshold_ > 0)) {
-        return; 
+    if (!(start_history_ > 0 || start_threshold_ > 0 || stop_history_ > 0 ||
+          stop_history_eou_ > 0 || stop_threshold_ > 0 || stop_threshold_eou_ > 0)) {
+      return;
     }
 
     auto* endpointing_config = config->mutable_endpointing_config();
 
     if (start_history_ > 0) {
-        endpointing_config->set_start_history(start_history_);
+      endpointing_config->set_start_history(start_history_);
     }
     if (start_threshold_ > 0) {
-        endpointing_config->set_start_threshold(start_threshold_);
+      endpointing_config->set_start_threshold(start_threshold_);
     }
     if (stop_history_ > 0) {
-        endpointing_config->set_stop_history(stop_history_);
-    }
-    if (stop_history_eou_ > 0) {
-        endpointing_config->set_stop_history_eou(stop_history_eou_);
+      endpointing_config->set_stop_history(stop_history_);
     }
     if (stop_threshold_ > 0) {
-        endpointing_config->set_stop_threshold(stop_threshold_);
+      endpointing_config->set_stop_threshold(stop_threshold_);
+    }
+    if (stop_history_eou_ > 0) {
+      endpointing_config->set_stop_history_eou(stop_history_eou_);
+    }
+    if (stop_threshold_eou_ > 0) {
+      endpointing_config->set_stop_threshold_eou(stop_threshold_eou_);
     }
   }
   // Loop while listening for completed responses.
@@ -407,6 +417,7 @@ class RecognizeClient {
   int32_t stop_history_;
   int32_t stop_history_eou_;
   float stop_threshold_;
+  float stop_threshold_eou_;
 };
 
 int
@@ -439,7 +450,8 @@ main(int argc, char** argv)
   str_usage << "           --start_threshold=<float>" << std::endl;
   str_usage << "           --stop_history=<int>" << std::endl;
   str_usage << "           --stop_history_eou=<int>" << std::endl;
-  str_usage << "           --stop_threshold=<float>" <<  std::endl;
+  str_usage << "           --stop_threshold=<float>" << std::endl;
+  str_usage << "           --stop_threshold_eou=<float>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -459,7 +471,7 @@ main(int argc, char** argv)
     std::cerr << "max_alternatives must be greater than or equal to 1." << std::endl;
     return 1;
   }
-  
+
   bool flag_set = gflags::GetCommandLineFlagInfoOrDie("riva_uri").is_default;
   const char* riva_uri = getenv("RIVA_URI");
 
@@ -485,9 +497,9 @@ main(int argc, char** argv)
       FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
       /* separate_recognition_per_channel*/ false, FLAGS_print_transcripts, FLAGS_output_filename,
       FLAGS_model_name, FLAGS_output_ctm, FLAGS_verbatim_transcripts, FLAGS_boosted_words_file,
-      (float)FLAGS_boosted_words_score, FLAGS_speaker_diarization, FLAGS_start_history, 
-      FLAGS_start_threshold, FLAGS_stop_history, FLAGS_stop_history_eou,
-      FLAGS_stop_threshold);
+      (float)FLAGS_boosted_words_score, FLAGS_speaker_diarization, FLAGS_start_history,
+      FLAGS_start_threshold, FLAGS_stop_history, FLAGS_stop_history_eou, FLAGS_stop_threshold,
+      FLAGS_stop_threshold_eou);
 
   // Preload all wav files, sort by size to reduce tail effects
   std::vector<std::shared_ptr<WaveData>> all_wav;
