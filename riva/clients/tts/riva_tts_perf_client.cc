@@ -61,7 +61,7 @@ DEFINE_string(
     zero_shot_audio_prompt, "",
     "Input audio file for Zero Shot Model. Audio length between 0-3 seconds.");
 DEFINE_int32(zero_shot_quality, 20, "Required quality of output audio, ranges between 1-40.");
-DEFINE_string(user_dictionary, "", " User dictionary containing graph-to-phone custom words");
+DEFINE_string(custom_dictionary, "", " User dictionary containing graph-to-phone custom words");
 
 static const std::string LC_enUS = "en-US";
 
@@ -118,7 +118,7 @@ size_t
 synthesizeBatch(
     std::unique_ptr<nr_tts::RivaSpeechSynthesis::Stub> tts, std::string text, std::string language,
     uint32_t rate, std::string voice_name, std::string filepath,
-    std::string zero_shot_prompt_filename, int32_t zero_shot_quality, std::string user_dictionary)
+    std::string zero_shot_prompt_filename, int32_t zero_shot_quality, std::string custom_dictionary)
 {
   // Parse command line arguments.
   nr_tts::SynthesizeSpeechRequest request;
@@ -136,8 +136,8 @@ synthesizeBatch(
     return -1;
   }
 
-  user_dictionary = ReadUserDictionaryFile(user_dictionary);
-  request.set_user_dictionary(user_dictionary);
+  custom_dictionary = ReadUserDictionaryFile(custom_dictionary);
+  request.set_custom_dictionary(custom_dictionary);
 
   if (not zero_shot_prompt_filename.empty()) {
     auto zero_shot_data = request.mutable_zero_shot_data();
@@ -353,7 +353,7 @@ main(int argc, char** argv)
   str_usage << "           --metadata=<key,value,...>" << std::endl;
   str_usage << "           --zero_shot_audio_prompt=<filename>" << std::endl;
   str_usage << "           --zero_shot_quality=<quality>" << std::endl;
-  str_usage << "           --user_dictionary=<filename> " << std::endl;
+  str_usage << "           --custom_dictionary=<filename> " << std::endl;
 
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
@@ -551,7 +551,7 @@ main(int argc, char** argv)
           size_t num_samples = synthesizeBatch(
               std::move(tts), sentences[i][s].second, FLAGS_language, rate, FLAGS_voice_name,
               std::to_string(sentences[i][s].first) + ".wav", FLAGS_zero_shot_audio_prompt,
-              FLAGS_zero_shot_quality, FLAGS_user_dictionary);
+              FLAGS_zero_shot_quality, FLAGS_custom_dictionary);
           results_num_samples[i]->push_back(num_samples);
         }
       }));
