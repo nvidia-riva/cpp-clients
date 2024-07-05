@@ -16,7 +16,6 @@
 #include <iomanip>
 #include <sstream>
 
-#include <boost/algorithm/string.hpp>
 #include "riva/clients/utils/grpc.h"
 #include "riva/proto/riva_tts.grpc.pb.h"
 #include "riva/utils/files/files.h"
@@ -63,28 +62,17 @@ ReadUserDictionaryFile(const std::string& dictionary_file)
 
     if (infile.is_open()) {
       std::string line;
-      bool is_first_line = true;
 
       while (std::getline(infile, line)) {
-        if (is_first_line) {
-          // Skip the first line it may contains headers
-          is_first_line = false;
-          continue;
-        }
-
         std::istringstream iss(line);
         std::string key, value;
 
         if (std::getline(iss, key, ' ') && std::getline(iss, value)) {
-          // Trim leading and trailing whitespace from key and value
-          boost::trim(key);
-          boost::trim(value);
-
           // Append the key-value pair to the dictionary string
           if (!dictionary_string.empty()) {
             dictionary_string += ",";
           }
-          dictionary_string += key + "  "  + value;
+          dictionary_string += key + "  " + value;
         }
       }
     } else {
