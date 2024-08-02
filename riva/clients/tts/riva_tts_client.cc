@@ -13,8 +13,7 @@
 #include <iostream>
 #include <iterator>
 #include <string>
-#include <iomanip>
-#include <sstream>
+#include <regex>
 
 #include "riva/clients/utils/grpc.h"
 #include "riva/proto/riva_tts.grpc.pb.h"
@@ -64,15 +63,20 @@ ReadUserDictionaryFile(const std::string& dictionary_file)
       std::string line;
 
       while (std::getline(infile, line)) {
-        std::istringstream iss(line);
-        std::string key, value;
+        // Trim leading and trailing whitespaces
+        line = std::regex_replace(line, std::regex("^ +| +$"), "");
+        int pos = line.find("  ");
 
-        if (std::getline(iss, key, ' ') && std::getline(iss, value)) {
+        if (pos != std::string::npos) {
+          std::string key = line.substr(0, pos);
+          std::string value = std::regex_replace(line.substr(pos+2), std::regex("^ +"), "");
           // Append the key-value pair to the dictionary string
           if (!dictionary_string.empty()) {
             dictionary_string += ",";
           }
           dictionary_string += key + "  " + value;
+        } else {
+          LOG(WARNING) << "Warning: Malformed line " << line << std::endl;
         }
       }
     } else {
