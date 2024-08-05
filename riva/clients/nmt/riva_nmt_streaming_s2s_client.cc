@@ -71,6 +71,9 @@ DEFINE_bool(
     "Whether to use SSL credentials or not. If ssl_cert is specified, "
     "this is assumed to be true");
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
+DEFINE_string(tts_prosody_rate, "", "Speech rate for TTS output");
+DEFINE_string(tts_prosody_pitch, "", "Speech pitch for TTS output");
+DEFINE_string(tts_prosody_volume, "", "Speech volume for TTS output");
 
 void
 signal_handler(int signal_num)
@@ -115,6 +118,9 @@ main(int argc, char** argv)
   str_usage << "           --tts_sample_rate=<rate hz>" << std::endl;
   str_usage << "           --tts_voice_name=<voice name>" << std::endl;
   str_usage << "           --metadata=<key,value,...>" << std::endl;
+  str_usage << "           --tts_prosody_rate=<output speech rate>" << std::endl;
+  str_usage << "           --tts_prosody_pitch=<output speech pitch>" << std::endl;
+  str_usage << "           --tts_prosody_volume=<output speech volume>" << std::endl;
 
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
@@ -162,7 +168,8 @@ main(int argc, char** argv)
       FLAGS_target_language_code, FLAGS_profanity_filter, FLAGS_automatic_punctuation,
       /* separate_recognition_per_channel*/ false, FLAGS_chunk_duration_ms, FLAGS_simulate_realtime,
       FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score,
-      FLAGS_tts_encoding, FLAGS_tts_audio_file, FLAGS_tts_sample_rate, FLAGS_tts_voice_name);
+      FLAGS_tts_encoding, FLAGS_tts_audio_file, FLAGS_tts_sample_rate, FLAGS_tts_voice_name,
+      FLAGS_tts_prosody_rate, FLAGS_tts_prosody_pitch, FLAGS_tts_prosody_volume);
 
   if (FLAGS_audio_file.size()) {
     return recognize_client.DoStreamingFromFile(
