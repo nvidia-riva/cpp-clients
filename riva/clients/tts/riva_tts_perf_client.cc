@@ -17,6 +17,7 @@
 #include <string>
 #include <thread>
 #include <utility>
+#include <regex>
 
 #include "riva/clients/utils/grpc.h"
 #include "riva/proto/riva_tts.grpc.pb.h"
@@ -58,6 +59,7 @@ DEFINE_string(
     zero_shot_audio_prompt, "",
     "Input audio file for Zero Shot Model. Audio length between 0-3 seconds.");
 DEFINE_int32(zero_shot_quality, 20, "Required quality of output audio, ranges between 1-40.");
+DEFINE_string(custom_dictionary, "", " User dictionary containing graph-to-phone custom words");
 
 static const std::string LC_enUS = "en-US";
 
@@ -69,12 +71,46 @@ CreateTTS(std::shared_ptr<grpc::Channel> channel)
   return tts;
 }
 
+std::string 
+ReadUserDictionaryFile(const std::string& dictionary_file)
+{
+  std::string dictionary_string;
+  if (!dictionary_file.empty()) {
+    std::ifstream infile(dictionary_file);
+
+    if (infile.is_open()) {
+      std::string line;
+
+      while (std::getline(infile, line)) {
+        // Trim leading and trailing whitespaces
+        line = std::regex_replace(line, std::regex("^ +| +$"), "");
+        int pos = line.find("  ");
+
+        if (pos != std::string::npos) {
+          std::string key = line.substr(0, pos);
+          std::string value = std::regex_replace(line.substr(pos+2), std::regex("^ +"), "");
+          // Append the key-value pair to the dictionary string
+          if (!dictionary_string.empty()) {
+            dictionary_string += ",";
+          }
+          dictionary_string += key + "  " + value;
+        } else {
+          LOG(WARNING) << "Warning: Malformed line " << line << std::endl;
+        }
+      }
+    } else {
+      std::string err = "Could not open file " + dictionary_file;
+      throw std::runtime_error(err);
+    }
+  }
+  return dictionary_string;
+}
 
 size_t
 synthesizeBatch(
     std::unique_ptr<nr_tts::RivaSpeechSynthesis::Stub> tts, std::string text, std::string language,
     uint32_t rate, std::string voice_name, std::string filepath,
-    std::string zero_shot_prompt_filename, int32_t zero_shot_quality)
+    std::string zero_shot_prompt_filename, int32_t zero_shot_quality, std::string custom_dictionary)
 {
   // Parse command line arguments.
   nr_tts::SynthesizeSpeechRequest request;
@@ -91,6 +127,9 @@ synthesizeBatch(
     std::cerr << "Unsupported encoding: \'" << FLAGS_audio_encoding << "\'" << std::endl;
     return -1;
   }
+
+  custom_dictionary = ReadUserDictionaryFile(custom_dictionary);
+  request.set_custom_dictionary(custom_dictionary);
 
   if (not zero_shot_prompt_filename.empty()) {
     auto zero_shot_data = request.mutable_zero_shot_data();
@@ -306,6 +345,7 @@ main(int argc, char** argv)
   str_usage << "           --metadata=<key,value,...>" << std::endl;
   str_usage << "           --zero_shot_audio_prompt=<filename>" << std::endl;
   str_usage << "           --zero_shot_quality=<quality>" << std::endl;
+  str_usage << "           --custom_dictionary=<filename> " << std::endl;
 
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
@@ -503,7 +543,7 @@ main(int argc, char** argv)
           size_t num_samples = synthesizeBatch(
               std::move(tts), sentences[i][s].second, FLAGS_language, rate, FLAGS_voice_name,
               std::to_string(sentences[i][s].first) + ".wav", FLAGS_zero_shot_audio_prompt,
-              FLAGS_zero_shot_quality);
+              FLAGS_zero_shot_quality, FLAGS_custom_dictionary);
           results_num_samples[i]->push_back(num_samples);
         }
       }));
