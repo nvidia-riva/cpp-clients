@@ -85,6 +85,13 @@ StreamingS2SClient::StartNewStream(std::unique_ptr<Stream> stream)
   call->streamer = stub_->StreamingTranslateSpeechToSpeech(&call->context);
   call->stream = std::move(stream);
 
+  std::cout << "######## checking supported models" << std::endl;
+  nr_nmt::AvailableLanguageRequest request;
+  nr_nmt::AvailableLanguageResponse response;
+  stub_->ListSupportedLanguagePairs(&call->context, request, &response);
+  std::cout << response.DebugString() << std::endl;
+  std::cout << "########" << std::endl;
+
   num_active_streams_++;
   num_streams_started_++;
 
