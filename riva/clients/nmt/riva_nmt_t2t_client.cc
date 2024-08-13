@@ -142,7 +142,7 @@ main(int argc, char** argv)
   if (argc > 1) {
     std::cout << argc << std::endl;
     std::cout << gflags::ProgramUsage();
-    // return 1;
+    return 1;
   }
 
   if (FLAGS_batch_size <= 0) {
