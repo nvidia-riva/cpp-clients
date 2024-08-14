@@ -264,9 +264,10 @@ main(int argc, char** argv)
     for (int iters = 0; iters < FLAGS_num_iterations; iters++) {
       std::queue<std::vector<std::pair<int, std::string>>> request_queue;
       std::vector<std::thread> workers;
-      std::vector<std::vector<nr_nmt::TranslateTextResponse>> responses(FLAGS_num_parallel_requests);
+      std::vector<std::vector<nr_nmt::TranslateTextResponse>> responses(
+          FLAGS_num_parallel_requests);
 
-      for (auto &request : all_requests) {
+      for (auto& request : all_requests) {
         request_queue.push(request);
       }
 
@@ -276,8 +277,8 @@ main(int argc, char** argv)
               nr_nmt::RivaTranslation::NewStub(grpc_channel));
 
           translateBatch(
-              std::move(nmt2), request_queue, FLAGS_target_language_code, FLAGS_source_language_code,
-              FLAGS_model_name, mtx, latencies, lmtx, responses.at(i));
+              std::move(nmt2), request_queue, FLAGS_target_language_code,
+              FLAGS_source_language_code, FLAGS_model_name, mtx, latencies, lmtx, responses.at(i));
         }));
       }
 
@@ -285,11 +286,10 @@ main(int argc, char** argv)
 
       for (int i = 0; i < FLAGS_num_parallel_requests; i++) {
         for (auto response : responses.at(i))
-        for (auto i : response.translations()) {
-          std::cout << i.text() << std::endl;
-        }
+          for (auto i : response.translations()) {
+            std::cout << i.text() << std::endl;
+          }
       }
-
     }
 
     auto end = std::chrono::steady_clock::now();
