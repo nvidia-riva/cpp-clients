@@ -223,7 +223,6 @@ main(int argc, char** argv)
     // std::vector<std::vector<std::vector<std::string>>> inputs;
 
     std::string str;
-    int count = 0;
     std::vector<std::pair<int, std::string>> batch;
     std::vector<std::vector<std::pair<int, std::string>>> all_requests;
     std::ifstream nmt_file(FLAGS_text_file);
@@ -238,7 +237,6 @@ main(int argc, char** argv)
         batch.clear();
       }
       if (!str.empty()) {
-        
         total_words += countWords(str);
         batch.push_back(make_pair(count, str));
         count++;
