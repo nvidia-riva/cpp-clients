@@ -91,6 +91,7 @@ translateBatch(
 }
 
 int countWords(const std::string& text) {
+  
     int wordCount = 0;
     bool wasSpace = true; 
     for (char c : text) {
