@@ -79,14 +79,14 @@ DEFINE_double(
     stop_threshold_eou, -1.,
     "Threshold value for likelihood of blanks before detecting end of utterance");
 DEFINE_string(
-    src_lang, "",
-    "Threshold value for likelihood of blanks before detecting end of utterance");
+    source_language, "",
+    "Language of the audio file");
 DEFINE_string(
-    dest_lang, "",
-    "Threshold value for likelihood of blanks before detecting end of utterance");
+    target_language, "",
+    "Target language for translation");
 DEFINE_string(
     task, "transcribe",
-    "Threshold value for likelihood of blanks before detecting end of utterance");
+    "Task for the model (transcribe/translate)");
 
 class RecognizeClient {
  public:
@@ -97,7 +97,7 @@ class RecognizeClient {
       std::string output_filename, std::string model_name, bool ctm, bool verbatim_transcripts,
       const std::string& boosted_phrases_file, float boosted_phrases_score,
       bool speaker_diarization, int32_t start_history, float start_threshold, int32_t stop_history,
-      int32_t stop_history_eou, float stop_threshold, float stop_threshold_eou, std::string src_lang, std::string dest_lang, std::string task)
+      int32_t stop_history_eou, float stop_threshold, float stop_threshold_eou, std::string source_language, std::string target_language, std::string task)
       : stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)), language_code_(language_code),
         max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
         word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
@@ -108,7 +108,7 @@ class RecognizeClient {
         verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
         start_history_(start_history), start_threshold_(start_threshold),
         stop_history_(stop_history), stop_history_eou_(stop_history_eou),
-        stop_threshold_(stop_threshold), stop_threshold_eou_(stop_threshold_eou), src_lang_(src_lang), dest_lang_(dest_lang), task_(task)
+        stop_threshold_(stop_threshold), stop_threshold_eou_(stop_threshold_eou), source_language_(source_language), target_language_(target_language), task_(task)
   {
     if (!output_filename.empty()) {
       output_file_.open(output_filename);
@@ -225,9 +225,9 @@ class RecognizeClient {
     config->set_enable_separate_recognition_per_channel(separate_recognition_per_channel_);
     auto custom_config = config->mutable_custom_configuration();
     (*custom_config)["test_key"] = "test_value";
-    if(src_lang_ != ""){
-      (*custom_config)["src_lang"] = src_lang_;
-      (*custom_config)["dest_lang"] = dest_lang_;
+    if(source_language_ != ""){
+      (*custom_config)["source_language"] = source_language_;
+      (*custom_config)["target_language"] = target_language_;
       (*custom_config)["task"] = task_;
     }
     
@@ -433,8 +433,8 @@ class RecognizeClient {
   int32_t stop_history_eou_;
   float stop_threshold_;
   float stop_threshold_eou_;
-  std::string src_lang_;
-  std::string dest_lang_;
+  std::string source_language_;
+  std::string target_language_;
   std::string task_;
 };
 
@@ -470,8 +470,8 @@ main(int argc, char** argv)
   str_usage << "           --stop_history_eou=<int>" << std::endl;
   str_usage << "           --stop_threshold=<float>" << std::endl;
   str_usage << "           --stop_threshold_eou=<float>" << std::endl;
-  str_usage << "           --src_lang=<string>" << std::endl;
-  str_usage << "           --dest_lang=<string>" << std::endl;
+  str_usage << "           --source_language=<string>" << std::endl;
+  str_usage << "           --target_language=<string>" << std::endl;
   str_usage << "           --task=<string>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
@@ -520,7 +520,7 @@ main(int argc, char** argv)
       FLAGS_model_name, FLAGS_output_ctm, FLAGS_verbatim_transcripts, FLAGS_boosted_words_file,
       (float)FLAGS_boosted_words_score, FLAGS_speaker_diarization, FLAGS_start_history,
       FLAGS_start_threshold, FLAGS_stop_history, FLAGS_stop_history_eou, FLAGS_stop_threshold,
-      FLAGS_stop_threshold_eou, FLAGS_src_lang, FLAGS_dest_lang, FLAGS_task);
+      FLAGS_stop_threshold_eou, FLAGS_source_language, FLAGS_target_language, FLAGS_task);
 
   // Preload all wav files, sort by size to reduce tail effects
   std::vector<std::shared_ptr<WaveData>> all_wav;
