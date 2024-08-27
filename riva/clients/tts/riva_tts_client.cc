@@ -12,8 +12,8 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
-#include <string>
 #include <regex>
+#include <string>
 
 #include "riva/clients/utils/grpc.h"
 #include "riva/proto/riva_tts.grpc.pb.h"
@@ -52,7 +52,7 @@ DEFINE_string(custom_dictionary, "", " User dictionary containing graph-to-phone
 
 static const std::string LC_enUS = "en-US";
 
-std::string 
+std::string
 ReadUserDictionaryFile(const std::string& dictionary_file)
 {
   std::string dictionary_string;
@@ -69,7 +69,7 @@ ReadUserDictionaryFile(const std::string& dictionary_file)
 
         if (pos != std::string::npos) {
           std::string key = line.substr(0, pos);
-          std::string value = std::regex_replace(line.substr(pos+2), std::regex("^ +"), "");
+          std::string value = std::regex_replace(line.substr(pos + 2), std::regex("^ +"), "");
           // Append the key-value pair to the dictionary string
           if (!dictionary_string.empty()) {
             dictionary_string += ",";
