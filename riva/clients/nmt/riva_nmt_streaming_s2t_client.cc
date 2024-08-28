@@ -54,6 +54,8 @@ DEFINE_int32(num_parallel_requests, 1, "Number of parallel requests to keep in f
 DEFINE_int32(chunk_duration_ms, 100, "Chunk duration in milliseconds");
 DEFINE_string(source_language_code, "en-US", "Language code for the input speech");
 DEFINE_string(target_language_code, "en-US", "Language code for the output text");
+DEFINE_string(
+    dnt_phrases_file, "", "File with a list of words to do not translate. One line per word.");
 DEFINE_string(boosted_words_file, "", "File with a list of words to boost. One line per word.");
 DEFINE_double(boosted_words_score, 10., "Score by which to boost the boosted words");
 DEFINE_bool(
@@ -103,6 +105,7 @@ main(int argc, char** argv)
             << std::endl;
   str_usage << "           --target_language_code=<bcp 47 language code (such as en-US)>"
             << std::endl;
+  str_usage << "           --dnt_phrases_file=<string>" << std::endl;
   str_usage << "           --boosted_words_file=<string>" << std::endl;
   str_usage << "           --boosted_words_score=<float>" << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
@@ -147,7 +150,8 @@ main(int argc, char** argv)
 
   StreamingS2TClient recognize_client(
       grpc_channel, FLAGS_num_parallel_requests, FLAGS_source_language_code,
-      FLAGS_target_language_code, FLAGS_profanity_filter, FLAGS_automatic_punctuation,
+      FLAGS_target_language_code, FLAGS_dnt_phrases_file, FLAGS_profanity_filter,
+      FLAGS_automatic_punctuation,
       /* separate_recognition_per_channel*/ false, FLAGS_chunk_duration_ms, FLAGS_simulate_realtime,
       FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score,
       FLAGS_nmt_text_file);
