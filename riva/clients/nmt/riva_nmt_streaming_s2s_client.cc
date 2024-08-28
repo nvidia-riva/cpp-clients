@@ -58,6 +58,7 @@ DEFINE_string(target_language_code, "en-US", "Language code for the output speec
 DEFINE_string(
     dnt_phrases_file, "",
     "File with a list of words and phrases to do not translate. One line per word or phrase.");
+DEFINE_bool(list_models, false, "List available models on server");
 DEFINE_string(boosted_words_file, "", "File with a list of words to boost. One line per word.");
 DEFINE_double(boosted_words_score, 10., "Score by which to boost the boosted words");
 DEFINE_bool(
@@ -219,6 +220,7 @@ main(int argc, char** argv)
   str_usage << "           --target_language_code=<bcp 47 language code (such as en-US)>"
             << std::endl;
   str_usage << "           --dnt_phrases_file=<string>" << std::endl;
+  str_usage << "           --list_models" << std::endl;
   str_usage << "           --boosted_words_file=<string>" << std::endl;
   str_usage << "           --boosted_words_score=<float>" << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
@@ -265,6 +267,19 @@ main(int argc, char** argv)
     std::cerr << "Error creating GRPC channel: " << e.what() << std::endl;
     std::cerr << "Exiting." << std::endl;
     return 1;
+  }
+
+  if (FLAGS_list_models) {
+    std::unique_ptr<nr_nmt::RivaTranslation::Stub> nmt_s2s(
+        nr_nmt::RivaTranslation::NewStub(grpc_channel));
+    grpc::ClientContext context;
+    nr_nmt::AvailableLanguageRequest request;
+    nr_nmt::AvailableLanguageResponse response;
+
+    request.set_model("s2s_model"); // this is optional, if empty returns all available models/languages
+    nmt_s2s->ListSupportedLanguagePairs(&context, request, &response);
+    std::cout << response.DebugString() << std::endl;
+    return 0;
   }
 
   if (!FLAGS_tts_encoding.empty() && FLAGS_tts_encoding != "pcm" && FLAGS_tts_encoding != "opus") {
