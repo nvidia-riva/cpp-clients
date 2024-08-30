@@ -165,9 +165,10 @@ StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
       config->set_enable_automatic_punctuation(automatic_punctuation_);
       config->set_enable_separate_recognition_per_channel(separate_recognition_per_channel_);
       auto custom_config = config->mutable_custom_configuration();
-      std::unordered_map<std::string, std::string> custom_configuration_map = ReadCustomConfiguration(custom_configuration_);
-      for (auto& it: custom_configuration_map) {
-          (*custom_config)[it.first] = it.second;
+      std::unordered_map<std::string, std::string> custom_configuration_map =
+          ReadCustomConfiguration(custom_configuration_);
+      for (auto& it : custom_configuration_map) {
+        (*custom_config)[it.first] = it.second;
       }
       (*custom_config)["test_key"] = "test_value";
       config->set_verbatim_transcripts(verbatim_transcripts_);

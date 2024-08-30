@@ -53,4 +53,5 @@ void PrintResult(
     Results& output_result, const std::string& filename, bool word_time_offsets,
     bool speaker_diarization);
 
-std::unordered_map<std::string, std::string> ReadCustomConfiguration(std::string& custom_configuration);
+std::unordered_map<std::string, std::string> ReadCustomConfiguration(
+    std::string& custom_configuration);
