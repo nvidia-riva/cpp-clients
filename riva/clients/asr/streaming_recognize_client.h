@@ -49,7 +49,7 @@ class StreamingRecognizeClient {
       bool verbatim_transcripts, const std::string& boosted_phrases_file,
       float boosted_phrases_score, int32_t start_history, float start_threshold,
       int32_t stop_history, int32_t stop_history_eou, float stop_threshold,
-      float stop_threshold_eou);
+      float stop_threshold_eou, std::string custom_configuration);
 
   ~StreamingRecognizeClient();
 
@@ -125,4 +125,5 @@ class StreamingRecognizeClient {
   int32_t stop_history_eou_;
   float stop_threshold_;
   float stop_threshold_eou_;
+  std::string custom_configuration_;
 };

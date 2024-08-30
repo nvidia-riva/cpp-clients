@@ -14,6 +14,7 @@
 #include <sstream>
 
 #include "absl/strings/str_replace.h"
+#include "absl/strings/str_split.h"
 #include "riva/proto/riva_asr.grpc.pb.h"
 
 namespace nr = nvidia::riva;
@@ -51,3 +52,5 @@ void AppendResult(
 void PrintResult(
     Results& output_result, const std::string& filename, bool word_time_offsets,
     bool speaker_diarization);
+
+std::unordered_map<std::string, std::string> ReadCustomConfiguration(std::string& custom_configuration);

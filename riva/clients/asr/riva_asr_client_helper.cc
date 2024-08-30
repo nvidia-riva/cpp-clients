@@ -190,3 +190,21 @@ PrintResult(
   std::cout << "-----------------------------------------------------------" << std::endl;
   std::cout << std::endl;
 }
+
+std::unordered_map<std::string, std::string> ReadCustomConfiguration(std::string& custom_configuration){
+  custom_configuration = absl::StrReplaceAll(custom_configuration, {{" ", ""}});
+  std::unordered_map<std::string, std::string> custom_configuration_map;
+  // Split the input string by commas to get key-value pairs
+  std::vector<absl::string_view> pairs = absl::StrSplit(custom_configuration, ',');
+  for (const auto& pair : pairs) {
+    // Split each pair by colon to separate the key and value
+    std::vector<absl::string_view> key_value = absl::StrSplit(pair, absl::ByString(":"));
+    if (key_value.size() == 2) {
+      if (custom_configuration_map.find(std::string(key_value[0])) == custom_configuration_map.end()) {
+        // If the key does not exist, insert the new key-value pair
+        custom_configuration_map[std::string(key_value[0])] = std::string(key_value[1]);
+      }
+    }
+  }
+  return custom_configuration_map;
+}
