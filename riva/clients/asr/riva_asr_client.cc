@@ -80,7 +80,7 @@ DEFINE_double(
     "Threshold value for likelihood of blanks before detecting end of utterance");
 DEFINE_string(
     custom_configuration, "",
-    "Add custom configurations to be sent to the custom backends. <key:value,key:value,...>");
+    "Custom configurations to be sent to the server as key value pairs <key:value,key:value,...>");
 
 class RecognizeClient {
  public:
@@ -462,7 +462,7 @@ main(int argc, char** argv)
   str_usage << "           --stop_history_eou=<int>" << std::endl;
   str_usage << "           --stop_threshold=<float>" << std::endl;
   str_usage << "           --stop_threshold_eou=<float>" << std::endl;
-  str_usage << "           --custom_configuration=<key:value,key:value>" << std::endl;
+  str_usage << "           --custom_configuration=<key:value,key:value,...>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
