@@ -53,11 +53,12 @@ MicrophoneThreadMain(
 StreamingS2SClient::StreamingS2SClient(
     std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
     const std::string& source_language_code, const std::string& target_language_code,
-    bool profanity_filter, bool automatic_punctuation, bool separate_recognition_per_channel,
-    int32_t chunk_duration_ms, bool simulate_realtime, bool verbatim_transcripts,
-    const std::string& boosted_phrases_file, float boosted_phrases_score,
+    const std::string& dnt_phrases_file, bool profanity_filter, bool automatic_punctuation,
+    bool separate_recognition_per_channel, int32_t chunk_duration_ms, bool simulate_realtime,
+    bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score,
     const std::string& tts_encoding, const std::string& tts_audio_file, int tts_sample_rate,
-    const std::string& tts_voice_name)
+    const std::string& tts_voice_name, std::string& tts_prosody_rate,
+    std::string& tts_prosody_pitch, std::string& tts_prosody_volume)
     : stub_(nr_nmt::RivaTranslation::NewStub(channel)), source_language_code_(source_language_code),
       target_language_code_(target_language_code), profanity_filter_(profanity_filter),
       automatic_punctuation_(automatic_punctuation),
@@ -66,13 +67,15 @@ StreamingS2SClient::StreamingS2SClient(
       simulate_realtime_(simulate_realtime), verbatim_transcripts_(verbatim_transcripts),
       boosted_phrases_score_(boosted_phrases_score), tts_encoding_(tts_encoding),
       tts_audio_file_(tts_audio_file), tts_voice_name_(tts_voice_name),
-      tts_sample_rate_(tts_sample_rate)
+      tts_sample_rate_(tts_sample_rate), tts_prosody_rate_(tts_prosody_rate),
+      tts_prosody_pitch_(tts_prosody_pitch), tts_prosody_volume_(tts_prosody_volume)
 {
   num_active_streams_.store(0);
   num_streams_finished_.store(0);
   thread_pool_.reset(new ThreadPool(4 * num_parallel_requests));
 
-  boosted_phrases_ = ReadBoostedPhrases(boosted_phrases_file);
+  boosted_phrases_ = ReadPhrasesFromFile(boosted_phrases_file);
+  dnt_phrases_ = ReadPhrasesFromFile(dnt_phrases_file);
 }
 
 StreamingS2SClient::~StreamingS2SClient() {}
@@ -113,6 +116,7 @@ StreamingS2SClient::GenerateRequests(std::shared_ptr<S2SClientCall> call)
       auto translation_config = streaming_s2s_config->mutable_translation_config();
       translation_config->set_source_language_code(source_language_code_);
       translation_config->set_target_language_code(target_language_code_);
+      *(translation_config->mutable_dnt_phrases()) = {dnt_phrases_.begin(), dnt_phrases_.end()};
 
       // set tts config
       auto tts_config = streaming_s2s_config->mutable_tts_config();
@@ -128,6 +132,9 @@ StreamingS2SClient::GenerateRequests(std::shared_ptr<S2SClientCall> call)
       tts_config->set_sample_rate_hz(rate);
       tts_config->set_voice_name(tts_voice_name_);
       tts_config->set_language_code(target_language_code_);
+      tts_config->set_prosody_rate(tts_prosody_rate_);
+      tts_config->set_prosody_pitch(tts_prosody_pitch_);
+      tts_config->set_prosody_volume(tts_prosody_volume_);
 
       // set asr config
       auto streaming_asr_config = streaming_s2s_config->mutable_asr_config();
@@ -367,6 +374,7 @@ StreamingS2SClient::DoStreamingFromMicrophone(const std::string& audio_device, b
   auto translation_config = s2s_config->mutable_translation_config();
   translation_config->set_source_language_code(source_language_code_);
   translation_config->set_target_language_code(target_language_code_);
+
   // set tts config
   auto tts_config = s2s_config->mutable_tts_config();
   if (tts_encoding_.empty() || tts_encoding_ == "pcm") {
@@ -381,6 +389,9 @@ StreamingS2SClient::DoStreamingFromMicrophone(const std::string& audio_device, b
   tts_config->set_sample_rate_hz(rate);
   tts_config->set_voice_name(tts_voice_name_);
   tts_config->set_language_code(target_language_code_);
+  tts_config->set_prosody_rate(tts_prosody_rate_);
+  tts_config->set_prosody_pitch(tts_prosody_pitch_);
+  tts_config->set_prosody_volume(tts_prosody_volume_);
 
 
   auto streaming_config = s2s_config->mutable_asr_config();

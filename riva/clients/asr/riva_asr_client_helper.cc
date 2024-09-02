@@ -7,23 +7,23 @@
 #include "riva_asr_client_helper.h"
 
 std::vector<std::string>
-ReadBoostedPhrases(const std::string& boosted_phrases_file)
+ReadPhrasesFromFile(const std::string& phrases_file)
 {
-  std::vector<std::string> boosted_phrases;
-  if (!boosted_phrases_file.empty()) {
-    std::ifstream infile(boosted_phrases_file);
+  std::vector<std::string> phrases;
+  if (!phrases_file.empty()) {
+    std::ifstream infile(phrases_file);
 
     if (infile.is_open()) {
-      std::string boosted_phrase;
-      while (getline(infile, boosted_phrase)) {
-        boosted_phrases.push_back(boosted_phrase);
+      std::string phrase;
+      while (getline(infile, phrase)) {
+        phrases.push_back(phrase);
       }
     } else {
-      std::string err = "Could not open file " + boosted_phrases_file;
+      std::string err = "Could not open file " + phrases_file;
       throw std::runtime_error(err);
     }
   }
-  return boosted_phrases;
+  return phrases;
 }
 
 bool

@@ -20,7 +20,7 @@
 namespace nr = nvidia::riva;
 namespace nr_asr = nvidia::riva::asr;
 
-std::vector<std::string> ReadBoostedPhrases(const std::string& boosted_phrases_file);
+std::vector<std::string> ReadPhrasesFromFile(const std::string& phrases_file);
 
 bool WaitUntilReady(
     std::shared_ptr<grpc::Channel> channel, std::chrono::system_clock::time_point& deadline);

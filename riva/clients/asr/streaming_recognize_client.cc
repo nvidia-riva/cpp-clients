@@ -81,7 +81,7 @@ StreamingRecognizeClient::StreamingRecognizeClient(
     output_file_.open(output_filename);
   }
 
-  boosted_phrases_ = ReadBoostedPhrases(boosted_phrases_file);
+  boosted_phrases_ = ReadPhrasesFromFile(boosted_phrases_file);
 }
 
 StreamingRecognizeClient::~StreamingRecognizeClient()
