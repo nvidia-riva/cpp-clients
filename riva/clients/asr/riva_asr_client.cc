@@ -80,7 +80,7 @@ DEFINE_double(
     "Threshold value for likelihood of blanks before detecting end of utterance");
 DEFINE_string(
     custom_configuration, "",
-    "Add custom configurations to be sent to the custom backends. <key:value,key:value>");
+    "Add custom configurations to be sent to the custom backends. <key:value,key:value,...>");
 
 class RecognizeClient {
  public:
@@ -225,8 +225,6 @@ class RecognizeClient {
     for (auto& it : custom_configuration_map) {
       (*custom_config)[it.first] = it.second;
     }
-    (*custom_config)["test_key"] = "test_value";
-
 
     auto speaker_diarization_config = config->mutable_diarization_config();
     speaker_diarization_config->set_enable_speaker_diarization(speaker_diarization_);

@@ -170,7 +170,6 @@ StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
       for (auto& it : custom_configuration_map) {
         (*custom_config)[it.first] = it.second;
       }
-      (*custom_config)["test_key"] = "test_value";
       config->set_verbatim_transcripts(verbatim_transcripts_);
       if (model_name_ != "") {
         config->set_model(model_name_);

@@ -91,7 +91,7 @@ DEFINE_double(
     "Threshold value for likelihood of blanks before detecting end of utterance");
 DEFINE_string(
     custom_configuration, "",
-    "Add custom configurations to be sent to the custom backends. <key:value,key:value>");
+    "Add custom configurations to be sent to the custom backends. <key:value,key:value,...>");
 
 void
 signal_handler(int signal_num)
