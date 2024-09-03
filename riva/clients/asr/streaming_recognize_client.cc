@@ -59,7 +59,7 @@ StreamingRecognizeClient::StreamingRecognizeClient(
     std::string output_filename, std::string model_name, bool simulate_realtime,
     bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score,
     int32_t start_history, float start_threshold, int32_t stop_history, int32_t stop_history_eou,
-    float stop_threshold, float stop_threshold_eou)
+    float stop_threshold, float stop_threshold_eou, std::string custom_configuration)
     : print_latency_stats_(true), stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)),
       language_code_(language_code), max_alternatives_(max_alternatives),
       profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
@@ -71,7 +71,7 @@ StreamingRecognizeClient::StreamingRecognizeClient(
       verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
       start_history_(start_history), start_threshold_(start_threshold), stop_history_(stop_history),
       stop_history_eou_(stop_history_eou), stop_threshold_(stop_threshold),
-      stop_threshold_eou_(stop_threshold_eou)
+      stop_threshold_eou_(stop_threshold_eou), custom_configuration_(custom_configuration)
 {
   num_active_streams_.store(0);
   num_streams_finished_.store(0);
@@ -165,7 +165,11 @@ StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
       config->set_enable_automatic_punctuation(automatic_punctuation_);
       config->set_enable_separate_recognition_per_channel(separate_recognition_per_channel_);
       auto custom_config = config->mutable_custom_configuration();
-      (*custom_config)["test_key"] = "test_value";
+      std::unordered_map<std::string, std::string> custom_configuration_map =
+          ReadCustomConfiguration(custom_configuration_);
+      for (auto& it : custom_configuration_map) {
+        (*custom_config)[it.first] = it.second;
+      }
       config->set_verbatim_transcripts(verbatim_transcripts_);
       if (model_name_ != "") {
         config->set_model(model_name_);
