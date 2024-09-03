@@ -276,7 +276,7 @@ main(int argc, char** argv)
     nr_nmt::AvailableLanguageRequest request;
     nr_nmt::AvailableLanguageResponse response;
 
-    request.set_model("s2s_model"); // this is optional, if empty returns all available models/languages
+    request.set_model("s2s_model");  // get only S2S supported languages
     nmt_s2s->ListSupportedLanguagePairs(&context, request, &response);
     std::cout << response.DebugString() << std::endl;
     return 0;
