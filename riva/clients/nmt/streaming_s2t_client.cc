@@ -7,6 +7,7 @@
 
 #include "streaming_s2t_client.h"
 
+
 #define clear_screen() printf("\033[H\033[J")
 #define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
 
@@ -75,19 +76,17 @@ StreamingS2TClient::StreamingS2TClient(
 StreamingS2TClient::~StreamingS2TClient() {}
 
 void
-StreamingS2TClient::StartNewStream(std::unique_ptr<Stream> stream)
+StreamingS2TClient::StartNewStream(std::unique_ptr<Stream> stream, std::string& audio_file)
 {
-  std::cout << "starting a new stream!" << std::endl;
   std::shared_ptr<S2TClientCall> call = std::make_shared<S2TClientCall>(stream->corr_id, false);
   call->streamer = stub_->StreamingTranslateSpeechToText(&call->context);
   call->stream = std::move(stream);
 
   num_active_streams_++;
   num_streams_started_++;
-
   auto gen_func = std::bind(&StreamingS2TClient::GenerateRequests, this, call);
-  auto recv_func =
-      std::bind(&StreamingS2TClient::ReceiveResponses, this, call, false /*audio_device*/);
+  auto recv_func = std::bind(
+      &StreamingS2TClient::ReceiveResponses, this, call, false /*audio_device*/, audio_file);
 
   thread_pool_->Enqueue(gen_func);
   thread_pool_->Enqueue(recv_func);
@@ -216,7 +215,7 @@ StreamingS2TClient::DoStreamingFromFile(
   while (true) {
     while (NumActiveStreams() < (uint32_t)num_parallel_requests && all_wav_i < all_wav_max) {
       std::unique_ptr<Stream> stream(new Stream(all_wav_repeated[all_wav_i], all_wav_i));
-      StartNewStream(std::move(stream));
+      StartNewStream(std::move(stream), all_wav_repeated[all_wav_i]->filename);
       ++all_wav_i;
     }
 
@@ -259,15 +258,17 @@ StreamingS2TClient::PostProcessResults(std::shared_ptr<S2TClientCall> call, bool
 }
 
 void
-StreamingS2TClient::ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool audio_device)
+StreamingS2TClient::ReceiveResponses(
+    std::shared_ptr<S2TClientCall> call, bool audio_device, std::string& audio_file)
 {
   if (audio_device) {
     clear_screen();
     std::cout << "ASR started... press `Ctrl-C' to stop recording\n\n";
     gotoxy(0, 5);
   }
-
-  std::ofstream result_file(nmt_text_file_);
+  std::ofstream result_file(nmt_text_file_, std::ios::app);
+  result_file << "{\"audio_filepath\": \"" << audio_file << "\",";
+  result_file << "\"text\": \"";
   while (call->streamer->Read(&call->response)) {  // Returns false when no more to read.
     call->recv_times.push_back(std::chrono::steady_clock::now());
     for (int r = 0; r < call->response.results_size(); ++r) {
@@ -281,7 +282,7 @@ StreamingS2TClient::ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool a
       VLOG(1) << "Result: " << result.DebugString();
       std::cout << "translated text: \"" << result.alternatives(0).transcript() << "\""
                 << std::endl;
-      result_file << result.alternatives(0).transcript() << std::endl;
+        result_file << EscapeTranscript(result.alternatives(0).transcript()) << "\"}" << std::endl;
     }
   }
   result_file.close();
@@ -345,8 +346,8 @@ StreamingS2TClient::DoStreamingFromMicrophone(const std::string& audio_device, b
   std::thread microphone_thread(
       &MicrophoneThreadMain, call, alsa_handle, samplerate, channels, std::ref(encoding),
       chunk_duration_ms_, std::ref(request_exit));
-
-  ReceiveResponses(call, true /*audio_device*/);
+  std::string filename = "microphone";
+  ReceiveResponses(call, true /*audio_device*/, filename);
   microphone_thread.join();
 
   CloseAudioDevice(&alsa_handle);

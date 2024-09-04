@@ -62,7 +62,7 @@ class StreamingS2TClient {
 
   float TotalAudioProcessed() { return total_audio_processed_; }
 
-  void StartNewStream(std::unique_ptr<Stream> stream);
+  void StartNewStream(std::unique_ptr<Stream> stream, std::string& audio_file);
 
   void GenerateRequests(std::shared_ptr<S2TClientCall> call);
 
@@ -71,7 +71,7 @@ class StreamingS2TClient {
 
   void PostProcessResults(std::shared_ptr<S2TClientCall> call, bool audio_device);
 
-  void ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool audio_device);
+  void ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool audio_device, std::string& audio_file);
 
   int DoStreamingFromMicrophone(const std::string& audio_device, bool& request_exit);
 

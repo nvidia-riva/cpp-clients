@@ -81,6 +81,11 @@ signal_handler(int signal_num)
   count++;
 }
 
+void emptyFileBeforeRequest() {
+    std::ofstream result_file(FLAGS_nmt_text_file, std::ios::trunc);
+    result_file.close();
+}
+
 int
 main(int argc, char** argv)
 {
@@ -119,7 +124,7 @@ main(int argc, char** argv)
 
   std::signal(SIGINT, signal_handler);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-
+  emptyFileBeforeRequest();
   if (argc > 1) {
     std::cout << gflags::ProgramUsage();
     return 1;
@@ -151,7 +156,7 @@ main(int argc, char** argv)
       /* separate_recognition_per_channel*/ false, FLAGS_chunk_duration_ms, FLAGS_simulate_realtime,
       FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score,
       FLAGS_nmt_text_file);
-
+  
   if (FLAGS_audio_file.size()) {
     return recognize_client.DoStreamingFromFile(
         FLAGS_audio_file, FLAGS_num_iterations, FLAGS_num_parallel_requests);
