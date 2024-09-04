@@ -78,6 +78,7 @@ StreamingS2TClient::~StreamingS2TClient() {}
 void
 StreamingS2TClient::StartNewStream(std::unique_ptr<Stream> stream, std::string& audio_file)
 {
+  std::cout << "starting a new stream!" << std::endl;
   std::shared_ptr<S2TClientCall> call = std::make_shared<S2TClientCall>(stream->corr_id, false);
   call->streamer = stub_->StreamingTranslateSpeechToText(&call->context);
   call->stream = std::move(stream);
