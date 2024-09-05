@@ -78,6 +78,9 @@ DEFINE_double(stop_threshold, -1., "Threshold value to determine when endpoint d
 DEFINE_double(
     stop_threshold_eou, -1.,
     "Threshold value for likelihood of blanks before detecting end of utterance");
+DEFINE_string(
+    custom_configuration, "",
+    "Custom configurations to be sent to the server as key value pairs <key:value,key:value,...>");
 
 class RecognizeClient {
  public:
@@ -88,7 +91,8 @@ class RecognizeClient {
       std::string output_filename, std::string model_name, bool ctm, bool verbatim_transcripts,
       const std::string& boosted_phrases_file, float boosted_phrases_score,
       bool speaker_diarization, int32_t start_history, float start_threshold, int32_t stop_history,
-      int32_t stop_history_eou, float stop_threshold, float stop_threshold_eou)
+      int32_t stop_history_eou, float stop_threshold, float stop_threshold_eou,
+      std::string custom_configuration)
       : stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)), language_code_(language_code),
         max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
         word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
@@ -99,7 +103,8 @@ class RecognizeClient {
         verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
         start_history_(start_history), start_threshold_(start_threshold),
         stop_history_(stop_history), stop_history_eou_(stop_history_eou),
-        stop_threshold_(stop_threshold), stop_threshold_eou_(stop_threshold_eou)
+        stop_threshold_(stop_threshold), stop_threshold_eou_(stop_threshold_eou),
+        custom_configuration_(custom_configuration)
   {
     if (!output_filename.empty()) {
       output_file_.open(output_filename);
@@ -110,7 +115,7 @@ class RecognizeClient {
       }
     }
 
-    boosted_phrases_ = ReadBoostedPhrases(boosted_phrases_file);
+    boosted_phrases_ = ReadPhrasesFromFile(boosted_phrases_file);
   }
 
   ~RecognizeClient()
@@ -215,7 +220,11 @@ class RecognizeClient {
     config->set_verbatim_transcripts(verbatim_transcripts_);
     config->set_enable_separate_recognition_per_channel(separate_recognition_per_channel_);
     auto custom_config = config->mutable_custom_configuration();
-    (*custom_config)["test_key"] = "test_value";
+    std::unordered_map<std::string, std::string> custom_configuration_map =
+        ReadCustomConfiguration(custom_configuration_);
+    for (auto& it : custom_configuration_map) {
+      (*custom_config)[it.first] = it.second;
+    }
 
     auto speaker_diarization_config = config->mutable_diarization_config();
     speaker_diarization_config->set_enable_speaker_diarization(speaker_diarization_);
@@ -418,6 +427,7 @@ class RecognizeClient {
   int32_t stop_history_eou_;
   float stop_threshold_;
   float stop_threshold_eou_;
+  std::string custom_configuration_;
 };
 
 int
@@ -452,6 +462,7 @@ main(int argc, char** argv)
   str_usage << "           --stop_history_eou=<int>" << std::endl;
   str_usage << "           --stop_threshold=<float>" << std::endl;
   str_usage << "           --stop_threshold_eou=<float>" << std::endl;
+  str_usage << "           --custom_configuration=<key:value,key:value,...>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -499,7 +510,7 @@ main(int argc, char** argv)
       FLAGS_model_name, FLAGS_output_ctm, FLAGS_verbatim_transcripts, FLAGS_boosted_words_file,
       (float)FLAGS_boosted_words_score, FLAGS_speaker_diarization, FLAGS_start_history,
       FLAGS_start_threshold, FLAGS_stop_history, FLAGS_stop_history_eou, FLAGS_stop_threshold,
-      FLAGS_stop_threshold_eou);
+      FLAGS_stop_threshold_eou, FLAGS_custom_configuration);
 
   // Preload all wav files, sort by size to reduce tail effects
   std::vector<std::shared_ptr<WaveData>> all_wav;

@@ -7,23 +7,23 @@
 #include "riva_asr_client_helper.h"
 
 std::vector<std::string>
-ReadBoostedPhrases(const std::string& boosted_phrases_file)
+ReadPhrasesFromFile(const std::string& phrases_file)
 {
-  std::vector<std::string> boosted_phrases;
-  if (!boosted_phrases_file.empty()) {
-    std::ifstream infile(boosted_phrases_file);
+  std::vector<std::string> phrases;
+  if (!phrases_file.empty()) {
+    std::ifstream infile(phrases_file);
 
     if (infile.is_open()) {
-      std::string boosted_phrase;
-      while (getline(infile, boosted_phrase)) {
-        boosted_phrases.push_back(boosted_phrase);
+      std::string phrase;
+      while (getline(infile, phrase)) {
+        phrases.push_back(phrase);
       }
     } else {
-      std::string err = "Could not open file " + boosted_phrases_file;
+      std::string err = "Could not open file " + phrases_file;
       throw std::runtime_error(err);
     }
   }
-  return boosted_phrases;
+  return phrases;
 }
 
 bool
@@ -189,4 +189,34 @@ PrintResult(
   std::cout << "Audio processed: " << output_result.audio_processed << " sec." << std::endl;
   std::cout << "-----------------------------------------------------------" << std::endl;
   std::cout << std::endl;
+}
+
+std::unordered_map<std::string, std::string>
+ReadCustomConfiguration(std::string& custom_configuration)
+{
+  custom_configuration = absl::StrReplaceAll(custom_configuration, {{" ", ""}});
+  std::unordered_map<std::string, std::string> custom_configuration_map;
+  // Split the input string by commas to get key-value pairs
+
+  std::vector<absl::string_view> pairs = absl::StrSplit(custom_configuration, ',');
+  for (const auto& pair : pairs) {
+    // Split each pair by colon to separate the key and value
+    if (pair != "") {
+      std::vector<absl::string_view> key_value = absl::StrSplit(pair, absl::ByString(":"));
+      if (key_value.size() == 2) {
+        if (custom_configuration_map.find(std::string(key_value[0])) ==
+            custom_configuration_map.end()) {
+          // If the key does not exist, insert the new key-value pair
+          custom_configuration_map[std::string(key_value[0])] = std::string(key_value[1]);
+        } else {
+          std::string err = "custom_configuration key already used " + std::string(key_value[0]);
+          throw std::runtime_error(err);
+        }
+      } else {
+        std::string err = "Invalid custom_configuration key:value pair " + std::string(pair);
+        throw std::runtime_error(err);
+      }
+    }
+  }
+  return custom_configuration_map;
 }
