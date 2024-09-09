@@ -16,42 +16,56 @@ ClientCall::ClientCall(uint32_t corr_id, bool word_time_offsets)
 void
 ClientCall::AppendResult(const nr_asr::StreamingRecognitionResult& result)
 {
-  bool is_final = result.is_final();
-  if (latest_result_.final_transcripts.size() < 1) {
-    latest_result_.final_transcripts.resize(1);
-    latest_result_.final_transcripts[0] = "";
-  }
-
-  if (is_final) {
-    int num_alternatives = result.alternatives_size();
-    latest_result_.final_transcripts.resize(num_alternatives);
-    latest_result_.final_scores.resize(num_alternatives);
-    latest_result_.final_time_stamps.resize(num_alternatives);
-    for (int a = 0; a < num_alternatives; ++a) {
-      // Append to transcript
-      latest_result_.final_transcripts[a] += result.alternatives(a).transcript();
-      latest_result_.final_scores[a] += result.alternatives(a).confidence();
+  if (result.has_pipeline_states()) {
+    if (latest_result_.final_transcripts.size() == 0) {
+      latest_result_.final_transcripts.resize(1);
+      latest_result_.final_transcripts[0] = "";
     }
-    VLOG(1) << "Final transcript: " << result.alternatives(0).transcript();
+    auto pipeline_states = result.pipeline_states();
+    int prob_states_count = pipeline_states.vad_probabilities_size();
+    std::string log = "";
+    for (int i = 0; i < prob_states_count; i++) {
+      log += std::to_string(pipeline_states.vad_probabilities(i)) + " ";
+    }
+    VLOG(1) << "VAD states: " << log;
+  } else {
+    bool is_final = result.is_final();
+    if (latest_result_.final_transcripts.size() < 1) {
+      latest_result_.final_transcripts.resize(1);
+      latest_result_.final_transcripts[0] = "";
+    }
 
-    if (word_time_offsets_) {
-      if (num_alternatives > 0) {
-        for (int a = 0; a < num_alternatives; ++a) {
-          for (int w = 0; w < result.alternatives(a).words_size(); ++w) {
-            latest_result_.final_time_stamps[a].push_back(result.alternatives(a).words(w));
+    if (is_final) {
+      int num_alternatives = result.alternatives_size();
+      latest_result_.final_transcripts.resize(num_alternatives);
+      latest_result_.final_scores.resize(num_alternatives);
+      latest_result_.final_time_stamps.resize(num_alternatives);
+      for (int a = 0; a < num_alternatives; ++a) {
+        // Append to transcript
+        latest_result_.final_transcripts[a] += result.alternatives(a).transcript();
+        latest_result_.final_scores[a] += result.alternatives(a).confidence();
+      }
+      VLOG(1) << "Final transcript: " << result.alternatives(0).transcript();
+
+      if (word_time_offsets_) {
+        if (num_alternatives > 0) {
+          for (int a = 0; a < num_alternatives; ++a) {
+            for (int w = 0; w < result.alternatives(a).words_size(); ++w) {
+              latest_result_.final_time_stamps[a].push_back(result.alternatives(a).words(w));
+            }
           }
         }
       }
-    }
-  } else {
-    if (result.alternatives_size() > 0) {
-      if (result.stability() == 1) {
-        VLOG(1) << "Intermediate transcript: " << result.alternatives(0).transcript();
-      } else {
-        latest_result_.partial_transcript += result.alternatives(0).transcript();
-        if (word_time_offsets_) {
-          for (int w = 0; w < result.alternatives(0).words_size(); ++w) {
-            latest_result_.partial_time_stamps.emplace_back(result.alternatives(0).words(w));
+    } else {
+      if (result.alternatives_size() > 0) {
+        if (result.stability() == 1) {
+          VLOG(1) << "Intermediate transcript: " << result.alternatives(0).transcript();
+        } else {
+          latest_result_.partial_transcript += result.alternatives(0).transcript();
+          if (word_time_offsets_) {
+            for (int w = 0; w < result.alternatives(0).words_size(); ++w) {
+              latest_result_.partial_time_stamps.emplace_back(result.alternatives(0).words(w));
+            }
           }
         }
       }
