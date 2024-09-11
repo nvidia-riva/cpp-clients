@@ -6,6 +6,8 @@
 
 #include "riva_asr_client_helper.h"
 
+#include <regex>
+
 std::vector<std::string>
 ReadPhrasesFromFile(const std::string& phrases_file)
 {
@@ -16,7 +18,10 @@ ReadPhrasesFromFile(const std::string& phrases_file)
     if (infile.is_open()) {
       std::string phrase;
       while (getline(infile, phrase)) {
-        phrases.push_back(phrase);
+        phrase = std::regex_replace(phrase, std::regex("^ +| +$"), "");
+        if (!phrase.empty()) {
+          phrases.push_back(phrase);
+        }
       }
     } else {
       std::string err = "Could not open file " + phrases_file;
