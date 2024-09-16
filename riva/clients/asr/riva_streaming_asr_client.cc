@@ -63,6 +63,7 @@ DEFINE_string(
     output_filename, "final_transcripts.json",
     "Filename of .json file containing output transcripts");
 DEFINE_string(model_name, "", "Name of the TRTIS model to use");
+DEFINE_bool(list_models, false, "List available models on server");
 DEFINE_string(language_code, "en-US", "Language code of the model to use");
 DEFINE_string(boosted_words_file, "", "File with a list of words to boost. One line per word.");
 DEFINE_double(boosted_words_score, 10., "Score by which to boost the boosted words");
@@ -133,6 +134,8 @@ main(int argc, char** argv)
   str_usage << "           --boosted_words_file=<string>" << std::endl;
   str_usage << "           --boosted_words_score=<float>" << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
+  str_usage << "           --model_name=<model>" << std::endl;
+  str_usage << "           --list_models" << std::endl;
   str_usage << "           --metadata=<key,value,...>" << std::endl;
   str_usage << "           --start_history=<int>" << std::endl;
   str_usage << "           --start_threshold=<float>" << std::endl;
@@ -180,6 +183,24 @@ main(int argc, char** argv)
     std::cerr << "Error creating GRPC channel: " << e.what() << std::endl;
     std::cerr << "Exiting." << std::endl;
     return 1;
+  }
+
+  if (FLAGS_list_models) {
+    std::unique_ptr<nr_asr::RivaSpeechRecognition::Stub> asr_stub_(
+        nr_asr::RivaSpeechRecognition::NewStub(grpc_channel));
+    grpc::ClientContext asr_context;
+    nr_asr::RivaSpeechRecognitionConfigRequest asr_request;
+    nr_asr::RivaSpeechRecognitionConfigResponse asr_response;
+    asr_stub_->GetRivaSpeechRecognitionConfig(&asr_context, asr_request, &asr_response);
+
+    for (int i = 0; i < asr_response.model_config_size(); i++) {
+      if (asr_response.model_config(i).parameters().find("type")->second == "online") {
+        std::cout << "'" << asr_response.model_config(i).parameters().find("language_code")->second
+                  << "': '" << asr_response.model_config(i).model_name() << "'" << std::endl;
+      }
+    }
+
+    return 0;
   }
 
   StreamingRecognizeClient recognize_client(
