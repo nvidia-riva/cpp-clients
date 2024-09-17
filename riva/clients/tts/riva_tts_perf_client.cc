@@ -14,10 +14,10 @@
 #include <iostream>
 #include <iterator>
 #include <numeric>
+#include <regex>
 #include <string>
 #include <thread>
 #include <utility>
-#include <regex>
 
 #include "riva/clients/utils/grpc.h"
 #include "riva/proto/riva_tts.grpc.pb.h"
@@ -71,7 +71,7 @@ CreateTTS(std::shared_ptr<grpc::Channel> channel)
   return tts;
 }
 
-std::string 
+std::string
 ReadUserDictionaryFile(const std::string& dictionary_file)
 {
   std::string dictionary_string;
@@ -88,7 +88,7 @@ ReadUserDictionaryFile(const std::string& dictionary_file)
 
         if (pos != std::string::npos) {
           std::string key = line.substr(0, pos);
-          std::string value = std::regex_replace(line.substr(pos+2), std::regex("^ +"), "");
+          std::string value = std::regex_replace(line.substr(pos + 2), std::regex("^ +"), "");
           // Append the key-value pair to the dictionary string
           if (!dictionary_string.empty()) {
             dictionary_string += ",";
