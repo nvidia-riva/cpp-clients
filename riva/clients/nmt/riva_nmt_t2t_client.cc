@@ -114,7 +114,7 @@ main(int argc, char** argv)
 {
   google::InitGoogleLogging(argv[0]);
   FLAGS_logtostderr = 1;
-    
+  
   std::stringstream str_usage;
   str_usage << "Usage: riva_nmt_t2t_client" << std::endl;
   str_usage << "           --text_file=<filename> " << std::endl;
