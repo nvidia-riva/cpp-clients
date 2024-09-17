@@ -290,7 +290,6 @@ main(int argc, char** argv)
           }
       }
     }
-
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> total = end - start;
     LOG(INFO) << FLAGS_model_name << "-" << FLAGS_batch_size << "-" << FLAGS_source_language_code
