@@ -92,19 +92,20 @@ translateBatch(
 
 int countWords(const std::string& text) {
     int wordCount = 0;
-    bool inside_word = false;
-
+    bool insideWord = false;
+    bool lastWasSpace = true;  
     for (char c : text) {
         if (std::isspace(c)) {
-            inside_word = false;
-        } else if (!std::ispunct(c)) {
-            if (!inside_word) {
+            insideWord = false;
+            lastWasSpace = true;
+        } else {
+            if (!insideWord && lastWasSpace) {
                 wordCount++;
-                inside_word = true;
+                insideWord = true;
             }
+            lastWasSpace = false;
         }
     }
-
     return wordCount;
 }
 
@@ -113,7 +114,7 @@ main(int argc, char** argv)
 {
   google::InitGoogleLogging(argv[0]);
   FLAGS_logtostderr = 1;
- 
+    
   std::stringstream str_usage;
   str_usage << "Usage: riva_nmt_t2t_client" << std::endl;
   str_usage << "           --text_file=<filename> " << std::endl;
@@ -274,7 +275,6 @@ main(int argc, char** argv)
         workers.push_back(std::thread([&, i]() {
           std::unique_ptr<nr_nmt::RivaTranslation::Stub> nmt2(
               nr_nmt::RivaTranslation::NewStub(grpc_channel));
-
           translateBatch(
               std::move(nmt2), request_queue, FLAGS_target_language_code,
               FLAGS_source_language_code, FLAGS_model_name, mtx, latencies, lmtx, responses.at(i));
@@ -297,7 +297,7 @@ main(int argc, char** argv)
               << "-" << FLAGS_target_language_code << ",count:" << count
               << ",total time: " << total.count()
               << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
-              << ",translations/second: " << total_words/total.count();
+              << ",translations/second: " << FLAGS_num_iterations * total_words /total.count();
 
     std::sort(latencies.begin(), latencies.end());
     auto size = latencies.size();
