@@ -213,7 +213,6 @@ main(int argc, char** argv)
     std::cout << response.translations(0).text() << std::endl;
     return 0;
   }
-  int total_words = 0;
 
   if (FLAGS_text_file != "") {
     // pull strings into vectors per parallel request
@@ -225,6 +224,7 @@ main(int argc, char** argv)
 
     std::string str;
     int count = 0;
+    int total_words = 0;
     std::vector<std::pair<int, std::string>> batch;
     std::vector<std::vector<std::pair<int, std::string>>> all_requests;
     std::ifstream nmt_file(FLAGS_text_file);
