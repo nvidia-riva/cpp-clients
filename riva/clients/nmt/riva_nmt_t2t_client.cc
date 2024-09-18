@@ -92,19 +92,19 @@ translateBatch(
 
 int countWords(const std::string& text) {
     int wordCount = 0;
-    bool insideWord = false;
-    bool lastWasSpace = true;  
+    bool wasSpace = true; 
     for (char c : text) {
         if (std::isspace(c)) {
-            insideWord = false;
-            lastWasSpace = true;
-        } else {
-            if (!insideWord && lastWasSpace) {
+            if (!wasSpace) {
                 wordCount++;
-                insideWord = true;
             }
-            lastWasSpace = false;
+            wasSpace = true;
+        } else {
+            wasSpace = false;
         }
+    }
+    if (!wasSpace) {
+        wordCount++;
     }
     return wordCount;
 }
