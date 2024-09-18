@@ -67,7 +67,7 @@ DEFINE_bool(
     "Whether to use SSL credentials or not. If ssl_cert is specified, "
     "this is assumed to be true");
 DEFINE_bool(speaker_diarization, false, "Flag that controls if speaker diarization is requested");
-DEFINE_int32(max_speaker_count, -1, "Max number of speakers to detect when performing speaker diarization");
+DEFINE_int32(max_speaker_count, 3, "Max number of speakers to detect when performing speaker diarization");
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 DEFINE_int32(start_history, -1, "Value to detect and initiate start of speech utterance");
 DEFINE_double(
