@@ -99,7 +99,7 @@ class RecognizeClient {
         max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
         word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
         separate_recognition_per_channel_(separate_recognition_per_channel),
-        speaker_diarization_(speaker_diarization), max_speaker_count_(diarization_max_speakers), print_transcripts_(print_transcripts),
+        speaker_diarization_(speaker_diarization), diarization_max_speakers_(diarization_max_speakers), print_transcripts_(print_transcripts),
         done_sending_(false), num_requests_(0), num_responses_(0), num_failed_requests_(0),
         total_audio_processed_(0.), model_name_(model_name), output_filename_(output_filename),
         verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
@@ -230,7 +230,7 @@ class RecognizeClient {
 
     auto speaker_diarization_config = config->mutable_diarization_config();
     speaker_diarization_config->set_enable_speaker_diarization(speaker_diarization_);
-    speaker_diarization_config->set_max_speaker_count(max_speaker_count_);
+    speaker_diarization_config->set_max_speaker_count(diarization_max_speakers_);
 
     if (model_name_ != "") {
       config->set_model(model_name_);
@@ -403,7 +403,7 @@ class RecognizeClient {
   bool automatic_punctuation_;
   bool separate_recognition_per_channel_;
   bool speaker_diarization_;
-  int32_t max_speaker_count_;
+  int32_t diarization_max_speakers_;
   bool print_transcripts_;
 
 
