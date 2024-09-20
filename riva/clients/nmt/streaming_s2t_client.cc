@@ -282,7 +282,6 @@ StreamingS2TClient::ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool a
       VLOG(1) << "Result: " << result.DebugString();
     }
   }
-  PostProcessResults(call, audio_device);
   grpc::Status status = call->streamer->Finish();
   if (!status.ok()) {
     // Report the RPC failure.
