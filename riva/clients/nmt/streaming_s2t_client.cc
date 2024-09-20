@@ -7,7 +7,6 @@
 
 #include "streaming_s2t_client.h"
 
-
 #define clear_screen() printf("\033[H\033[J")
 #define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
 
@@ -78,15 +77,17 @@ StreamingS2TClient::~StreamingS2TClient() {}
 void
 StreamingS2TClient::StartNewStream(std::unique_ptr<Stream> stream)
 {
+  std::cout << "starting a new stream!" << std::endl;
   std::shared_ptr<S2TClientCall> call = std::make_shared<S2TClientCall>(stream->corr_id, false);
   call->streamer = stub_->StreamingTranslateSpeechToText(&call->context);
   call->stream = std::move(stream);
 
   num_active_streams_++;
   num_streams_started_++;
+
   auto gen_func = std::bind(&StreamingS2TClient::GenerateRequests, this, call);
-  auto recv_func = std::bind(
-      &StreamingS2TClient::ReceiveResponses, this, call, false /*audio_device*/);
+  auto recv_func =
+      std::bind(&StreamingS2TClient::ReceiveResponses, this, call, false /*audio_device*/);
 
   thread_pool_->Enqueue(gen_func);
   thread_pool_->Enqueue(recv_func);
@@ -246,9 +247,8 @@ StreamingS2TClient::DoStreamingFromFile(
 void
 StreamingS2TClient::PostProcessResults(std::shared_ptr<S2TClientCall> call, bool audio_device)
 {
-  std::cout<<"post process results function"<<std::endl;
   std::lock_guard<std::mutex> lock(latencies_mutex_);
-  
+
   if (simulate_realtime_) {
     double lat =
         std::chrono::duration<double, std::milli>(call->recv_times[0] - call->send_times.back())
@@ -258,19 +258,17 @@ StreamingS2TClient::PostProcessResults(std::shared_ptr<S2TClientCall> call, bool
   }
   std::ofstream result_file(nmt_text_file_, std::ios::app);
   call->PrintResult(audio_device, result_file);
-
 }
 
 void
-StreamingS2TClient::ReceiveResponses(
-    std::shared_ptr<S2TClientCall> call, bool audio_device)
+StreamingS2TClient::ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool audio_device)
 {
-  std::cout<<"Recevicefunction"<<std::endl;
   if (audio_device) {
     clear_screen();
     std::cout << "ASR started... press `Ctrl-C' to stop recording\n\n";
     gotoxy(0, 5);
   }
+
   while (call->streamer->Read(&call->response)) {  // Returns false when no more to read.
     call->recv_times.push_back(std::chrono::steady_clock::now());
     for (int r = 0; r < call->response.results_size(); ++r) {
@@ -284,7 +282,7 @@ StreamingS2TClient::ReceiveResponses(
       VLOG(1) << "Result: " << result.DebugString();
     }
   }
-
+  PostProcessResults(call, audio_device);
   grpc::Status status = call->streamer->Finish();
   if (!status.ok()) {
     // Report the RPC failure.
@@ -292,6 +290,7 @@ StreamingS2TClient::ReceiveResponses(
   } else {
     PostProcessResults(call, audio_device);
   }
+
   num_streams_finished_++;
 }
 
@@ -343,7 +342,7 @@ StreamingS2TClient::DoStreamingFromMicrophone(const std::string& audio_device, b
   std::thread microphone_thread(
       &MicrophoneThreadMain, call, alsa_handle, samplerate, channels, std::ref(encoding),
       chunk_duration_ms_, std::ref(request_exit));
-  std::string filename = "microphone";
+
   ReceiveResponses(call, true /*audio_device*/);
   microphone_thread.join();
 
