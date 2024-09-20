@@ -258,6 +258,8 @@ StreamingS2TClient::PostProcessResults(std::shared_ptr<S2TClientCall> call, bool
     VLOG(1) << "Latency:" << lat << std::endl;
     latencies_.push_back(lat);
   }
+  std::ofstream result_file(nmt_text_file_, std::ios::app);
+  call->PrintResult(audio_device, result_file);
 }
 
 void
@@ -269,7 +271,6 @@ StreamingS2TClient::ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool a
     gotoxy(0, 5);
   }
 
-  std::ofstream result_file(nmt_text_file_);
   while (call->streamer->Read(&call->response)) {  // Returns false when no more to read.
     call->recv_times.push_back(std::chrono::steady_clock::now());
     for (int r = 0; r < call->response.results_size(); ++r) {
@@ -281,13 +282,9 @@ StreamingS2TClient::ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool a
         gotoxy(0, 5);
       }
       VLOG(1) << "Result: " << result.DebugString();
-      std::cout << "translated text: \"" << result.alternatives(0).transcript() << "\""
-                << std::endl;
-      result_file << result.alternatives(0).transcript() << std::endl;
     }
   }
-  result_file.close();
-
+  PostProcessResults(call, audio_device);
   grpc::Status status = call->streamer->Finish();
   if (!status.ok()) {
     // Report the RPC failure.
