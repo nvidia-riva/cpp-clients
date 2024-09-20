@@ -49,10 +49,10 @@ class StreamingS2TClient {
   StreamingS2TClient(
       std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
       const std::string& source_language_code, const std::string& target_language_code,
-      const std::string& dnt_words_file, bool profanity_filter, bool automatic_punctuation,
-      bool separate_recognition_per_channel, int32_t chunk_duration_ms, bool simulate_realtime,
-      bool verbatim_transcripts, const std::string& boosted_phrases_file,
-      float boosted_phrases_score, const std::string& nmt_text_file);
+      bool profanity_filter, bool automatic_punctuation, bool separate_recognition_per_channel,
+      int32_t chunk_duration_ms, bool simulate_realtime, bool verbatim_transcripts,
+      const std::string& boosted_phrases_file, float boosted_phrases_score,
+      const std::string& nmt_text_file);
 
   ~StreamingS2TClient();
 
@@ -62,7 +62,7 @@ class StreamingS2TClient {
 
   float TotalAudioProcessed() { return total_audio_processed_; }
 
-  void StartNewStream(std::unique_ptr<Stream> stream, std::string& audio_file);
+  void StartNewStream(std::unique_ptr<Stream> stream);
 
   void GenerateRequests(std::shared_ptr<S2TClientCall> call);
 
@@ -71,7 +71,7 @@ class StreamingS2TClient {
 
   void PostProcessResults(std::shared_ptr<S2TClientCall> call, bool audio_device);
 
-  void ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool audio_device, std::string& audio_file);
+  void ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool audio_device);
 
   int DoStreamingFromMicrophone(const std::string& audio_device, bool& request_exit);
 
@@ -89,7 +89,6 @@ class StreamingS2TClient {
 
   std::string source_language_code_;
   std::string target_language_code_;
-  std::vector<std::string> dnt_phrases_;
   bool profanity_filter_;
   int32_t channels_;
   bool automatic_punctuation_;
