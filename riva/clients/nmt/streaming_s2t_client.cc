@@ -54,9 +54,9 @@ MicrophoneThreadMain(
 StreamingS2TClient::StreamingS2TClient(
     std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
     const std::string& source_language_code, const std::string& target_language_code,
-    const std::string& dnt_phrases_file, bool profanity_filter, bool automatic_punctuation,
-    bool separate_recognition_per_channel, int32_t chunk_duration_ms, bool simulate_realtime,
-    bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score,
+    bool profanity_filter, bool automatic_punctuation, bool separate_recognition_per_channel,
+    int32_t chunk_duration_ms, bool simulate_realtime, bool verbatim_transcripts,
+    const std::string& boosted_phrases_file, float boosted_phrases_score,
     const std::string& nmt_text_file)
     : stub_(nr_nmt::RivaTranslation::NewStub(channel)), source_language_code_(source_language_code),
       target_language_code_(target_language_code), profanity_filter_(profanity_filter),
@@ -70,16 +70,14 @@ StreamingS2TClient::StreamingS2TClient(
   num_streams_finished_.store(0);
   thread_pool_.reset(new ThreadPool(4 * num_parallel_requests));
 
-  boosted_phrases_ = ReadPhrasesFromFile(boosted_phrases_file);
-  dnt_phrases_ = ReadPhrasesFromFile(dnt_phrases_file);
+  boosted_phrases_ = ReadBoostedPhrases(boosted_phrases_file);
 }
 
 StreamingS2TClient::~StreamingS2TClient() {}
 
 void
-StreamingS2TClient::StartNewStream(std::unique_ptr<Stream> stream, std::string& audio_file)
+StreamingS2TClient::StartNewStream(std::unique_ptr<Stream> stream)
 {
-  std::cout << "starting a new stream!" << std::endl;
   std::shared_ptr<S2TClientCall> call = std::make_shared<S2TClientCall>(stream->corr_id, false);
   call->streamer = stub_->StreamingTranslateSpeechToText(&call->context);
   call->stream = std::move(stream);
@@ -88,7 +86,7 @@ StreamingS2TClient::StartNewStream(std::unique_ptr<Stream> stream, std::string& 
   num_streams_started_++;
   auto gen_func = std::bind(&StreamingS2TClient::GenerateRequests, this, call);
   auto recv_func = std::bind(
-      &StreamingS2TClient::ReceiveResponses, this, call, false /*audio_device*/, audio_file);
+      &StreamingS2TClient::ReceiveResponses, this, call, false /*audio_device*/);
 
   thread_pool_->Enqueue(gen_func);
   thread_pool_->Enqueue(recv_func);
@@ -112,7 +110,6 @@ StreamingS2TClient::GenerateRequests(std::shared_ptr<S2TClientCall> call)
       auto translation_config = streaming_s2t_config->mutable_translation_config();
       translation_config->set_source_language_code(source_language_code_);
       translation_config->set_target_language_code(target_language_code_);
-      *(translation_config->mutable_dnt_phrases()) = {dnt_phrases_.begin(), dnt_phrases_.end()};
 
       // set asr config
       auto streaming_asr_config = streaming_s2t_config->mutable_asr_config();
@@ -218,7 +215,7 @@ StreamingS2TClient::DoStreamingFromFile(
   while (true) {
     while (NumActiveStreams() < (uint32_t)num_parallel_requests && all_wav_i < all_wav_max) {
       std::unique_ptr<Stream> stream(new Stream(all_wav_repeated[all_wav_i], all_wav_i));
-      StartNewStream(std::move(stream), all_wav_repeated[all_wav_i]->filename);
+      StartNewStream(std::move(stream));
       ++all_wav_i;
     }
 
@@ -249,8 +246,9 @@ StreamingS2TClient::DoStreamingFromFile(
 void
 StreamingS2TClient::PostProcessResults(std::shared_ptr<S2TClientCall> call, bool audio_device)
 {
+  std::cout<<"post process results function"<<std::endl;
   std::lock_guard<std::mutex> lock(latencies_mutex_);
-
+  
   if (simulate_realtime_) {
     double lat =
         std::chrono::duration<double, std::milli>(call->recv_times[0] - call->send_times.back())
@@ -258,20 +256,21 @@ StreamingS2TClient::PostProcessResults(std::shared_ptr<S2TClientCall> call, bool
     VLOG(1) << "Latency:" << lat << std::endl;
     latencies_.push_back(lat);
   }
+  std::ofstream result_file(nmt_text_file_, std::ios::app);
+  call->PrintResult(audio_device, result_file);
+
 }
 
 void
 StreamingS2TClient::ReceiveResponses(
-    std::shared_ptr<S2TClientCall> call, bool audio_device, std::string& audio_file)
+    std::shared_ptr<S2TClientCall> call, bool audio_device)
 {
+  std::cout<<"Recevicefunction"<<std::endl;
   if (audio_device) {
     clear_screen();
     std::cout << "ASR started... press `Ctrl-C' to stop recording\n\n";
     gotoxy(0, 5);
   }
-  std::ofstream result_file(nmt_text_file_, std::ios::app);
-  result_file << "{\"audio_filepath\": \"" << audio_file << "\",";
-  result_file << "\"text\": \"";
   while (call->streamer->Read(&call->response)) {  // Returns false when no more to read.
     call->recv_times.push_back(std::chrono::steady_clock::now());
     for (int r = 0; r < call->response.results_size(); ++r) {
@@ -283,12 +282,8 @@ StreamingS2TClient::ReceiveResponses(
         gotoxy(0, 5);
       }
       VLOG(1) << "Result: " << result.DebugString();
-      std::cout << "translated text: \"" << result.alternatives(0).transcript() << "\""
-                << std::endl;
-        result_file << EscapeTranscript(result.alternatives(0).transcript()) << "\"}" << std::endl;
     }
   }
-  result_file.close();
 
   grpc::Status status = call->streamer->Finish();
   if (!status.ok()) {
@@ -297,7 +292,6 @@ StreamingS2TClient::ReceiveResponses(
   } else {
     PostProcessResults(call, audio_device);
   }
-
   num_streams_finished_++;
 }
 
@@ -350,7 +344,7 @@ StreamingS2TClient::DoStreamingFromMicrophone(const std::string& audio_device, b
       &MicrophoneThreadMain, call, alsa_handle, samplerate, channels, std::ref(encoding),
       chunk_duration_ms_, std::ref(request_exit));
   std::string filename = "microphone";
-  ReceiveResponses(call, true /*audio_device*/, filename);
+  ReceiveResponses(call, true /*audio_device*/);
   microphone_thread.join();
 
   CloseAudioDevice(&alsa_handle);
