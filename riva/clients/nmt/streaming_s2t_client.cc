@@ -273,8 +273,17 @@ StreamingS2TClient::ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool a
 
   while (call->streamer->Read(&call->response)) {  // Returns false when no more to read.
     call->recv_times.push_back(std::chrono::steady_clock::now());
+
+    call->latest_result_.partial_transcript = "";
+    call->latest_result_.partial_time_stamps.clear();
+
+    bool is_final = false;
     for (int r = 0; r < call->response.results_size(); ++r) {
       const auto& result = call->response.results(r);
+
+      if (result.is_final()) {
+        is_final = true;
+      }
 
       if (audio_device) {
         clear_screen();
@@ -282,9 +291,10 @@ StreamingS2TClient::ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool a
         gotoxy(0, 5);
       }
       VLOG(1) << "Result: " << result.DebugString();
+      call->latest_result_.audio_processed = result.audio_processed();
+      call->AppendResult(result);
     }
   }
-  PostProcessResults(call, audio_device);
   grpc::Status status = call->streamer->Finish();
   if (!status.ok()) {
     // Report the RPC failure.
