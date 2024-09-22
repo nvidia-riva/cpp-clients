@@ -84,11 +84,6 @@ signal_handler(int signal_num)
   count++;
 }
 
-void emptyFileBeforeRequest() {
-    std::ofstream result_file(FLAGS_nmt_text_file, std::ios::trunc);
-    result_file.close();
-}
-
 int
 main(int argc, char** argv)
 {
@@ -129,7 +124,7 @@ main(int argc, char** argv)
 
   std::signal(SIGINT, signal_handler);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  emptyFileBeforeRequest();
+  
   if (argc > 1) {
     std::cout << gflags::ProgramUsage();
     return 1;
