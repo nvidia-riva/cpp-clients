@@ -124,12 +124,12 @@ main(int argc, char** argv)
 
   std::signal(SIGINT, signal_handler);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  
+
   if (argc > 1) {
     std::cout << gflags::ProgramUsage();
     return 1;
   }
-  
+
   bool flag_set = gflags::GetCommandLineFlagInfoOrDie("riva_uri").is_default;
   const char* riva_uri = getenv("RIVA_URI");
 
