@@ -107,11 +107,12 @@ class StreamingS2TClient {
 
   std::unique_ptr<ThreadPool> thread_pool_;
 
-
+  
   bool simulate_realtime_;
   bool verbatim_transcripts_;
 
   std::vector<std::string> boosted_phrases_;
   float boosted_phrases_score_;
   std::string nmt_text_file_;
+  std::ofstream output_file_;
 };
