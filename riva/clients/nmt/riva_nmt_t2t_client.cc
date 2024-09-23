@@ -238,6 +238,7 @@ main(int argc, char** argv)
         batch.clear();
       }
       if (!str.empty()) {
+        total_words += countWords(str);
         batch.push_back(make_pair(count, str));
         count++;
       }
