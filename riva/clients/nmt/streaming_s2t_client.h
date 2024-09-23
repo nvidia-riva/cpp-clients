@@ -114,4 +114,5 @@ class StreamingS2TClient {
   std::vector<std::string> boosted_phrases_;
   float boosted_phrases_score_;
   std::string nmt_text_file_;
+  std::ofstream output_file_;
 };
