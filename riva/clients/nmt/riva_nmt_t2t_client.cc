@@ -90,6 +90,7 @@ translateBatch(
   }
 }
 
+<<<<<<< HEAD
 int countWords(const std::string& text) {
   
     int wordCount = 0;
@@ -109,13 +110,15 @@ int countWords(const std::string& text) {
     }
     return wordCount;
 }
+=======
+>>>>>>> 15e37ae (streaming s2t client updated)
 
 int
 main(int argc, char** argv)
 {
   google::InitGoogleLogging(argv[0]);
   FLAGS_logtostderr = 1;
- 
+
   std::stringstream str_usage;
   str_usage << "Usage: riva_nmt_t2t_client" << std::endl;
   str_usage << "           --text_file=<filename> " << std::endl;
@@ -214,7 +217,6 @@ main(int argc, char** argv)
     std::cout << response.translations(0).text() << std::endl;
     return 0;
   }
-  int total_words = 0;
 
   if (FLAGS_text_file != "") {
     // pull strings into vectors per parallel request
@@ -240,7 +242,6 @@ main(int argc, char** argv)
         batch.clear();
       }
       if (!str.empty()) {
-        total_words += countWords(str);
         batch.push_back(make_pair(count, str));
         count++;
       }
@@ -276,7 +277,6 @@ main(int argc, char** argv)
         workers.push_back(std::thread([&, i]() {
           std::unique_ptr<nr_nmt::RivaTranslation::Stub> nmt2(
               nr_nmt::RivaTranslation::NewStub(grpc_channel));
-
           translateBatch(
               std::move(nmt2), request_queue, FLAGS_target_language_code,
               FLAGS_source_language_code, FLAGS_model_name, mtx, latencies, lmtx, responses.at(i));
@@ -292,7 +292,6 @@ main(int argc, char** argv)
           }
       }
     }
-
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> total = end - start;
     LOG(INFO) << FLAGS_model_name << "-" << FLAGS_batch_size << "-" << FLAGS_source_language_code
