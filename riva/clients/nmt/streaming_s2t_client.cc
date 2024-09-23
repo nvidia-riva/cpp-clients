@@ -71,6 +71,8 @@ StreamingS2TClient::StreamingS2TClient(
 
   boosted_phrases_ = ReadPhrasesFromFile(boosted_phrases_file);
   dnt_phrases_ = ReadPhrasesFromFile(dnt_phrases_file);
+  output_file_.open(nmt_text_file);
+  boosted_phrases_ = ReadBoostedPhrases(boosted_phrases_file);
 }
 
 StreamingS2TClient::~StreamingS2TClient() {}
@@ -258,8 +260,7 @@ StreamingS2TClient::PostProcessResults(std::shared_ptr<S2TClientCall> call, bool
     VLOG(1) << "Latency:" << lat << std::endl;
     latencies_.push_back(lat);
   }
-  std::ofstream result_file(nmt_text_file_, std::ios::app);
-  call->PrintResult(audio_device, result_file);
+  call->PrintResult(audio_device, output_file_);
 }
 
 void
@@ -284,7 +285,6 @@ StreamingS2TClient::ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool a
       if (result.is_final()) {
         is_final = true;
       }
-
       if (audio_device) {
         clear_screen();
         std::cout << "ASR started... press `Ctrl-C' to stop recording\n\n";
