@@ -75,7 +75,9 @@ StreamingS2TClient::StreamingS2TClient(
   boosted_phrases_ = ReadBoostedPhrases(boosted_phrases_file);
 }
 
-StreamingS2TClient::~StreamingS2TClient() {}
+StreamingS2TClient::~StreamingS2TClient() {
+    output_file_.close();
+}
 
 void
 StreamingS2TClient::StartNewStream(std::unique_ptr<Stream> stream)
