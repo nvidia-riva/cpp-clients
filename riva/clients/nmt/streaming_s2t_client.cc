@@ -278,13 +278,9 @@ StreamingS2TClient::ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool a
     call->latest_result_.partial_transcript = "";
     call->latest_result_.partial_time_stamps.clear();
 
-    bool is_final = false;
     for (int r = 0; r < call->response.results_size(); ++r) {
       const auto& result = call->response.results(r);
 
-      if (result.is_final()) {
-        is_final = true;
-      }
       if (audio_device) {
         clear_screen();
         std::cout << "ASR started... press `Ctrl-C' to stop recording\n\n";
