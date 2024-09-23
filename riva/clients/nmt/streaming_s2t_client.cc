@@ -72,7 +72,7 @@ StreamingS2TClient::StreamingS2TClient(
   boosted_phrases_ = ReadPhrasesFromFile(boosted_phrases_file);
   dnt_phrases_ = ReadPhrasesFromFile(dnt_phrases_file);
   output_file_.open(nmt_text_file);
-  boosted_phrases_ = ReadBoostedPhrases(boosted_phrases_file);
+  boosted_phrases_ = ReadPhrasesFromFile(boosted_phrases_file);
 }
 
 StreamingS2TClient::~StreamingS2TClient() {
