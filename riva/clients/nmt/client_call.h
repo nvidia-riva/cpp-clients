@@ -164,8 +164,8 @@ class ClientCall {
         std::cout << std::endl;
       }
     }
-    std::cout << std::endl;
-    std::cout << "Audio processed: " << latest_result_.audio_processed << " sec." << std::endl;
+    // std::cout << std::endl;
+    // std::cout << "Audio processed: " << latest_result_.audio_processed << " sec." << std::endl;
     std::cout << "-----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
   }
