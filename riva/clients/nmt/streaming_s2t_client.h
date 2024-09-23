@@ -107,7 +107,7 @@ class StreamingS2TClient {
 
   std::unique_ptr<ThreadPool> thread_pool_;
 
-  
+
   bool simulate_realtime_;
   bool verbatim_transcripts_;
 
