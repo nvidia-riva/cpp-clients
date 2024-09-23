@@ -74,8 +74,9 @@ StreamingS2TClient::StreamingS2TClient(
   output_file_.open(nmt_text_file);
 }
 
-StreamingS2TClient::~StreamingS2TClient() {
-    output_file_.close();
+StreamingS2TClient::~StreamingS2TClient()
+{
+  output_file_.close();
 }
 
 void
@@ -276,8 +277,6 @@ StreamingS2TClient::ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool a
   while (call->streamer->Read(&call->response)) {  // Returns false when no more to read.
     call->recv_times.push_back(std::chrono::steady_clock::now());
 
-    call->latest_result_.partial_transcript = "";
-    call->latest_result_.partial_time_stamps.clear();
 
     for (int r = 0; r < call->response.results_size(); ++r) {
       const auto& result = call->response.results(r);
@@ -289,6 +288,7 @@ StreamingS2TClient::ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool a
       }
       VLOG(1) << "Result: " << result.DebugString();
       call->latest_result_.audio_processed = result.audio_processed();
+
       call->AppendResult(result);
     }
   }
