@@ -90,7 +90,7 @@ translateBatch(
   }
 }
 
-<<<<<<< HEAD
+
 int countWords(const std::string& text) {
   
     int wordCount = 0;
@@ -110,8 +110,6 @@ int countWords(const std::string& text) {
     }
     return wordCount;
 }
-=======
->>>>>>> 15e37ae (streaming s2t client updated)
 
 int
 main(int argc, char** argv)
