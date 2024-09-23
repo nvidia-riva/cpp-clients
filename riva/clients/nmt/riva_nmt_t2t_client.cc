@@ -90,7 +90,6 @@ translateBatch(
   }
 }
 
-
 int countWords(const std::string& text) {
   
     int wordCount = 0;
