@@ -53,9 +53,9 @@ MicrophoneThreadMain(
 StreamingS2TClient::StreamingS2TClient(
     std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
     const std::string& source_language_code, const std::string& target_language_code,
-    bool profanity_filter, bool automatic_punctuation, bool separate_recognition_per_channel,
-    int32_t chunk_duration_ms, bool simulate_realtime, bool verbatim_transcripts,
-    const std::string& boosted_phrases_file, float boosted_phrases_score,
+    const std::string& dnt_phrases_file, bool profanity_filter, bool automatic_punctuation,
+    bool separate_recognition_per_channel, int32_t chunk_duration_ms, bool simulate_realtime,
+    bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score,
     const std::string& nmt_text_file)
     : stub_(nr_nmt::RivaTranslation::NewStub(channel)), source_language_code_(source_language_code),
       target_language_code_(target_language_code), profanity_filter_(profanity_filter),
@@ -69,10 +69,15 @@ StreamingS2TClient::StreamingS2TClient(
   num_streams_finished_.store(0);
   thread_pool_.reset(new ThreadPool(4 * num_parallel_requests));
 
-  boosted_phrases_ = ReadBoostedPhrases(boosted_phrases_file);
+  boosted_phrases_ = ReadPhrasesFromFile(boosted_phrases_file);
+  dnt_phrases_ = ReadPhrasesFromFile(dnt_phrases_file);
+  output_file_.open(nmt_text_file);
 }
 
-StreamingS2TClient::~StreamingS2TClient() {}
+StreamingS2TClient::~StreamingS2TClient()
+{
+  output_file_.close();
+}
 
 void
 StreamingS2TClient::StartNewStream(std::unique_ptr<Stream> stream)
@@ -111,6 +116,7 @@ StreamingS2TClient::GenerateRequests(std::shared_ptr<S2TClientCall> call)
       auto translation_config = streaming_s2t_config->mutable_translation_config();
       translation_config->set_source_language_code(source_language_code_);
       translation_config->set_target_language_code(target_language_code_);
+      *(translation_config->mutable_dnt_phrases()) = {dnt_phrases_.begin(), dnt_phrases_.end()};
 
       // set asr config
       auto streaming_asr_config = streaming_s2t_config->mutable_asr_config();
@@ -256,6 +262,7 @@ StreamingS2TClient::PostProcessResults(std::shared_ptr<S2TClientCall> call, bool
     VLOG(1) << "Latency:" << lat << std::endl;
     latencies_.push_back(lat);
   }
+  call->PrintResult(audio_device, output_file_);
 }
 
 void
@@ -267,7 +274,6 @@ StreamingS2TClient::ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool a
     gotoxy(0, 5);
   }
 
-  std::ofstream result_file(nmt_text_file_);
   while (call->streamer->Read(&call->response)) {  // Returns false when no more to read.
     call->recv_times.push_back(std::chrono::steady_clock::now());
     for (int r = 0; r < call->response.results_size(); ++r) {
@@ -279,13 +285,10 @@ StreamingS2TClient::ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool a
         gotoxy(0, 5);
       }
       VLOG(1) << "Result: " << result.DebugString();
-      std::cout << "translated text: \"" << result.alternatives(0).transcript() << "\""
-                << std::endl;
-      result_file << result.alternatives(0).transcript() << std::endl;
+      call->latest_result_.audio_processed = result.audio_processed();
+      call->AppendResult(result);
     }
   }
-  result_file.close();
-
   grpc::Status status = call->streamer->Finish();
   if (!status.ok()) {
     // Report the RPC failure.

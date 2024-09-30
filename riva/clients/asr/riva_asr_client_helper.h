@@ -14,12 +14,13 @@
 #include <sstream>
 
 #include "absl/strings/str_replace.h"
+#include "absl/strings/str_split.h"
 #include "riva/proto/riva_asr.grpc.pb.h"
 
 namespace nr = nvidia::riva;
 namespace nr_asr = nvidia::riva::asr;
 
-std::vector<std::string> ReadBoostedPhrases(const std::string& boosted_phrases_file);
+std::vector<std::string> ReadPhrasesFromFile(const std::string& phrases_file);
 
 bool WaitUntilReady(
     std::shared_ptr<grpc::Channel> channel, std::chrono::system_clock::time_point& deadline);
@@ -51,3 +52,6 @@ void AppendResult(
 void PrintResult(
     Results& output_result, const std::string& filename, bool word_time_offsets,
     bool speaker_diarization);
+
+std::unordered_map<std::string, std::string> ReadCustomConfiguration(
+    std::string& custom_configuration);
