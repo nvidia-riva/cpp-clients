@@ -22,10 +22,6 @@ void
 ClientCall::AppendResult(const nr_asr::StreamingRecognitionResult& result)
 {
   if (result.has_pipeline_states()) {
-    if (latest_result_.final_transcripts.size() == 0) {
-      latest_result_.final_transcripts.resize(1);
-      latest_result_.final_transcripts[0] = "";
-    }
     auto pipeline_states = result.pipeline_states();
     int prob_states_count = pipeline_states.vad_probabilities_size();
     std::string vad_log = "";
