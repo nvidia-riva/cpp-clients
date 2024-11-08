@@ -15,7 +15,7 @@ ClientCall::ClientCall(uint32_t corr_id, bool word_time_offsets)
 
 ClientCall::~ClientCall()
 {
-  if (pipeline_states_logs_.is_open()){
+  if (pipeline_states_logs_.is_open()) {
     pipeline_states_logs_.close();
   }
 }
