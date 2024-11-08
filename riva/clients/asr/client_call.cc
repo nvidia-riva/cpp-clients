@@ -15,31 +15,31 @@ ClientCall::ClientCall(uint32_t corr_id, bool word_time_offsets)
 
 ClientCall::~ClientCall()
 {
-  if (pipeline_states_logs_)
+  if (pipeline_states_logs_.is_open()){
     pipeline_states_logs_.close();
+  }
 }
 
 void
 ClientCall::AppendResult(const nr_asr::StreamingRecognitionResult& result)
 {
+  if (latest_result_.final_transcripts.size() < 1) {
+    latest_result_.final_transcripts.resize(1);
+    latest_result_.final_transcripts[0] = "";
+  }
   if (result.has_pipeline_states()) {
     auto pipeline_states = result.pipeline_states();
-    int prob_states_count = pipeline_states.vad_probabilities_size();
+    size_t prob_states_count = pipeline_states.vad_probabilities_size();
     std::string vad_log = "";
-    for (int i = 0; i < prob_states_count; i++) {
+    for (size_t i = 0; i < prob_states_count; i++) {
       vad_log += std::to_string(pipeline_states.vad_probabilities(i)) + " ";
     }
-    if (!pipeline_states_logs_) {
+    if (!pipeline_states_logs_.is_open()) {
       pipeline_states_logs_.open("riva_asr_pipeline_states.log");
     }
     pipeline_states_logs_ << "VAD states: " << vad_log << std::endl;
   } else {
     bool is_final = result.is_final();
-    if (latest_result_.final_transcripts.size() < 1) {
-      latest_result_.final_transcripts.resize(1);
-      latest_result_.final_transcripts[0] = "";
-    }
-
     if (is_final) {
       int num_alternatives = result.alternatives_size();
       latest_result_.final_transcripts.resize(num_alternatives);
