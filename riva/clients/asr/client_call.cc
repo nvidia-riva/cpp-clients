@@ -13,7 +13,8 @@ ClientCall::ClientCall(uint32_t corr_id, bool word_time_offsets)
   recv_final_flags.reserve(1000);
 }
 
-ClientCall::~ClientCall() {
+ClientCall::~ClientCall()
+{
   if (pipeline_states_logs_)
     pipeline_states_logs_.close();
 }
@@ -28,7 +29,7 @@ ClientCall::AppendResult(const nr_asr::StreamingRecognitionResult& result)
     for (int i = 0; i < prob_states_count; i++) {
       vad_log += std::to_string(pipeline_states.vad_probabilities(i)) + " ";
     }
-    if(!pipeline_states_logs_){
+    if (!pipeline_states_logs_) {
       pipeline_states_logs_.open("riva_asr_pipeline_states.log");
     }
     pipeline_states_logs_ << "VAD states: " << vad_log << std::endl;
