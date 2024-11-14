@@ -91,21 +91,21 @@ translateBatch(
 }
 
 int countWords(const std::string& text) {
-  
     int wordCount = 0;
-    bool inside_word = false;
-
+    bool wasSpace = true; 
     for (char c : text) {
         if (std::isspace(c)) {
-            inside_word = false;
-        } else if (!std::ispunct(c)) {
-            if (!inside_word) {
+            if (!wasSpace) {
                 wordCount++;
-                inside_word = true;
             }
+            wasSpace = true;
+        } else {
+            wasSpace = false;
         }
     }
-
+    if (!wasSpace) {
+        wordCount++;
+    }
     return wordCount;
 }
 
@@ -224,7 +224,7 @@ main(int argc, char** argv)
     // std::vector<std::vector<std::vector<std::string>>> inputs;
 
     std::string str;
-    int count = 0;
+    int count = 0, total_words = 0;
     std::vector<std::pair<int, std::string>> batch;
     std::vector<std::vector<std::pair<int, std::string>>> all_requests;
     std::ifstream nmt_file(FLAGS_text_file);
@@ -295,10 +295,11 @@ main(int argc, char** argv)
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> total = end - start;
     LOG(INFO) << FLAGS_model_name << "-" << FLAGS_batch_size << "-" << FLAGS_source_language_code
-              << "-" << FLAGS_target_language_code << ",count:" << count
+              << "-" << FLAGS_target_language_code << ",lines: " << count
+              << ",tokens: " << total_words 
               << ",total time: " << total.count()
               << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
-              << ",translations/second: " << total_words/total.count();
+              << ",tokens/second: " << FLAGS_num_iterations * total_words /total.count();
 
     std::sort(latencies.begin(), latencies.end());
     auto size = latencies.size();

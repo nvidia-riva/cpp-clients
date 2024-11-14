@@ -49,10 +49,10 @@ class StreamingS2TClient {
   StreamingS2TClient(
       std::shared_ptr<grpc::Channel> channel, int32_t num_parallel_requests,
       const std::string& source_language_code, const std::string& target_language_code,
-      bool profanity_filter, bool automatic_punctuation, bool separate_recognition_per_channel,
-      int32_t chunk_duration_ms, bool simulate_realtime, bool verbatim_transcripts,
-      const std::string& boosted_phrases_file, float boosted_phrases_score,
-      const std::string& nmt_text_file);
+      const std::string& dnt_words_file, bool profanity_filter, bool automatic_punctuation,
+      bool separate_recognition_per_channel, int32_t chunk_duration_ms, bool simulate_realtime,
+      bool verbatim_transcripts, const std::string& boosted_phrases_file,
+      float boosted_phrases_score, const std::string& nmt_text_file);
 
   ~StreamingS2TClient();
 
@@ -89,6 +89,7 @@ class StreamingS2TClient {
 
   std::string source_language_code_;
   std::string target_language_code_;
+  std::vector<std::string> dnt_phrases_;
   bool profanity_filter_;
   int32_t channels_;
   bool automatic_punctuation_;
@@ -113,4 +114,5 @@ class StreamingS2TClient {
   std::vector<std::string> boosted_phrases_;
   float boosted_phrases_score_;
   std::string nmt_text_file_;
+  std::ofstream output_file_;
 };
