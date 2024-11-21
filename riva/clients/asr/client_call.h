@@ -37,6 +37,7 @@ namespace nr_asr = nvidia::riva::asr;
 class ClientCall {
  public:
   ClientCall(uint32_t _corr_id, bool word_time_offsets);
+  ~ClientCall();
 
   void AppendResult(const nr_asr::StreamingRecognitionResult& result);
 
@@ -66,5 +67,6 @@ class ClientCall {
   std::vector<bool> recv_final_flags;
 
   grpc::Status finish_status;
+  std::ofstream pipeline_states_logs_;
 
 };  // ClientCall
