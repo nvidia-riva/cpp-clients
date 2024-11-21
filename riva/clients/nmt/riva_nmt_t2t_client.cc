@@ -252,10 +252,7 @@ main(int argc, char** argv)
     return 0;
   }
 
-  // dnt_phrases_ = ReadPhrasesFromFile(dnt_phrases_file);
   std::string dnt_phrases = ReadUserDictionaryFile(FLAGS_dnt_phrases_file);
-  LOG(INFO) << FLAGS_dnt_phrases_file;
-  LOG(INFO) << dnt_phrases;
 
   if (FLAGS_text != "") {
     nr_nmt::TranslateTextRequest request;
