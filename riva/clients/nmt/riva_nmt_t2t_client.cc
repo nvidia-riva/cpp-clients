@@ -186,7 +186,6 @@ main(int argc, char** argv)
   str_usage << "           --list_models" << std::endl;
   str_usage << "           --metadata=<key,value,...>" << std::endl;
   str_usage << "           --dnt_phrases_file=<string>" << std::endl;
-
   gflags::SetUsageMessage(str_usage.str());
 
   if (argc < 2) {
@@ -264,7 +263,6 @@ main(int argc, char** argv)
 
     request.add_texts(FLAGS_text);
     request.add_custom_dnt_phrases(dnt_phrases);
-
     grpc::Status rpc_status = nmt->TranslateText(&context, request, &response);
     if (!rpc_status.ok()) {
       LOG(ERROR) << rpc_status.error_message();
@@ -273,7 +271,6 @@ main(int argc, char** argv)
     std::cout << response.translations(0).text() << std::endl;
     return 0;
   }
-  int total_words = 0;
 
   if (FLAGS_text_file != "") {
     // pull strings into vectors per parallel request
@@ -335,7 +332,6 @@ main(int argc, char** argv)
         workers.push_back(std::thread([&, i]() {
           std::unique_ptr<nr_nmt::RivaTranslation::Stub> nmt2(
               nr_nmt::RivaTranslation::NewStub(grpc_channel));
-
           translateBatch(
               std::move(nmt2), request_queue, FLAGS_target_language_code,
               FLAGS_source_language_code, FLAGS_model_name, mtx, latencies, lmtx, responses.at(i),
@@ -352,7 +348,6 @@ main(int argc, char** argv)
           }
       }
     }
-
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> total = end - start;
     LOG(INFO) << FLAGS_model_name << "-" << FLAGS_batch_size << "-" << FLAGS_source_language_code
