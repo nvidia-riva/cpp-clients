@@ -152,7 +152,9 @@ ReadDntPhrasesFile(const std::string& dnt_phrases_file)
           if (!dnt_phrases_string.empty()) {
             dnt_phrases_string += ",";
           }
-          dnt_phrases_string += key + "##" + value;
+          if (key != "") {
+            dnt_phrases_string += key + "##" + value;
+          }
         }
       }
     } else {
@@ -252,7 +254,7 @@ main(int argc, char** argv)
   }
 
   std::string dnt_phrases = ReadDntPhrasesFile(FLAGS_dnt_phrases_file);
-
+  LOG(INFO) << dnt_phrases;
   if (FLAGS_text != "") {
     nr_nmt::TranslateTextRequest request;
     nr_nmt::TranslateTextResponse response;
