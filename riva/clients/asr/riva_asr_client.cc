@@ -538,6 +538,7 @@ main(int argc, char** argv)
       FLAGS_model_name, FLAGS_output_ctm, FLAGS_verbatim_transcripts, FLAGS_boosted_words_file,
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
       (float)FLAGS_boosted_words_score, FLAGS_speaker_diarization, FLAGS_diarization_max_speakers,
       FLAGS_start_history, FLAGS_start_threshold, FLAGS_stop_history, FLAGS_stop_history_eou,
       FLAGS_stop_threshold, FLAGS_stop_threshold_eou, FLAGS_custom_configuration);
@@ -546,6 +547,9 @@ main(int argc, char** argv)
 =======
       (float)FLAGS_boosted_words_score, FLAGS_speaker_diarization, FLAGS_diarization_max_speakers,
       FLAGS_start_history,
+>>>>>>> 5554cc4 (Support to set max speakers for offline diarization (#98))
+=======
+      (float)FLAGS_boosted_words_score, FLAGS_speaker_diarization, FLAGS_diarization_max_speakers, FLAGS_start_history,
 >>>>>>> 5554cc4 (Support to set max speakers for offline diarization (#98))
       FLAGS_start_threshold, FLAGS_stop_history, FLAGS_stop_history_eou, FLAGS_stop_threshold,
       FLAGS_stop_threshold_eou, FLAGS_custom_configuration);
