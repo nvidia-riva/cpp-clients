@@ -156,7 +156,7 @@ ReadDntPhrasesFile(const std::string& dnt_phrases_file)
         }
       }
     } else {
-      std::string err = "Could not open file " + dictionary_file;
+      std::string err = "Could not open file " + dnt_phrases_file;
       throw std::runtime_error(err);
     }
   }
