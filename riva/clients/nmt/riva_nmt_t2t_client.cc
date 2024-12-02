@@ -77,7 +77,7 @@ translateBatch(
     request.set_source_language(source_language_code);
     request.set_target_language(target_language_code);
     *request.mutable_texts() = {text.begin(), text.end()};
-    request.add_custom_dnt_phrases(dnt_phrases);
+    request.add_dnt_phrases(dnt_phrases);
     // std::cout << request.DebugString() << std::endl;
 
     auto start = std::chrono::steady_clock::now();
@@ -117,11 +117,11 @@ countWords(const std::string& text)
 }
 
 std::string
-ReadUserDictionaryFile(const std::string& dictionary_file)
+ReadDntPhrasesFile(const std::string& dnt_phrases_file)
 {
-  std::string dictionary_string;
-  if (!dictionary_file.empty()) {
-    std::ifstream infile(dictionary_file);
+  std::string dnt_phrases_string;
+  if (!dnt_phrases_file.empty()) {
+    std::ifstream infile(dnt_phrases_file);
 
     if (infile.is_open()) {
       std::string line;
@@ -141,7 +141,7 @@ ReadUserDictionaryFile(const std::string& dictionary_file)
           } else {
             // Line doesn't contain "##"
             key = line;
-            value = "null";
+            value = "";
           }
 
           // Trim key and value
@@ -149,10 +149,10 @@ ReadUserDictionaryFile(const std::string& dictionary_file)
           value = std::regex_replace(value, std::regex("^ +| +$"), "");
 
           // Append the key-value pair to the dictionary string
-          if (!dictionary_string.empty()) {
-            dictionary_string += ",";
+          if (!dnt_phrases_string.empty()) {
+            dnt_phrases_string += ",";
           }
-          dictionary_string += key + "  " + value;
+          dnt_phrases_string += key + "##" + value;
         }
       }
     } else {
@@ -160,7 +160,7 @@ ReadUserDictionaryFile(const std::string& dictionary_file)
       throw std::runtime_error(err);
     }
   }
-  return dictionary_string;
+  return dnt_phrases_string;
 }
 
 int
@@ -251,7 +251,7 @@ main(int argc, char** argv)
     return 0;
   }
 
-  std::string dnt_phrases = ReadUserDictionaryFile(FLAGS_dnt_phrases_file);
+  std::string dnt_phrases = ReadDntPhrasesFile(FLAGS_dnt_phrases_file);
 
   if (FLAGS_text != "") {
     nr_nmt::TranslateTextRequest request;
@@ -262,7 +262,7 @@ main(int argc, char** argv)
     request.set_target_language(FLAGS_target_language_code);
 
     request.add_texts(FLAGS_text);
-    request.add_custom_dnt_phrases(dnt_phrases);
+    request.add_dnt_phrases(dnt_phrases);
     grpc::Status rpc_status = nmt->TranslateText(&context, request, &response);
     if (!rpc_status.ok()) {
       LOG(ERROR) << rpc_status.error_message();
