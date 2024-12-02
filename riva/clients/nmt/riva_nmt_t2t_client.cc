@@ -91,7 +91,6 @@ translateBatch(
 }
 
 int countWords(const std::string& text) {
-  
     int wordCount = 0;
     bool wasSpace = true; 
     for (char c : text) {
@@ -301,11 +300,7 @@ main(int argc, char** argv)
               << ",tokens: " << total_words 
               << ",total time: " << total.count()
               << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
-<<<<<<< HEAD
               << ",tokens/second: " << FLAGS_num_iterations * total_words /total.count();
-=======
-              << ",translations/second: " << total_words/total.count();
->>>>>>> 3ec8cb8 (performance metric-translation/sec updated)
 
     std::sort(latencies.begin(), latencies.end());
     auto size = latencies.size();
