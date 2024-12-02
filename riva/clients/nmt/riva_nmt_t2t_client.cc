@@ -92,6 +92,7 @@ translateBatch(
 
 int countWords(const std::string& text) {
     int wordCount = 0;
+<<<<<<< HEAD
     bool wasSpace = true; 
     for (char c : text) {
         if (std::isspace(c)) {
@@ -106,6 +107,21 @@ int countWords(const std::string& text) {
     if (!wasSpace) {
         wordCount++;
     }
+=======
+    bool inside_word = false;
+
+    for (char c : text) {
+        if (std::isspace(c)) {
+            inside_word = false;
+        } else if (!std::ispunct(c)) {
+            if (!inside_word) {
+                wordCount++;
+                inside_word = true;
+            }
+        }
+    }
+
+>>>>>>> 3ec8cb8 (performance metric-translation/sec updated)
     return wordCount;
 }
 
@@ -114,7 +130,7 @@ main(int argc, char** argv)
 {
   google::InitGoogleLogging(argv[0]);
   FLAGS_logtostderr = 1;
-
+ 
   std::stringstream str_usage;
   str_usage << "Usage: riva_nmt_t2t_client" << std::endl;
   str_usage << "           --text_file=<filename> " << std::endl;
@@ -143,7 +159,7 @@ main(int argc, char** argv)
   if (argc > 1) {
     std::cout << argc << std::endl;
     std::cout << gflags::ProgramUsage();
-    return 1;
+    // return 1;
   }
 
   if (FLAGS_batch_size <= 0) {
@@ -214,6 +230,7 @@ main(int argc, char** argv)
     std::cout << response.translations(0).text() << std::endl;
     return 0;
   }
+  int total_words = 0;
 
   if (FLAGS_text_file != "") {
     // pull strings into vectors per parallel request
@@ -275,6 +292,7 @@ main(int argc, char** argv)
         workers.push_back(std::thread([&, i]() {
           std::unique_ptr<nr_nmt::RivaTranslation::Stub> nmt2(
               nr_nmt::RivaTranslation::NewStub(grpc_channel));
+
           translateBatch(
               std::move(nmt2), request_queue, FLAGS_target_language_code,
               FLAGS_source_language_code, FLAGS_model_name, mtx, latencies, lmtx, responses.at(i));
@@ -290,6 +308,7 @@ main(int argc, char** argv)
           }
       }
     }
+
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> total = end - start;
     LOG(INFO) << FLAGS_model_name << "-" << FLAGS_batch_size << "-" << FLAGS_source_language_code
@@ -297,7 +316,11 @@ main(int argc, char** argv)
               << ",tokens: " << total_words 
               << ",total time: " << total.count()
               << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
+<<<<<<< HEAD
               << ",tokens/second: " << FLAGS_num_iterations * total_words /total.count();
+=======
+              << ",translations/second: " << total_words/total.count();
+>>>>>>> 3ec8cb8 (performance metric-translation/sec updated)
 
     std::sort(latencies.begin(), latencies.end());
     auto size = latencies.size();
