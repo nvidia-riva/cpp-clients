@@ -540,70 +540,69 @@ main(int argc, char** argv)
       FLAGS_start_history, FLAGS_start_threshold, FLAGS_stop_history, FLAGS_stop_history_eou,
       FLAGS_stop_threshold, FLAGS_stop_threshold_eou, FLAGS_custom_configuration);
 
-      // Preload all wav files, sort by size to reduce tail effects
-      std::vector<std::shared_ptr<WaveData>> all_wav;
-      try {
-        LoadWavData(all_wav, FLAGS_audio_file);
-      }
-      catch (const std::exception& e) {
-        std::cerr << "Unable to load audio file(s): " << e.what() << std::endl;
-        return 1;
-      }
-      if (all_wav.size() == 0) {
-        std::cout << "No audio files specified. Exiting." << std::endl;
-        return 1;
-      }
+  // Preload all wav files, sort by size to reduce tail effects
+  std::vector<std::shared_ptr<WaveData>> all_wav;
+  try {
+    LoadWavData(all_wav, FLAGS_audio_file);
+  }
+  catch (const std::exception& e) {
+    std::cerr << "Unable to load audio file(s): " << e.what() << std::endl;
+    return 1;
+  }
+  if (all_wav.size() == 0) {
+    std::cout << "No audio files specified. Exiting." << std::endl;
+    return 1;
+  }
 
-      uint32_t all_wav_max = all_wav.size() * FLAGS_num_iterations;
-      std::vector<std::shared_ptr<WaveData>> all_wav_repeated;
-      all_wav_repeated.reserve(all_wav_max);
-      for (uint32_t file_id = 0; file_id < all_wav.size(); file_id++) {
-        for (int iter = 0; iter < FLAGS_num_iterations; iter++) {
-          all_wav_repeated.push_back(all_wav[file_id]);
-        }
-      }
+  uint32_t all_wav_max = all_wav.size() * FLAGS_num_iterations;
+  std::vector<std::shared_ptr<WaveData>> all_wav_repeated;
+  all_wav_repeated.reserve(all_wav_max);
+  for (uint32_t file_id = 0; file_id < all_wav.size(); file_id++) {
+    for (int iter = 0; iter < FLAGS_num_iterations; iter++) {
+      all_wav_repeated.push_back(all_wav[file_id]);
+    }
+  }
 
-      // Spawn reader thread that loops indefinitely
-      std::thread thread_ = std::thread(&RecognizeClient::AsyncCompleteRpc, &recognize_client);
+  // Spawn reader thread that loops indefinitely
+  std::thread thread_ = std::thread(&RecognizeClient::AsyncCompleteRpc, &recognize_client);
 
-      // Ensure there's also num_parallel_requests in flight
-      uint32_t all_wav_i = 0;
-      auto start_time = std::chrono::steady_clock::now();
-      while (true) {
-        while (recognize_client.NumActiveTasks() < (uint32_t)FLAGS_num_parallel_requests &&
-               all_wav_i < all_wav_max) {
-          std::unique_ptr<Stream> stream(new Stream(all_wav_repeated[all_wav_i], all_wav_i));
-          recognize_client.Recognize(std::move(stream));
-          ++all_wav_i;
-        }
+  // Ensure there's also num_parallel_requests in flight
+  uint32_t all_wav_i = 0;
+  auto start_time = std::chrono::steady_clock::now();
+  while (true) {
+    while (recognize_client.NumActiveTasks() < (uint32_t)FLAGS_num_parallel_requests &&
+           all_wav_i < all_wav_max) {
+      std::unique_ptr<Stream> stream(new Stream(all_wav_repeated[all_wav_i], all_wav_i));
+      recognize_client.Recognize(std::move(stream));
+      ++all_wav_i;
+    }
 
-        if (all_wav_i == all_wav_max) {
-          break;
-        }
-      }
+    if (all_wav_i == all_wav_max) {
+      break;
+    }
+  }
 
-      recognize_client.DoneSending();
-      thread_.join();
+  recognize_client.DoneSending();
+  thread_.join();
 
-      if (recognize_client.NumFailedRequests()) {
-        std::cout << "Some requests failed to complete properly, not printing performance stats"
-                  << std::endl;
-      } else {
-        recognize_client.PrintStats();
+  if (recognize_client.NumFailedRequests()) {
+    std::cout << "Some requests failed to complete properly, not printing performance stats"
+              << std::endl;
+  } else {
+    recognize_client.PrintStats();
 
-        auto current_time = std::chrono::steady_clock::now();
-        double diff_time =
-            std::chrono::duration<double, std::milli>(current_time - start_time).count();
+    auto current_time = std::chrono::steady_clock::now();
+    double diff_time = std::chrono::duration<double, std::milli>(current_time - start_time).count();
 
-        std::cout << "Run time: " << diff_time / 1000. << " sec." << std::endl;
-        std::cout << "Total audio processed: " << recognize_client.TotalAudioProcessed() << " sec."
-                  << std::endl;
-        std::cout << "Throughput: " << recognize_client.TotalAudioProcessed() * 1000. / diff_time
-                  << " RTFX" << std::endl;
-        if (!FLAGS_output_filename.empty()) {
-          std::cout << "Final transcripts written to " << FLAGS_output_filename << std::endl;
-        }
-      }
+    std::cout << "Run time: " << diff_time / 1000. << " sec." << std::endl;
+    std::cout << "Total audio processed: " << recognize_client.TotalAudioProcessed() << " sec."
+              << std::endl;
+    std::cout << "Throughput: " << recognize_client.TotalAudioProcessed() * 1000. / diff_time
+              << " RTFX" << std::endl;
+    if (!FLAGS_output_filename.empty()) {
+      std::cout << "Final transcripts written to " << FLAGS_output_filename << std::endl;
+    }
+  }
 
-      return 0;
+  return 0;
 }
