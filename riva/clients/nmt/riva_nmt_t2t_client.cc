@@ -13,6 +13,7 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <regex>
 #include <thread>
 
 #include "riva/clients/utils/grpc.h"
@@ -41,6 +42,9 @@ DEFINE_bool(
     "Whether to use SSL credentials or not. If ssl_cert is specified, "
     "this is assumed to be true");
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
+DEFINE_string(
+    dnt_phrases_file, "",
+    "File with a list of words to be custom translated. Word and translation in a line.");
 
 int
 translateBatch(
@@ -48,7 +52,7 @@ translateBatch(
     std::queue<std::vector<std::pair<int, std::string>>>& work,
     const std::string target_language_code, const std::string source_language_code,
     const std::string model_name, std::mutex& mtx, std::vector<double>& latencies, std::mutex& lmtx,
-    std::vector<nr_nmt::TranslateTextResponse>& responses)
+    std::vector<nr_nmt::TranslateTextResponse>& responses, std::string& dnt_phrases)
 {
   while (1) {
     std::vector<std::pair<int, std::string>> pairs;
@@ -73,6 +77,7 @@ translateBatch(
     request.set_source_language(source_language_code);
     request.set_target_language(target_language_code);
     *request.mutable_texts() = {text.begin(), text.end()};
+    request.add_custom_dnt_phrases(dnt_phrases);
     // std::cout << request.DebugString() << std::endl;
 
     auto start = std::chrono::steady_clock::now();
@@ -90,23 +95,72 @@ translateBatch(
   }
 }
 
-int countWords(const std::string& text) {
-    int wordCount = 0;
-    bool wasSpace = true; 
-    for (char c : text) {
-        if (std::isspace(c)) {
-            if (!wasSpace) {
-                wordCount++;
-            }
-            wasSpace = true;
-        } else {
-            wasSpace = false;
-        }
-    }
-    if (!wasSpace) {
+int
+countWords(const std::string& text)
+{
+  int wordCount = 0;
+  bool wasSpace = true;
+  for (char c : text) {
+    if (std::isspace(c)) {
+      if (!wasSpace) {
         wordCount++;
+      }
+      wasSpace = true;
+    } else {
+      wasSpace = false;
     }
-    return wordCount;
+  }
+  if (!wasSpace) {
+    wordCount++;
+  }
+  return wordCount;
+}
+
+std::string
+ReadUserDictionaryFile(const std::string& dictionary_file)
+{
+  std::string dictionary_string;
+  if (!dictionary_file.empty()) {
+    std::ifstream infile(dictionary_file);
+
+    if (infile.is_open()) {
+      std::string line;
+
+      while (std::getline(infile, line)) {
+        // Trim leading and trailing whitespaces
+        line = std::regex_replace(line, std::regex("^ +| +$"), "");
+
+        if (!line.empty()) {
+          size_t pos = line.find("##");
+          std::string key, value;
+
+          if (pos != std::string::npos) {
+            // Line contains "##"
+            key = line.substr(0, pos);
+            value = line.substr(pos + 2);
+          } else {
+            // Line doesn't contain "##"
+            key = line;
+            value = "null";
+          }
+
+          // Trim key and value
+          key = std::regex_replace(key, std::regex("^ +| +$"), "");
+          value = std::regex_replace(value, std::regex("^ +| +$"), "");
+
+          // Append the key-value pair to the dictionary string
+          if (!dictionary_string.empty()) {
+            dictionary_string += ",";
+          }
+          dictionary_string += key + "  " + value;
+        }
+      }
+    } else {
+      std::string err = "Could not open file " + dictionary_file;
+      throw std::runtime_error(err);
+    }
+  }
+  return dictionary_string;
 }
 
 int
@@ -114,7 +168,7 @@ main(int argc, char** argv)
 {
   google::InitGoogleLogging(argv[0]);
   FLAGS_logtostderr = 1;
- 
+
   std::stringstream str_usage;
   str_usage << "Usage: riva_nmt_t2t_client" << std::endl;
   str_usage << "           --text_file=<filename> " << std::endl;
@@ -131,6 +185,8 @@ main(int argc, char** argv)
   str_usage << "           --model_name=<model>" << std::endl;
   str_usage << "           --list_models" << std::endl;
   str_usage << "           --metadata=<key,value,...>" << std::endl;
+  str_usage << "           --dnt_phrases_file=<string>" << std::endl;
+
   gflags::SetUsageMessage(str_usage.str());
 
   if (argc < 2) {
@@ -196,6 +252,10 @@ main(int argc, char** argv)
     return 0;
   }
 
+  // dnt_phrases_ = ReadPhrasesFromFile(dnt_phrases_file);
+  std::string dnt_phrases = ReadUserDictionaryFile(FLAGS_dnt_phrases_file);
+  LOG(INFO) << FLAGS_dnt_phrases_file;
+  LOG(INFO) << dnt_phrases;
 
   if (FLAGS_text != "") {
     nr_nmt::TranslateTextRequest request;
@@ -206,6 +266,8 @@ main(int argc, char** argv)
     request.set_target_language(FLAGS_target_language_code);
 
     request.add_texts(FLAGS_text);
+    request.add_custom_dnt_phrases(dnt_phrases);
+
     grpc::Status rpc_status = nmt->TranslateText(&context, request, &response);
     if (!rpc_status.ok()) {
       LOG(ERROR) << rpc_status.error_message();
@@ -279,7 +341,8 @@ main(int argc, char** argv)
 
           translateBatch(
               std::move(nmt2), request_queue, FLAGS_target_language_code,
-              FLAGS_source_language_code, FLAGS_model_name, mtx, latencies, lmtx, responses.at(i));
+              FLAGS_source_language_code, FLAGS_model_name, mtx, latencies, lmtx, responses.at(i),
+              dnt_phrases);
         }));
       }
 
@@ -297,10 +360,9 @@ main(int argc, char** argv)
     std::chrono::duration<double> total = end - start;
     LOG(INFO) << FLAGS_model_name << "-" << FLAGS_batch_size << "-" << FLAGS_source_language_code
               << "-" << FLAGS_target_language_code << ",lines: " << count
-              << ",tokens: " << total_words 
-              << ",total time: " << total.count()
+              << ",tokens: " << total_words << ",total time: " << total.count()
               << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
-              << ",tokens/second: " << FLAGS_num_iterations * total_words /total.count();
+              << ",tokens/second: " << FLAGS_num_iterations * total_words / total.count();
 
     std::sort(latencies.begin(), latencies.end());
     auto size = latencies.size();
