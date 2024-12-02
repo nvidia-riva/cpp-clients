@@ -93,7 +93,6 @@ translateBatch(
 int countWords(const std::string& text) {
   
     int wordCount = 0;
-<<<<<<< HEAD
     bool wasSpace = true; 
     for (char c : text) {
         if (std::isspace(c)) {
@@ -108,21 +107,6 @@ int countWords(const std::string& text) {
     if (!wasSpace) {
         wordCount++;
     }
-=======
-    bool inside_word = false;
-
-    for (char c : text) {
-        if (std::isspace(c)) {
-            inside_word = false;
-        } else if (!std::ispunct(c)) {
-            if (!inside_word) {
-                wordCount++;
-                inside_word = true;
-            }
-        }
-    }
-
->>>>>>> 3ec8cb8 (performance metric-translation/sec updated)
     return wordCount;
 }
 
