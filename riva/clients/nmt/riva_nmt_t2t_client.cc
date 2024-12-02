@@ -170,7 +170,7 @@ main(int argc, char** argv)
 {
   google::InitGoogleLogging(argv[0]);
   FLAGS_logtostderr = 1;
- 
+
   std::stringstream str_usage;
   str_usage << "Usage: riva_nmt_t2t_client" << std::endl;
   str_usage << "           --text_file=<filename> " << std::endl;
@@ -254,7 +254,6 @@ main(int argc, char** argv)
   }
 
   std::string dnt_phrases = ReadDntPhrasesFile(FLAGS_dnt_phrases_file);
-  LOG(INFO) << dnt_phrases;
   if (FLAGS_text != "") {
     nr_nmt::TranslateTextRequest request;
     nr_nmt::TranslateTextResponse response;
@@ -357,10 +356,9 @@ main(int argc, char** argv)
     std::chrono::duration<double> total = end - start;
     LOG(INFO) << FLAGS_model_name << "-" << FLAGS_batch_size << "-" << FLAGS_source_language_code
               << "-" << FLAGS_target_language_code << ",lines: " << count
-              << ",tokens: " << total_words 
-              << ",total time: " << total.count()
+              << ",tokens: " << total_words << ",total time: " << total.count()
               << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
-              << ",tokens/second: " << FLAGS_num_iterations * total_words /total.count();
+              << ",tokens/second: " << FLAGS_num_iterations * total_words / total.count();
 
     std::sort(latencies.begin(), latencies.end());
     auto size = latencies.size();
