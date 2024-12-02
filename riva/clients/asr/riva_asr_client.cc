@@ -536,27 +536,9 @@ main(int argc, char** argv)
       FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
       /* separate_recognition_per_channel*/ false, FLAGS_print_transcripts, FLAGS_output_filename,
       FLAGS_model_name, FLAGS_output_ctm, FLAGS_verbatim_transcripts, FLAGS_boosted_words_file,
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
       (float)FLAGS_boosted_words_score, FLAGS_speaker_diarization, FLAGS_diarization_max_speakers,
       FLAGS_start_history, FLAGS_start_threshold, FLAGS_stop_history, FLAGS_stop_history_eou,
       FLAGS_stop_threshold, FLAGS_stop_threshold_eou, FLAGS_custom_configuration);
-=======
-      (float)FLAGS_boosted_words_score, FLAGS_speaker_diarization, FLAGS_start_history,
-=======
-      (float)FLAGS_boosted_words_score, FLAGS_speaker_diarization, FLAGS_diarization_max_speakers,
-      FLAGS_start_history,
->>>>>>> 5554cc4 (Support to set max speakers for offline diarization (#98))
-=======
-      (float)FLAGS_boosted_words_score, FLAGS_speaker_diarization, FLAGS_diarization_max_speakers, FLAGS_start_history,
->>>>>>> 5554cc4 (Support to set max speakers for offline diarization (#98))
-      FLAGS_start_threshold, FLAGS_stop_history, FLAGS_stop_history_eou, FLAGS_stop_threshold,
-      FLAGS_stop_threshold_eou, FLAGS_custom_configuration);
-<<<<<<< HEAD
->>>>>>> 0987ff2 (Support custom_configuration param for ASR clients (#92))
-=======
->>>>>>> 0987ff2 (Support custom_configuration param for ASR clients (#92))
 
       // Preload all wav files, sort by size to reduce tail effects
       std::vector<std::shared_ptr<WaveData>> all_wav;

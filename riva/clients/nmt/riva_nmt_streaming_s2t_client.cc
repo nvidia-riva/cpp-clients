@@ -107,21 +107,7 @@ main(int argc, char** argv)
   str_usage << "           --target_language_code=<bcp 47 language code (such as en-US)>"
             << std::endl;
   str_usage << "           --dnt_phrases_file=<string>" << std::endl;
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
   str_usage << "           --list_models" << std::endl;
-=======
->>>>>>> a6f4eae (Add DNT (do not translate) support in S2S and S2T clients (#91))
-=======
-  str_usage << "           --list_models" << std::endl;
->>>>>>> 9a8b03b (Add list_models option for s2s/s2t clients (#93))
-=======
->>>>>>> a6f4eae (Add DNT (do not translate) support in S2S and S2T clients (#91))
-=======
-  str_usage << "           --list_models" << std::endl;
->>>>>>> 9a8b03b (Add list_models option for s2s/s2t clients (#93))
   str_usage << "           --boosted_words_file=<string>" << std::endl;
   str_usage << "           --boosted_words_score=<float>" << std::endl;
   str_usage << "           --ssl_cert=<filename>" << std::endl;
