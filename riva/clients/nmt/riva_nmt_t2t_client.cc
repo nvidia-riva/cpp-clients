@@ -357,9 +357,10 @@ main(int argc, char** argv)
     std::chrono::duration<double> total = end - start;
     LOG(INFO) << FLAGS_model_name << "-" << FLAGS_batch_size << "-" << FLAGS_source_language_code
               << "-" << FLAGS_target_language_code << ",lines: " << count
-              << ",tokens: " << total_words << ",total time: " << total.count()
+              << ",tokens: " << total_words 
+              << ",total time: " << total.count()
               << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
-              << ",tokens/second: " << FLAGS_num_iterations * total_words / total.count();
+              << ",tokens/second: " << FLAGS_num_iterations * total_words /total.count();
 
     std::sort(latencies.begin(), latencies.end());
     auto size = latencies.size();
