@@ -95,11 +95,6 @@ translateBatch(
   }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 98cf34b (changes made for custom translation for nmt)
 int
 countWords(const std::string& text)
 {
@@ -108,28 +103,11 @@ countWords(const std::string& text)
   for (char c : text) {
     if (std::isspace(c)) {
       if (!wasSpace) {
-<<<<<<< HEAD
         wordCount++;
       }
       wasSpace = true;
     } else {
       wasSpace = false;
-=======
-int countWords(const std::string& text) {
-  
-    int wordCount = 0;
-    bool inside_word = false;
-
-    for (char c : text) {
-        if (std::isspace(c)) {
-            inside_word = false;
-        } else if (!std::ispunct(c)) {
-            if (!inside_word) {
-                wordCount++;
-                inside_word = true;
-            }
-        }
->>>>>>> 1e25e0b (updated perf metric and new line added)
     }
   }
   if (!wasSpace) {
@@ -185,33 +163,22 @@ ReadDntPhrasesFile(const std::string& dnt_phrases_file)
     }
   }
   return dnt_phrases_string;
-=======
-int countWords(const std::string& text) {
-    int wordCount = 0;
-    bool wasSpace = true; 
-    for (char c : text) {
-        if (std::isspace(c)) {
-            if (!wasSpace) {
-                wordCount++;
-            }
-            wasSpace = true;
-        } else {
-            wasSpace = false;
-        }
-    }
-    if (!wasSpace) {
-=======
->>>>>>> 98cf34b (changes made for custom translation for nmt)
+}
+
+int
+countWords(const std::string& text)
+{
+  int wordCount = 0;
+  bool wasSpace = true;
+  for (char c : text) {
+    if (std::isspace(c)) {
+      if (!wasSpace) {
         wordCount++;
       }
       wasSpace = true;
     } else {
       wasSpace = false;
     }
-<<<<<<< HEAD
-    return wordCount;
->>>>>>> 09af17b (Update NMT text client to report tokens/sec (#90))
-=======
   }
   if (!wasSpace) {
     wordCount++;
@@ -360,12 +327,13 @@ main(int argc, char** argv)
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   std::string dnt_phrases = ReadDntPhrasesFile(FLAGS_dnt_phrases_file);
 =======
   // dnt_phrases_ = ReadPhrasesFromFile(dnt_phrases_file);
+=======
+>>>>>>> 32d76e9 (logs removed)
   std::string dnt_phrases = ReadUserDictionaryFile(FLAGS_dnt_phrases_file);
-  LOG(INFO) << FLAGS_dnt_phrases_file;
-  LOG(INFO) << dnt_phrases;
 
 >>>>>>> 98cf34b (changes made for custom translation for nmt)
   if (FLAGS_text != "") {
@@ -481,10 +449,9 @@ main(int argc, char** argv)
               << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
               << ",tokens/second: " << FLAGS_num_iterations * total_words / total.count();
 =======
-              << ",tokens: " << total_words 
-              << ",total time: " << total.count()
+              << ",tokens: " << total_words << ",total time: " << total.count()
               << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
-              << ",tokens/second: " << FLAGS_num_iterations * total_words /total.count();
+              << ",tokens/second: " << FLAGS_num_iterations * total_words / total.count();
 >>>>>>> 09af17b (Update NMT text client to report tokens/sec (#90))
 =======
               << ",tokens: " << total_words << ",total time: " << total.count()
