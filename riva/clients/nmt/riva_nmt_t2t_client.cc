@@ -250,17 +250,8 @@ main(int argc, char** argv)
     std::cout << response.DebugString() << std::endl;
     return 0;
   }
-
-<<<<<<< HEAD
-<<<<<<< HEAD
   std::string dnt_phrases = ReadDntPhrasesFile(FLAGS_dnt_phrases_file);
-=======
-  // dnt_phrases_ = ReadPhrasesFromFile(dnt_phrases_file);
-=======
->>>>>>> 32d76e9 (logs removed)
-  std::string dnt_phrases = ReadUserDictionaryFile(FLAGS_dnt_phrases_file);
 
->>>>>>> 98cf34b (changes made for custom translation for nmt)
   if (FLAGS_text != "") {
     nr_nmt::TranslateTextRequest request;
     nr_nmt::TranslateTextResponse response;
@@ -270,15 +261,7 @@ main(int argc, char** argv)
     request.set_target_language(FLAGS_target_language_code);
 
     request.add_texts(FLAGS_text);
-<<<<<<< HEAD
     request.add_dnt_phrases(dnt_phrases);
-=======
-    request.add_custom_dnt_phrases(dnt_phrases);
-<<<<<<< HEAD
-
->>>>>>> 98cf34b (changes made for custom translation for nmt)
-=======
->>>>>>> bcd1f72 (unwanted lines removed)
     grpc::Status rpc_status = nmt->TranslateText(&context, request, &response);
     if (!rpc_status.ok()) {
       LOG(ERROR) << rpc_status.error_message();
@@ -368,27 +351,9 @@ main(int argc, char** argv)
     std::chrono::duration<double> total = end - start;
     LOG(INFO) << FLAGS_model_name << "-" << FLAGS_batch_size << "-" << FLAGS_source_language_code
               << "-" << FLAGS_target_language_code << ",lines: " << count
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
               << ",tokens: " << total_words << ",total time: " << total.count()
               << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
               << ",tokens/second: " << FLAGS_num_iterations * total_words / total.count();
-=======
-              << ",tokens: " << total_words << ",total time: " << total.count()
-              << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
-              << ",tokens/second: " << FLAGS_num_iterations * total_words / total.count();
->>>>>>> 09af17b (Update NMT text client to report tokens/sec (#90))
-=======
-              << ",tokens: " << total_words << ",total time: " << total.count()
-              << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
-              << ",tokens/second: " << FLAGS_num_iterations * total_words / total.count();
->>>>>>> 98cf34b (changes made for custom translation for nmt)
-=======
-              << ",tokens: " << total_words << ",total time: " << total.count()
-              << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
-              << ",tokens/second: " << FLAGS_num_iterations * total_words / total.count();
->>>>>>> b3b9816 (small fix done)
 
     std::sort(latencies.begin(), latencies.end());
     auto size = latencies.size();
