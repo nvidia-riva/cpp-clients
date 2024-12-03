@@ -97,6 +97,9 @@ translateBatch(
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 98cf34b (changes made for custom translation for nmt)
 int
 countWords(const std::string& text)
 {
@@ -105,6 +108,7 @@ countWords(const std::string& text)
   for (char c : text) {
     if (std::isspace(c)) {
       if (!wasSpace) {
+<<<<<<< HEAD
         wordCount++;
       }
       wasSpace = true;
@@ -196,10 +200,71 @@ int countWords(const std::string& text) {
         }
     }
     if (!wasSpace) {
+=======
+>>>>>>> 98cf34b (changes made for custom translation for nmt)
         wordCount++;
+      }
+      wasSpace = true;
+    } else {
+      wasSpace = false;
     }
+<<<<<<< HEAD
     return wordCount;
 >>>>>>> 09af17b (Update NMT text client to report tokens/sec (#90))
+=======
+  }
+  if (!wasSpace) {
+    wordCount++;
+  }
+  return wordCount;
+}
+
+std::string
+ReadUserDictionaryFile(const std::string& dictionary_file)
+{
+  std::string dictionary_string;
+  if (!dictionary_file.empty()) {
+    std::ifstream infile(dictionary_file);
+
+    if (infile.is_open()) {
+      std::string line;
+
+      while (std::getline(infile, line)) {
+        // Trim leading and trailing whitespaces
+        line = std::regex_replace(line, std::regex("^ +| +$"), "");
+
+        if (!line.empty()) {
+          size_t pos = line.find("##");
+          std::string key, value;
+
+          if (pos != std::string::npos) {
+            // Line contains "##"
+            key = line.substr(0, pos);
+            value = line.substr(pos + 2);
+          } else {
+            // Line doesn't contain "##"
+            key = line;
+            value = "null";
+          }
+
+          // Trim key and value
+          key = std::regex_replace(key, std::regex("^ +| +$"), "");
+          value = std::regex_replace(value, std::regex("^ +| +$"), "");
+
+          // Append the key-value pair to the dictionary string
+          if (!dictionary_string.empty()) {
+            dictionary_string += ",";
+          }
+          dictionary_string += key + "  " + value;
+        }
+      }
+    } else {
+      std::string err = "Could not open file " + dictionary_file;
+      throw std::runtime_error(err);
+    }
+  }
+  return dictionary_string;
+>>>>>>> 98cf34b (changes made for custom translation for nmt)
 }
 
 int
@@ -207,7 +272,7 @@ main(int argc, char** argv)
 {
   google::InitGoogleLogging(argv[0]);
   FLAGS_logtostderr = 1;
- 
+
   std::stringstream str_usage;
   str_usage << "Usage: riva_nmt_t2t_client" << std::endl;
   str_usage << "           --text_file=<filename> " << std::endl;
@@ -225,6 +290,10 @@ main(int argc, char** argv)
   str_usage << "           --list_models" << std::endl;
   str_usage << "           --metadata=<key,value,...>" << std::endl;
   str_usage << "           --dnt_phrases_file=<string>" << std::endl;
+<<<<<<< HEAD
+=======
+
+>>>>>>> 98cf34b (changes made for custom translation for nmt)
   gflags::SetUsageMessage(str_usage.str());
 
   if (argc < 2) {
@@ -290,7 +359,15 @@ main(int argc, char** argv)
     return 0;
   }
 
+<<<<<<< HEAD
   std::string dnt_phrases = ReadDntPhrasesFile(FLAGS_dnt_phrases_file);
+=======
+  // dnt_phrases_ = ReadPhrasesFromFile(dnt_phrases_file);
+  std::string dnt_phrases = ReadUserDictionaryFile(FLAGS_dnt_phrases_file);
+  LOG(INFO) << FLAGS_dnt_phrases_file;
+  LOG(INFO) << dnt_phrases;
+
+>>>>>>> 98cf34b (changes made for custom translation for nmt)
   if (FLAGS_text != "") {
     nr_nmt::TranslateTextRequest request;
     nr_nmt::TranslateTextResponse response;
@@ -300,7 +377,12 @@ main(int argc, char** argv)
     request.set_target_language(FLAGS_target_language_code);
 
     request.add_texts(FLAGS_text);
+<<<<<<< HEAD
     request.add_dnt_phrases(dnt_phrases);
+=======
+    request.add_custom_dnt_phrases(dnt_phrases);
+
+>>>>>>> 98cf34b (changes made for custom translation for nmt)
     grpc::Status rpc_status = nmt->TranslateText(&context, request, &response);
     if (!rpc_status.ok()) {
       LOG(ERROR) << rpc_status.error_message();
@@ -394,6 +476,7 @@ main(int argc, char** argv)
     LOG(INFO) << FLAGS_model_name << "-" << FLAGS_batch_size << "-" << FLAGS_source_language_code
               << "-" << FLAGS_target_language_code << ",lines: " << count
 <<<<<<< HEAD
+<<<<<<< HEAD
               << ",tokens: " << total_words << ",total time: " << total.count()
               << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
               << ",tokens/second: " << FLAGS_num_iterations * total_words / total.count();
@@ -403,6 +486,11 @@ main(int argc, char** argv)
               << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
               << ",tokens/second: " << FLAGS_num_iterations * total_words /total.count();
 >>>>>>> 09af17b (Update NMT text client to report tokens/sec (#90))
+=======
+              << ",tokens: " << total_words << ",total time: " << total.count()
+              << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
+              << ",tokens/second: " << FLAGS_num_iterations * total_words / total.count();
+>>>>>>> 98cf34b (changes made for custom translation for nmt)
 
     std::sort(latencies.begin(), latencies.end());
     auto size = latencies.size();
