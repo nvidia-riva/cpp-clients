@@ -554,6 +554,9 @@ main(int argc, char** argv)
       FLAGS_start_threshold, FLAGS_stop_history, FLAGS_stop_history_eou, FLAGS_stop_threshold,
       FLAGS_stop_threshold_eou, FLAGS_custom_configuration);
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> 0987ff2 (Support custom_configuration param for ASR clients (#92))
+=======
 >>>>>>> 0987ff2 (Support custom_configuration param for ASR clients (#92))
 =======
 >>>>>>> 0987ff2 (Support custom_configuration param for ASR clients (#92))
