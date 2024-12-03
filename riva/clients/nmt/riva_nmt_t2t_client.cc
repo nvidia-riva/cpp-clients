@@ -149,7 +149,7 @@ ReadDntPhrasesFile(const std::string& dnt_phrases_file)
           value = std::regex_replace(value, std::regex("^ +| +$"), "");
 
           // Append the key-value pair to the dictionary string
-          if (!dnt_phrases_string.empty()) {
+          if (!dnt_phrases_string.empty() and key != "") {
             dnt_phrases_string += ",";
           }
           dnt_phrases_string += key + "##" + value;
