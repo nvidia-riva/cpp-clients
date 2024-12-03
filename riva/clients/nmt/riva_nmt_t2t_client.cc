@@ -95,6 +95,7 @@ translateBatch(
   }
 }
 
+<<<<<<< HEAD
 int
 countWords(const std::string& text)
 {
@@ -108,6 +109,22 @@ countWords(const std::string& text)
       wasSpace = true;
     } else {
       wasSpace = false;
+=======
+int countWords(const std::string& text) {
+  
+    int wordCount = 0;
+    bool inside_word = false;
+
+    for (char c : text) {
+        if (std::isspace(c)) {
+            inside_word = false;
+        } else if (!std::ispunct(c)) {
+            if (!inside_word) {
+                wordCount++;
+                inside_word = true;
+            }
+        }
+>>>>>>> 1e25e0b (updated perf metric and new line added)
     }
   }
   if (!wasSpace) {
@@ -365,11 +382,7 @@ main(int argc, char** argv)
               << "-" << FLAGS_target_language_code << ",lines: " << count
               << ",tokens: " << total_words << ",total time: " << total.count()
               << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
-<<<<<<< HEAD
               << ",tokens/second: " << FLAGS_num_iterations * total_words / total.count();
-=======
-              << ",translations/second: " << total_words/total.count();
->>>>>>> 3ec8cb8 (performance metric-translation/sec updated)
 
     std::sort(latencies.begin(), latencies.end());
     auto size = latencies.size();
