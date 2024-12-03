@@ -299,9 +299,12 @@ main(int argc, char** argv)
       }
       if (!str.empty()) {
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         
 >>>>>>> 3ec8cb8 (performance metric-translation/sec updated)
+=======
+>>>>>>> 89aedae (Update riva_nmt_t2t_client.cc)
         total_words += countWords(str);
         batch.push_back(make_pair(count, str));
         count++;
