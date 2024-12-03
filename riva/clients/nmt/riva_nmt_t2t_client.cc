@@ -96,6 +96,7 @@ translateBatch(
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 int
 countWords(const std::string& text)
 {
@@ -180,6 +181,25 @@ ReadDntPhrasesFile(const std::string& dnt_phrases_file)
     }
   }
   return dnt_phrases_string;
+=======
+int countWords(const std::string& text) {
+    int wordCount = 0;
+    bool wasSpace = true; 
+    for (char c : text) {
+        if (std::isspace(c)) {
+            if (!wasSpace) {
+                wordCount++;
+            }
+            wasSpace = true;
+        } else {
+            wasSpace = false;
+        }
+    }
+    if (!wasSpace) {
+        wordCount++;
+    }
+    return wordCount;
+>>>>>>> 09af17b (Update NMT text client to report tokens/sec (#90))
 }
 
 int
@@ -315,13 +335,6 @@ main(int argc, char** argv)
         batch.clear();
       }
       if (!str.empty()) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        
->>>>>>> 3ec8cb8 (performance metric-translation/sec updated)
-=======
->>>>>>> 89aedae (Update riva_nmt_t2t_client.cc)
         total_words += countWords(str);
         batch.push_back(make_pair(count, str));
         count++;
@@ -380,9 +393,16 @@ main(int argc, char** argv)
     std::chrono::duration<double> total = end - start;
     LOG(INFO) << FLAGS_model_name << "-" << FLAGS_batch_size << "-" << FLAGS_source_language_code
               << "-" << FLAGS_target_language_code << ",lines: " << count
+<<<<<<< HEAD
               << ",tokens: " << total_words << ",total time: " << total.count()
               << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
               << ",tokens/second: " << FLAGS_num_iterations * total_words / total.count();
+=======
+              << ",tokens: " << total_words 
+              << ",total time: " << total.count()
+              << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
+              << ",tokens/second: " << FLAGS_num_iterations * total_words /total.count();
+>>>>>>> 09af17b (Update NMT text client to report tokens/sec (#90))
 
     std::sort(latencies.begin(), latencies.end());
     auto size = latencies.size();
