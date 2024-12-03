@@ -70,11 +70,7 @@ grpc_extra_deps()
 git_repository(
     name = "nvriva_common",
     remote = "https://github.com/ydharavath/common.git",
-<<<<<<< HEAD
     commit = "9144c09416838c6bc1efdae1476a576e1b912114"
-=======
-    commit = "ac48b18aca47dde9d9a8e10d441dcdc1350f565f"
->>>>>>> 98cf34b (changes made for custom translation for nmt)
 )
 
 http_archive(
