@@ -152,9 +152,7 @@ ReadDntPhrasesFile(const std::string& dnt_phrases_file)
           if (!dnt_phrases_string.empty()) {
             dnt_phrases_string += ",";
           }
-          if (key != "") {
-            dnt_phrases_string += key + "##" + value;
-          }
+          dnt_phrases_string += key + "##" + value;
         }
       }
     } else {
@@ -163,75 +161,6 @@ ReadDntPhrasesFile(const std::string& dnt_phrases_file)
     }
   }
   return dnt_phrases_string;
-}
-
-int
-countWords(const std::string& text)
-{
-  int wordCount = 0;
-  bool wasSpace = true;
-  for (char c : text) {
-    if (std::isspace(c)) {
-      if (!wasSpace) {
-        wordCount++;
-      }
-      wasSpace = true;
-    } else {
-      wasSpace = false;
-    }
-  }
-  if (!wasSpace) {
-    wordCount++;
-  }
-  return wordCount;
-}
-
-std::string
-ReadUserDictionaryFile(const std::string& dictionary_file)
-{
-  std::string dictionary_string;
-  if (!dictionary_file.empty()) {
-    std::ifstream infile(dictionary_file);
-
-    if (infile.is_open()) {
-      std::string line;
-
-      while (std::getline(infile, line)) {
-        // Trim leading and trailing whitespaces
-        line = std::regex_replace(line, std::regex("^ +| +$"), "");
-
-        if (!line.empty()) {
-          size_t pos = line.find("##");
-          std::string key, value;
-
-          if (pos != std::string::npos) {
-            // Line contains "##"
-            key = line.substr(0, pos);
-            value = line.substr(pos + 2);
-          } else {
-            // Line doesn't contain "##"
-            key = line;
-            value = "null";
-          }
-
-          // Trim key and value
-          key = std::regex_replace(key, std::regex("^ +| +$"), "");
-          value = std::regex_replace(value, std::regex("^ +| +$"), "");
-
-          // Append the key-value pair to the dictionary string
-          if (!dictionary_string.empty()) {
-            dictionary_string += ",";
-          }
-          dictionary_string += key + "  " + value;
-        }
-      }
-    } else {
-      std::string err = "Could not open file " + dictionary_file;
-      throw std::runtime_error(err);
-    }
-  }
-  return dictionary_string;
->>>>>>> 98cf34b (changes made for custom translation for nmt)
 }
 
 int
@@ -441,6 +370,7 @@ main(int argc, char** argv)
               << "-" << FLAGS_target_language_code << ",lines: " << count
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
               << ",tokens: " << total_words << ",total time: " << total.count()
               << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
               << ",tokens/second: " << FLAGS_num_iterations * total_words / total.count();
@@ -454,6 +384,11 @@ main(int argc, char** argv)
               << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
               << ",tokens/second: " << FLAGS_num_iterations * total_words / total.count();
 >>>>>>> 98cf34b (changes made for custom translation for nmt)
+=======
+              << ",tokens: " << total_words << ",total time: " << total.count()
+              << ",requests/second: " << FLAGS_num_iterations * request_count / total.count()
+              << ",tokens/second: " << FLAGS_num_iterations * total_words / total.count();
+>>>>>>> b3b9816 (small fix done)
 
     std::sort(latencies.begin(), latencies.end());
     auto size = latencies.size();
