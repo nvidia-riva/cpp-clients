@@ -250,6 +250,7 @@ main(int argc, char** argv)
     std::cout << response.DebugString() << std::endl;
     return 0;
   }
+
   std::string dnt_phrases = ReadDntPhrasesFile(FLAGS_dnt_phrases_file);
 
   if (FLAGS_text != "") {
