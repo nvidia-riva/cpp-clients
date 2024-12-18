@@ -68,9 +68,19 @@ load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
 grpc_extra_deps()
 
 git_repository(
+<<<<<<< Updated upstream
     name = "nvriva_common",
     remote = "https://github.com/nvidia-riva/common.git",
     commit = "aca81234f8cd62898463742849738bf07a0d4dbb"
+||||||| Stash base
+     name = "nvriva_common",
+     remote = "https://github.com/nvidia-riva/common.git",
+     commit = "2d2cc96597c8d30d3fd10f8f584e672efe5d2d10"
+=======
+     name = "nvriva_common",
+     remote = "https://github.com/atomer-nvidia/common.git",
+     commit = "d0fe7018eb8872dcce05f849867bea47a25fa426"
+>>>>>>> Stashed changes
 )
 
 http_archive(
