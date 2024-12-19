@@ -51,12 +51,7 @@ DEFINE_string(
     "Input audio file for Zero Shot Model. Audio length between 0-3 seconds.");
 DEFINE_int32(zero_shot_quality, 20, "Required quality of output audio, ranges between 1-40.");
 DEFINE_string(custom_dictionary, "", " User dictionary containing graph-to-phone custom words");
-DEFINE_string(
-    zero_shot_text_prompt, "",
-    "Input text for Zero Shot Model.");
-DEFINE_string(
-    zero_shot_transcript_target, "",
-    "Target transcript for zero shot model.");
+DEFINE_string(zero_shot_target_transcript, "", "Target transcript for zero shot model.");
 
 static const std::string LC_enUS = "en-US";
 
@@ -73,7 +68,7 @@ ReadUserDictionaryFile(const std::string& dictionary_file)
       while (std::getline(infile, line)) {
         // Trim leading and trailing whitespaces
         line = std::regex_replace(line, std::regex("^ +| +$"), "");
-        int pos = line.find("  ");
+        size_t pos = line.find("  ");
 
         if (pos != std::string::npos) {
           std::string key = line.substr(0, pos);
@@ -117,8 +112,7 @@ main(int argc, char** argv)
   str_usage << "           --metadata=<key,value,...>" << std::endl;
   str_usage << "           --zero_shot_audio_prompt=<filename>" << std::endl;
   str_usage << "           --zero_shot_quality=<quality>" << std::endl;
-  str_usage << "           --zero_shot_text_prompt=<text>" << std::endl;
-  str_usage << "           --zero_shot_transcript_target=<text>" << std::endl;
+  str_usage << "           --zero_shot_target_transcript=<text>" << std::endl;
   str_usage << "           --custom_dictionary=<filename> " << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
@@ -216,10 +210,8 @@ main(int argc, char** argv)
     }
     zero_shot_data->set_sample_rate_hz(zero_shot_sample_rate);
     zero_shot_data->set_quality(FLAGS_zero_shot_quality);
-    if (not FLAGS_zero_shot_text_prompt.empty()) {
-      zero_shot_data->set_text_prompt(FLAGS_zero_shot_text_prompt);
-      assert(!FLAGS_zero_shot_transcript_target.empty());
-      zero_shot_data->set_transcript_target(FLAGS_zero_shot_transcript_target);
+    if (not FLAGS_zero_shot_target_transcript.empty()) {
+      zero_shot_data->set_target_transcript(FLAGS_zero_shot_target_transcript);
     }
   }
 
