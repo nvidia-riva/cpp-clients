@@ -59,15 +59,15 @@ StreamingS2SClient::StreamingS2SClient(
     const std::string& tts_encoding, const std::string& tts_audio_file, int tts_sample_rate,
     const std::string& tts_voice_name, std::string& tts_prosody_rate,
     std::string& tts_prosody_pitch, std::string& tts_prosody_volume)
-    : stub_(nr_nmt::RivaTranslation::NewStub(channel)), source_language_code_(source_language_code),
-      target_language_code_(target_language_code), profanity_filter_(profanity_filter),
+    : stub_(nr_nmt::RivaTranslation::NewStub(channel)), tts_encoding_(tts_encoding),
+      tts_audio_file_(tts_audio_file), tts_voice_name_(tts_voice_name),
+      source_language_code_(source_language_code), target_language_code_(target_language_code),
+      tts_sample_rate_(tts_sample_rate), profanity_filter_(profanity_filter),
       automatic_punctuation_(automatic_punctuation),
       separate_recognition_per_channel_(separate_recognition_per_channel),
       chunk_duration_ms_(chunk_duration_ms), total_audio_processed_(0.), num_streams_started_(0),
       simulate_realtime_(simulate_realtime), verbatim_transcripts_(verbatim_transcripts),
-      boosted_phrases_score_(boosted_phrases_score), tts_encoding_(tts_encoding),
-      tts_audio_file_(tts_audio_file), tts_voice_name_(tts_voice_name),
-      tts_sample_rate_(tts_sample_rate), tts_prosody_rate_(tts_prosody_rate),
+      boosted_phrases_score_(boosted_phrases_score), tts_prosody_rate_(tts_prosody_rate),
       tts_prosody_pitch_(tts_prosody_pitch), tts_prosody_volume_(tts_prosody_volume)
 {
   num_active_streams_.store(0);

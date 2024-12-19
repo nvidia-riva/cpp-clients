@@ -200,6 +200,7 @@ validate_tts_prosody_volume(std::string& value)
   return false;
 }
 
+int
 main(int argc, char** argv)
 {
   google::InitGoogleLogging(argv[0]);
