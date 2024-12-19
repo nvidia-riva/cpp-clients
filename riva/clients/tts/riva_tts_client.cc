@@ -211,10 +211,8 @@ main(int argc, char** argv)
     }
     zero_shot_data->set_sample_rate_hz(zero_shot_sample_rate);
     zero_shot_data->set_quality(FLAGS_zero_shot_quality);
-    if (not FLAGS_zero_shot_text_prompt.empty()) {
-      zero_shot_data->set_text_prompt(FLAGS_zero_shot_text_prompt);
-      assert(!FLAGS_zero_shot_transcript_target.empty());
-      zero_shot_data->set_transcript_target(FLAGS_zero_shot_transcript_target);
+    if (not FLAGS_zero_shot_target_transcript.empty()) {
+      zero_shot_data->set_target_transcript(FLAGS_zero_shot_target_transcript);
     }
   }
 
