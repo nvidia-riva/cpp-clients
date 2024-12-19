@@ -62,6 +62,12 @@ DEFINE_string(
     "Input audio file for Zero Shot Model. Audio length between 0-3 seconds.");
 DEFINE_int32(zero_shot_quality, 20, "Required quality of output audio, ranges between 1-40.");
 DEFINE_string(custom_dictionary, "", " User dictionary containing graph-to-phone custom words");
+DEFINE_string(
+    zero_shot_text_prompt, "",
+    "Input text for Zero Shot Model.");
+DEFINE_string(
+    zero_shot_transcript_target, "",
+    "Target transcript for zero shot model.");
 
 static const std::string LC_enUS = "en-US";
 
@@ -112,7 +118,8 @@ size_t
 synthesizeBatch(
     std::unique_ptr<nr_tts::RivaSpeechSynthesis::Stub> tts, std::string text, std::string language,
     uint32_t rate, std::string voice_name, std::string filepath,
-    std::string zero_shot_prompt_filename, int32_t zero_shot_quality, std::string custom_dictionary)
+    std::string zero_shot_prompt_filename, int32_t zero_shot_quality, std::string custom_dictionary,
+    std::string zero_shot_text_prompt, std::string zero_shot_transcript_target)
 {
   // Parse command line arguments.
   nr_tts::SynthesizeSpeechRequest request;
@@ -158,6 +165,11 @@ synthesizeBatch(
     }
     zero_shot_data->set_sample_rate_hz(zero_shot_sample_rate);
     zero_shot_data->set_quality(zero_shot_quality);
+    if (FLAGS_zero_shot_text_prompt) {
+      zero_shot_data->set_text_prompt(FLAGS_zero_shot_text_prompt);
+      assert(!FLAGS_zero_shot_transcript_target.empty());
+      zero_shot_data->set_transcript_target(FLAGS_zero_shot_transcript_target);
+    }
   }
 
   // Send text content using Synthesize().
@@ -349,6 +361,8 @@ main(int argc, char** argv)
   str_usage << "           --metadata=<key,value,...>" << std::endl;
   str_usage << "           --zero_shot_audio_prompt=<filename>" << std::endl;
   str_usage << "           --zero_shot_quality=<quality>" << std::endl;
+  str_usage << "           --zero_shot_text_prompt=<text>" << std::endl;
+  str_usage << "           --zero_shot_transcript_target=<text>" << std::endl;
   str_usage << "           --custom_dictionary=<filename> " << std::endl;
 
   gflags::SetUsageMessage(str_usage.str());
@@ -547,7 +561,8 @@ main(int argc, char** argv)
           size_t num_samples = synthesizeBatch(
               std::move(tts), sentences[i][s].second, FLAGS_language, rate, FLAGS_voice_name,
               std::to_string(sentences[i][s].first) + ".wav", FLAGS_zero_shot_audio_prompt,
-              FLAGS_zero_shot_quality, FLAGS_custom_dictionary);
+              FLAGS_zero_shot_quality, FLAGS_custom_dictionary, FLAGS_zero_shot_text_prompt,
+              FLAGS_zero_shot_transcript_target);
           results_num_samples[i]->push_back(num_samples);
         }
       }));
