@@ -78,16 +78,23 @@ CreateChannelBlocking(
 /// @param use_ssl Boolean flag that controls if ssl encryption should be used
 /// @param ssl_cert Path to the certificate file
 std::shared_ptr<grpc::ChannelCredentials>
-CreateChannelCredentials(bool use_ssl, const std::string& ssl_cert, const std::string& metadata)
+CreateChannelCredentials(bool use_ssl, const std::string& ssl_root_cert, const std::string& ssl_client_key, const std::string& ssl_client_cert, const std::string& metadata)
 {
   std::shared_ptr<grpc::ChannelCredentials> creds;
 
-  if (use_ssl || !ssl_cert.empty()) {
+  if (use_ssl || !ssl_root_cert.empty()) {
     grpc::SslCredentialsOptions ssl_opts;
-    if (!ssl_cert.empty()) {
-      auto cacert = riva::utils::files::ReadFileContentAsString(ssl_cert);
+    if (!ssl_root_cert.empty()) {
+      auto cacert = riva::utils::files::ReadFileContentAsString(ssl_root_cert);
       ssl_opts.pem_root_certs = cacert;
     }
+    if (!ssl_client_key.empty() && !ssl_client_cert.empty()) {
+      auto client_key = riva::utils::files::ReadFileContentAsString(ssl_client_key);
+      auto client_cert = riva::utils::files::ReadFileContentAsString(ssl_client_cert);
+      ssl_opts.pem_private_key = client_key;
+      ssl_opts.pem_cert_chain = client_cert;
+    }
+
     LOG(INFO) << "Using SSL Credentials";
     creds = grpc::SslCredentials(ssl_opts);
   } else {
