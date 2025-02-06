@@ -93,6 +93,9 @@ DEFINE_double(
 DEFINE_string(
     custom_configuration, "",
     "Custom configurations to be sent to the server as key value pairs <key:value,key:value,...>");
+DEFINE_bool(
+    speaker_diarization, false, 
+    "Flag that controls if speaker diarization is requested");
 
 void
 signal_handler(int signal_num)
@@ -144,6 +147,7 @@ main(int argc, char** argv)
   str_usage << "           --stop_threshold=<float>" << std::endl;
   str_usage << "           --stop_threshold_eou=<float>" << std::endl;
   str_usage << "           --custom_configuration=<key:value,key:value,...>" << std::endl;
+  str_usage << "           --speaker_diarization=<true|false>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -210,7 +214,7 @@ main(int argc, char** argv)
       FLAGS_interim_results, FLAGS_output_filename, FLAGS_model_name, FLAGS_simulate_realtime,
       FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score,
       FLAGS_start_history, FLAGS_start_threshold, FLAGS_stop_history, FLAGS_stop_history_eou,
-      FLAGS_stop_threshold, FLAGS_stop_threshold_eou, FLAGS_custom_configuration);
+      FLAGS_stop_threshold, FLAGS_stop_threshold_eou, FLAGS_custom_configuration, FLAGS_speaker_diarization);
 
   if (FLAGS_audio_file.size()) {
     return recognize_client.DoStreamingFromFile(
