@@ -11,6 +11,7 @@
 #include <limits>
 #include <stdexcept>
 #include <vector>
+#include <cstdint>
 
 namespace riva::utils::wav {
 
