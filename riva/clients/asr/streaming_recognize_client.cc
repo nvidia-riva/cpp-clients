@@ -60,7 +60,7 @@ StreamingRecognizeClient::StreamingRecognizeClient(
     bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score,
     int32_t start_history, float start_threshold, int32_t stop_history, int32_t stop_history_eou,
     float stop_threshold, float stop_threshold_eou, std::string custom_configuration,
-    bool speaker_diarization)
+    bool speaker_diarization, int32_t diarization_max_speakers)
     : print_latency_stats_(true), stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)),
       language_code_(language_code), max_alternatives_(max_alternatives),
       profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
@@ -73,7 +73,7 @@ StreamingRecognizeClient::StreamingRecognizeClient(
       start_history_(start_history), start_threshold_(start_threshold), stop_history_(stop_history),
       stop_history_eou_(stop_history_eou), stop_threshold_(stop_threshold),
       stop_threshold_eou_(stop_threshold_eou), custom_configuration_(custom_configuration),
-      speaker_diarization_(speaker_diarization)
+      speaker_diarization_(speaker_diarization), diarization_max_speakers_(diarization_max_speakers)
 {
   num_active_streams_.store(0);
   num_streams_finished_.store(0);
@@ -144,6 +144,14 @@ StreamingRecognizeClient::UpdateEndpointingConfig(nr_asr::RecognitionConfig* con
 }
 
 void
+StreamingRecognizeClient::UpdateSpeakerDiarizationConfig(nr_asr::RecognitionConfig* config)
+{
+  auto speaker_diarization_config = config->mutable_diarization_config();
+  speaker_diarization_config->set_enable_speaker_diarization(speaker_diarization_);
+  speaker_diarization_config->set_max_speaker_count(diarization_max_speakers_);
+}
+
+void
 StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
 {
   float audio_processed = 0.;
@@ -183,6 +191,9 @@ StreamingRecognizeClient::GenerateRequests(std::shared_ptr<ClientCall> call)
 
       // Set the endpoint parameters
       UpdateEndpointingConfig(config);
+
+      // Set the speaker diarization parameters
+      UpdateSpeakerDiarizationConfig(config);
 
       call->streamer->Write(request);
       first_write = false;

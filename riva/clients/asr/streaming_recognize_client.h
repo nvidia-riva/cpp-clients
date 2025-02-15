@@ -50,7 +50,7 @@ class StreamingRecognizeClient {
       float boosted_phrases_score, int32_t start_history, float start_threshold,
       int32_t stop_history, int32_t stop_history_eou, float stop_threshold,
       float stop_threshold_eou, std::string custom_configuration,
-      bool speaker_diarization);
+      bool speaker_diarization, int32_t diarization_max_speakers);
 
   ~StreamingRecognizeClient();
 
@@ -63,6 +63,8 @@ class StreamingRecognizeClient {
   void StartNewStream(std::unique_ptr<Stream> stream);
 
   void UpdateEndpointingConfig(nr_asr::RecognitionConfig* config);
+
+  void UpdateSpeakerDiarizationConfig(nr_asr::RecognitionConfig* config);
 
   void GenerateRequests(std::shared_ptr<ClientCall> call);
 
@@ -128,4 +130,5 @@ class StreamingRecognizeClient {
   float stop_threshold_eou_;
   std::string custom_configuration_;
   bool speaker_diarization_;
+  int32_t diarization_max_speakers_;
 };
