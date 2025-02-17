@@ -36,7 +36,7 @@ namespace nr_asr = nvidia::riva::asr;
 
 class ClientCall {
  public:
-  ClientCall(uint32_t _corr_id, bool word_time_offsets);
+  ClientCall(uint32_t _corr_id, bool word_time_offsets, bool speaker_diarization);
   ~ClientCall();
 
   void AppendResult(const nr_asr::StreamingRecognitionResult& result);
@@ -60,6 +60,7 @@ class ClientCall {
 
   uint32_t corr_id_;
   bool word_time_offsets_;
+  bool speaker_diarization_;
 
   Results latest_result_;
 

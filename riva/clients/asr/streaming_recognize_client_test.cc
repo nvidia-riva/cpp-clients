@@ -20,9 +20,9 @@ TEST(StreamingRecognizeClient, num_responses_requests)
 
   StreamingRecognizeClient recognize_client(
       grpc_channel, 1, "en-US", 1, false, false, false, false, false, 800, false, "dummy.txt",
-      "dummy", true, true, "", 10., 10, 0.98, 10, 8, 0.98, 0.98, "test_key:test_value");
+      "dummy", true, true, "", 10., 10, 0.98, 10, 8, 0.98, 0.98, "test_key:test_value", false, 4);
 
-  std::shared_ptr<ClientCall> call = std::make_shared<ClientCall>(1, true);
+  std::shared_ptr<ClientCall> call = std::make_shared<ClientCall>(1, true, false);
   uint32_t num_sends = 10;
   for (uint32_t send_cnt = 0; send_cnt < num_sends; send_cnt++) {
     call->recv_times.push_back(current_time);

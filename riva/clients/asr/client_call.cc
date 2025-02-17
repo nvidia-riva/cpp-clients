@@ -5,8 +5,8 @@
 
 #include "client_call.h"
 
-ClientCall::ClientCall(uint32_t corr_id, bool word_time_offsets)
-    : corr_id_(corr_id), word_time_offsets_(word_time_offsets)
+ClientCall::ClientCall(uint32_t corr_id, bool word_time_offsets, bool speaker_diarization)
+    : corr_id_(corr_id), word_time_offsets_(word_time_offsets), speaker_diarization_(speaker_diarization)
 {
   send_times.reserve(1000);
   recv_times.reserve(1000);
@@ -52,7 +52,7 @@ ClientCall::AppendResult(const nr_asr::StreamingRecognitionResult& result)
       }
       VLOG(1) << "Final transcript: " << result.alternatives(0).transcript();
 
-      if (word_time_offsets_) {
+      if (word_time_offsets_ || speaker_diarization_) {
         if (num_alternatives > 0) {
           for (int a = 0; a < num_alternatives; ++a) {
             for (int w = 0; w < result.alternatives(a).words_size(); ++w) {
@@ -105,12 +105,17 @@ ClientCall::PrintResult(bool audio_device, std::ofstream& output_file)
                 << latest_result_.partial_transcript << std::endl;
       std::cout << std::endl;
 
-      if (word_time_offsets_) {
+      if (word_time_offsets_ || speaker_diarization_) {
         std::cout << "Timestamps: " << std::endl;
         std::cout << std::setw(40) << std::left << "Word";
-        std::cout << std::setw(16) << std::left << "Start (ms)";
-        std::cout << std::setw(16) << std::left << "End (ms)";
+        if (word_time_offsets_) {
+          std::cout << std::setw(16) << std::left << "Start (ms)";
+          std::cout << std::setw(16) << std::left << "End (ms)";
+        }
         std::cout << std::setw(16) << std::left << "Confidence";
+        if (a == 0 && speaker_diarization_) {
+          std::cout << std::setw(16) << std::left << "Speaker";
+        }
         std::cout << std::endl;
         std::cout << std::endl;
         for (uint32_t w = 0; a < latest_result_.final_time_stamps.size() &&
@@ -118,10 +123,16 @@ ClientCall::PrintResult(bool audio_device, std::ofstream& output_file)
              ++w) {
           auto& word_info = latest_result_.final_time_stamps[a][w];
           std::cout << std::setw(40) << std::left << word_info.word();
-          std::cout << std::setw(16) << std::left << word_info.start_time();
-          std::cout << std::setw(16) << std::left << word_info.end_time();
+          if (word_time_offsets_) {
+            std::cout << std::setw(16) << std::left << word_info.start_time();
+            std::cout << std::setw(16) << std::left << word_info.end_time();
+          }
           std::cout << std::setw(16) << std::setprecision(4) << std::scientific
-                    << word_info.confidence() << std::endl;
+                    << word_info.confidence();
+          if (a == 0 && speaker_diarization_) {
+            std::cout << std::setw(16) << std::left << word_info.speaker_tag();
+          }
+          std::cout << std::endl;
         }
 
         for (uint32_t w = 0; w < latest_result_.partial_time_stamps.size(); ++w) {
