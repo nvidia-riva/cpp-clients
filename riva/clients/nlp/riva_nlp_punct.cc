@@ -36,13 +36,15 @@ DEFINE_string(model_name, "", "Model name to test");
 DEFINE_string(language_code, "en-US", "Punctuation model language code");
 DEFINE_string(queries, "", "Path to a file with one input sentence per line");
 DEFINE_string(output, "", "Path to output file");
-DEFINE_string(ssl_cert, "", "Path to SSL client certificates file");
+DEFINE_string(ssl_root_cert, "", "Path to SSL root certificates file");
+DEFINE_string(ssl_client_key, "", "Path to SSL client certificates key");
+DEFINE_string(ssl_client_cert, "", "Path to SSL client certificates file");
 DEFINE_int32(num_iterations, 1, "Number of times to loop over strings");
 DEFINE_int32(parallel_requests, 10, "Number of in-flight requests to send");
 DEFINE_bool(print_results, true, "Print final classification results");
 DEFINE_bool(
     use_ssl, false,
-    "Whether to use SSL credentials or not. If ssl_cert is specified, "
+    "Whether to use SSL credentials or not. If ssl_root_cert is specified, "
     "this is assumed to be true");
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 
@@ -107,7 +109,9 @@ main(int argc, char** argv)
   str_usage << "           --parallel_requests=<integer> " << std::endl;
   str_usage << "           --print_results=<true|false> " << std::endl;
   str_usage << "           --output=<filename> " << std::endl;
-  str_usage << "           --ssl_cert=<filename>" << std::endl;
+  str_usage << "           --ssl_root_cert=<filename>" << std::endl;
+  str_usage << "           --ssl_client_key=<filename>" << std::endl;
+  str_usage << "           --ssl_client_cert=<filename>" << std::endl;
   str_usage << "           --metadata=<key,value,...>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
@@ -145,7 +149,7 @@ main(int argc, char** argv)
   std::shared_ptr<grpc::Channel> grpc_channel;
   try {
     auto creds =
-        riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_cert, FLAGS_metadata);
+        riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_root_cert, FLAGS_ssl_client_key, FLAGS_ssl_client_cert, FLAGS_metadata);
     grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
   }
   catch (const std::exception& e) {

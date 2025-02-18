@@ -63,11 +63,13 @@ DEFINE_bool(
     verbatim_transcripts, true,
     "True returns text exactly as it was said with no normalization.  False applies text inverse "
     "normalization");
-DEFINE_string(ssl_cert, "", "Path to SSL client certificates file");
+DEFINE_string(ssl_root_cert, "", "Path to SSL root certificates file");
+DEFINE_string(ssl_client_key, "", "Path to SSL client certificates key");
+DEFINE_string(ssl_client_cert, "", "Path to SSL client certificates file");
 DEFINE_string(nmt_text_file, "s2t_output.txt", "File containing translated text for input speech");
 DEFINE_bool(
     use_ssl, false,
-    "Whether to use SSL credentials or not. If ssl_cert is specified, "
+    "Whether to use SSL credentials or not. If ssl_root_cert is specified, "
     "this is assumed to be true");
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 
@@ -110,7 +112,9 @@ main(int argc, char** argv)
   str_usage << "           --list_models" << std::endl;
   str_usage << "           --boosted_words_file=<string>" << std::endl;
   str_usage << "           --boosted_words_score=<float>" << std::endl;
-  str_usage << "           --ssl_cert=<filename>" << std::endl;
+  str_usage << "           --ssl_root_cert=<filename>" << std::endl;
+  str_usage << "           --ssl_client_key=<filename>" << std::endl;
+  str_usage << "           --ssl_client_cert=<filename>" << std::endl;
   str_usage << "           --nmt_text_file=<filename>" << std::endl;
   str_usage << "           --metadata=<key,value,...>" << std::endl;
 
@@ -141,7 +145,7 @@ main(int argc, char** argv)
   std::shared_ptr<grpc::Channel> grpc_channel;
   try {
     auto creds =
-        riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_cert, FLAGS_metadata);
+        riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_root_cert, FLAGS_ssl_client_key, FLAGS_ssl_client_cert, FLAGS_metadata);
     grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
   }
   catch (const std::exception& e) {

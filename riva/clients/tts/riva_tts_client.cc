@@ -32,7 +32,9 @@ DEFINE_string(text, "", "Text to be synthesized");
 DEFINE_string(audio_file, "output.wav", "Output file");
 DEFINE_string(audio_encoding, "pcm", "Audio encoding (pcm or opus)");
 DEFINE_string(riva_uri, "localhost:50051", "Riva API server URI and port");
-DEFINE_string(ssl_cert, "", "Path to SSL client certificates file");
+DEFINE_string(ssl_root_cert, "", "Path to SSL root certificates file");
+DEFINE_string(ssl_client_key, "", "Path to SSL client certificates key");
+DEFINE_string(ssl_client_cert, "", "Path to SSL client certificates file");
 DEFINE_int32(rate, 44100, "Sample rate for the TTS output");
 DEFINE_bool(online, false, "Whether synthesis should be online or batch");
 DEFINE_string(
@@ -41,7 +43,7 @@ DEFINE_string(
 DEFINE_string(voice_name, "", "Desired voice name");
 DEFINE_bool(
     use_ssl, false,
-    "Whether to use SSL credentials or not. If ssl_cert is specified, "
+    "Whether to use SSL credentials or not. If ssl_root_cert is specified, "
     "this is assumed to be true");
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 DEFINE_string(
@@ -103,7 +105,9 @@ main(int argc, char** argv)
   str_usage << "           --language=<language-code> " << std::endl;
   str_usage << "           --voice_name=<voice-name> " << std::endl;
   str_usage << "           --online=<true|false> " << std::endl;
-  str_usage << "           --ssl_cert=<filename>" << std::endl;
+  str_usage << "           --ssl_root_cert=<filename>" << std::endl;
+  str_usage << "           --ssl_client_key=<filename>" << std::endl;
+  str_usage << "           --ssl_client_cert=<filename>" << std::endl;
   str_usage << "           --metadata=<key,value,...>" << std::endl;
   str_usage << "           --zero_shot_audio_prompt=<filename>" << std::endl;
   str_usage << "           --zero_shot_quality=<quality>" << std::endl;
@@ -140,7 +144,7 @@ main(int argc, char** argv)
   std::shared_ptr<grpc::Channel> grpc_channel;
   try {
     auto creds =
-        riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_cert, FLAGS_metadata);
+        riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_root_cert, FLAGS_ssl_client_key, FLAGS_ssl_client_cert, FLAGS_metadata);
     grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
   }
   catch (const std::exception& e) {
