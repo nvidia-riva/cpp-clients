@@ -109,7 +109,6 @@ StreamingS2TClient::GenerateRequests(std::shared_ptr<S2TClientCall> call)
   while (!done) {
     nr_nmt::StreamingTranslateSpeechToTextRequest request;
     if (first_write) {
-      VLOG(1) << "Setting up s2t config.";
       auto streaming_s2t_config = request.mutable_config();
 
       // set nmt config

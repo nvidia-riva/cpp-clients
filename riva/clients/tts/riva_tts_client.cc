@@ -195,8 +195,6 @@ main(int argc, char** argv)
       return -1;
     }
     if (audio_prompt[0]->encoding != nr::LINEAR_PCM && audio_prompt[0]->encoding != nr::OGGOPUS) {
-      std::cerr << "Unsupported encoding for zero shot prompt: \'" << audio_prompt[0]->encoding
-                << "\'" << std::endl;
       LOG(ERROR) << "Unsupported encoding for zero shot prompt: \'" << audio_prompt[0]->encoding
                  << "\'";
       return -1;
@@ -221,7 +219,7 @@ main(int argc, char** argv)
     grpc::Status rpc_status = tts->Synthesize(&context, request, &response);
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed = end - start;
-    LOG(ERROR) << "Request time: " << elapsed.count() << " s" << std::endl;
+    LOG(INFO) << "Request time: " << elapsed.count() << " s" << std::endl;
 
     if (!rpc_status.ok()) {
       // Report the RPC failure.
@@ -231,7 +229,7 @@ main(int argc, char** argv)
     }
 
     auto audio = response.audio();
-    LOG(ERROR) << "Got " << audio.length() << " bytes back from server" << std::endl;
+    LOG(INFO) << "Got " << audio.length() << " bytes back from server" << std::endl;
     // Write to WAV file
     if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
       ::riva::utils::wav::Write(
@@ -256,7 +254,7 @@ main(int argc, char** argv)
       if (audio_len == 0) {
         auto t_first_audio = std::chrono::steady_clock::now();
         std::chrono::duration<double> elapsed_first_audio = t_first_audio - start;
-        LOG(ERROR) << "Time to first chunk: " << elapsed_first_audio.count() << " s" << std::endl;
+        LOG(INFO) << "Time to first chunk: " << elapsed_first_audio.count() << " s" << std::endl;
       }
       LOG(INFO) << "Got chunk: " << chunk.audio().size() << " bytes" << std::endl;
       if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
@@ -274,7 +272,7 @@ main(int argc, char** argv)
     grpc::Status rpc_status = reader->Finish();
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed_total = end - start;
-    LOG(ERROR) << "Streaming time: " << elapsed_total.count() << " s" << std::endl;
+    LOG(INFO) << "Streaming time: " << elapsed_total.count() << " s" << std::endl;
 
     if (!rpc_status.ok()) {
       // Report the RPC failure.
