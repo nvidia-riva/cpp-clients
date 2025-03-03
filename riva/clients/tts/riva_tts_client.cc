@@ -113,6 +113,7 @@ main(int argc, char** argv)
   str_usage << "           --zero_shot_audio_prompt=<filename>" << std::endl;
   str_usage << "           --zero_shot_quality=<quality>" << std::endl;
   str_usage << "           --zero_shot_target_transcript=<text>" << std::endl;
+  str_usage << "           --zero_shot_language_id=<text>" << std::endl;
   str_usage << "           --custom_dictionary=<filename> " << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
