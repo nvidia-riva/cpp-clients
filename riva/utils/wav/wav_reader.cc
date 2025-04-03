@@ -26,7 +26,7 @@ little_endian_val(const char* str)
 {
   T val = T();
   T shift = 0;
-  for (int i = 0; i < sizeof(T); ++i) {
+  for (size_t i = 0; i < sizeof(T); ++i) {
     val += T(str[i] & 0xFF) << shift;
     shift += 8;
   }
