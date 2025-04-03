@@ -70,7 +70,7 @@ grpc_extra_deps()
 git_repository(
      name = "nvriva_common",
      remote = "https://github.com/atomer-nvidia/common.git",
-     commit = "f9aaae2e3bb0418ca85259984f2841b7e398183f"
+     commit = "85da4c648a36988c39649c1112f0c8c739bf5604"
 )
 
 http_archive(
