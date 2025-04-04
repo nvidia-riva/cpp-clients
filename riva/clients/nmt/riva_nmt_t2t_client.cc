@@ -47,6 +47,9 @@ DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be
 DEFINE_string(
     dnt_phrases_file, "",
     "File with a list of words to be custom translated. Word and translation in a line.");
+DEFINE_string(
+    max_len_variation, "",
+    "Parameter to control the maximum variation between the length of source and translated text in terms of tokens.");
 
 int
 translateBatch(
@@ -80,6 +83,7 @@ translateBatch(
     request.set_target_language(target_language_code);
     *request.mutable_texts() = {text.begin(), text.end()};
     request.add_dnt_phrases(dnt_phrases);
+    request.set_max_len_variation(FLAGS_max_len_variation);
     // std::cout << request.DebugString() << std::endl;
 
     auto start = std::chrono::steady_clock::now();
@@ -190,6 +194,7 @@ main(int argc, char** argv)
   str_usage << "           --list_models" << std::endl;
   str_usage << "           --metadata=<key,value,...>" << std::endl;
   str_usage << "           --dnt_phrases_file=<string>" << std::endl;
+  str_usage << "           --max_len_variation=<string>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
 
   if (argc < 2) {
@@ -267,6 +272,7 @@ main(int argc, char** argv)
 
     request.add_texts(FLAGS_text);
     request.add_dnt_phrases(dnt_phrases);
+    request.set_max_len_variation(FLAGS_max_len_variation);
     grpc::Status rpc_status = nmt->TranslateText(&context, request, &response);
     if (!rpc_status.ok()) {
       LOG(ERROR) << rpc_status.error_message();
