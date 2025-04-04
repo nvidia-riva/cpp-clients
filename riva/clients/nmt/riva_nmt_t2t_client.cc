@@ -49,7 +49,7 @@ DEFINE_string(
     "File with a list of words to be custom translated. Word and translation in a line.");
 DEFINE_string(
     max_len_variation, "",
-    "Length variation limit that controls the allowed difference between source and translated text.");
+    "Parameter to control the maximum variation between the length of source and translated text in terms of tokens.");
 
 int
 translateBatch(
