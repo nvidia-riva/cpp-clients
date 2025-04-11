@@ -420,8 +420,9 @@ main(int argc, char** argv)
 
   std::shared_ptr<grpc::Channel> grpc_channel;
   try {
-    auto creds =
-        riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_root_cert, FLAGS_ssl_client_key, FLAGS_ssl_client_cert, FLAGS_metadata);
+    auto creds = riva::clients::CreateChannelCredentials(
+        FLAGS_use_ssl, FLAGS_ssl_root_cert, FLAGS_ssl_client_key, FLAGS_ssl_client_cert,
+        FLAGS_metadata);
     grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
   }
   catch (const std::exception& e) {
@@ -434,6 +435,10 @@ main(int argc, char** argv)
   std::vector<std::thread> workers;
 
   if (FLAGS_online) {
+    if (!FLAGS_zero_shot_target_transcript.empty()) {
+      LOG(ERROR) << "A2flow does not support online inference.";
+      return -1;
+    }
     std::vector<std::vector<double>*> latencies_first_chunk;
     std::vector<std::vector<double>*> latencies_next_chunks;
     std::vector<std::vector<size_t>*> lengths;
