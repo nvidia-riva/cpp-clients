@@ -112,7 +112,8 @@ main(int argc, char** argv)
   str_usage << "           --metadata=<key,value,...>" << std::endl;
   str_usage << "           --zero_shot_audio_prompt=<filename>" << std::endl;
   str_usage << "           --zero_shot_quality=<quality>" << std::endl;
-  str_usage << "           --zero_shot_transcript=<text>" << std::endl;
+  str_usage << "           --zero_shot_target_transcript=<text>" << std::endl;
+  str_usage << "           --zero_shot_language_id=<text>" << std::endl;
   str_usage << "           --custom_dictionary=<filename> " << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
@@ -182,7 +183,6 @@ main(int argc, char** argv)
 
   request.set_sample_rate_hz(rate);
   request.set_voice_name(FLAGS_voice_name);
-  auto zero_shot_data = request.mutable_zero_shot_data();
   if (not FLAGS_zero_shot_audio_prompt.empty()) {
     std::vector<std::shared_ptr<WaveData>> audio_prompt;
     try {
@@ -212,6 +212,7 @@ main(int argc, char** argv)
     zero_shot_data->set_sample_rate_hz(zero_shot_sample_rate);
     zero_shot_data->set_quality(FLAGS_zero_shot_quality);
     if (not FLAGS_zero_shot_target_transcript.empty()) {
+      is_a2flow = true;
       zero_shot_data->set_target_transcript(FLAGS_zero_shot_target_transcript);
     }
   }
@@ -251,10 +252,6 @@ main(int argc, char** argv)
       ::riva::utils::wav::Write(FLAGS_audio_file, rate, pcm.data(), pcm.size());
     }
   } else {  // online inference
-    if (!FLAGS_zero_shot_transcript.empty()) {
-      LOG(ERROR) << "Zero shot transcript is not supported for streaming inference.";
-      return -1;
-    }
     std::vector<int16_t> pcm_buffer;
     std::vector<unsigned char> opus_buffer;
     size_t audio_len = 0;
