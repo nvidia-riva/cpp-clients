@@ -112,8 +112,7 @@ main(int argc, char** argv)
   str_usage << "           --metadata=<key,value,...>" << std::endl;
   str_usage << "           --zero_shot_audio_prompt=<filename>" << std::endl;
   str_usage << "           --zero_shot_quality=<quality>" << std::endl;
-  str_usage << "           --zero_shot_target_transcript=<text>" << std::endl;
-  str_usage << "           --zero_shot_language_id=<text>" << std::endl;
+  str_usage << "           --zero_shot_transcript=<text>" << std::endl;
   str_usage << "           --custom_dictionary=<filename> " << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
@@ -211,9 +210,9 @@ main(int argc, char** argv)
     }
     zero_shot_data->set_sample_rate_hz(zero_shot_sample_rate);
     zero_shot_data->set_quality(FLAGS_zero_shot_quality);
-    if (not FLAGS_zero_shot_target_transcript.empty()) {
+    if (not FLAGS_zero_shot_transcript.empty()) {
       is_a2flow = true;
-      zero_shot_data->set_target_transcript(FLAGS_zero_shot_target_transcript);
+      zero_shot_data->set_transcript(FLAGS_zero_shot_transcript);
     }
   }
 
