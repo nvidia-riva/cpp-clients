@@ -62,7 +62,7 @@ DEFINE_string(
     "Input audio file for Zero Shot Model. Audio length between 0-3 seconds.");
 DEFINE_int32(zero_shot_quality, 20, "Required quality of output audio, ranges between 1-40.");
 DEFINE_string(custom_dictionary, "", " User dictionary containing graph-to-phone custom words");
-DEFINE_string(zero_shot_target_transcript, "", "Target transcript for zero shot model.");
+DEFINE_string(zero_shot_transcript, "", "Target transcript for zero shot model.");
 
 static const std::string LC_enUS = "en-US";
 
@@ -114,7 +114,7 @@ synthesizeBatch(
     std::unique_ptr<nr_tts::RivaSpeechSynthesis::Stub> tts, std::string text, std::string language,
     uint32_t rate, std::string voice_name, std::string filepath,
     std::string zero_shot_prompt_filename, int32_t zero_shot_quality, std::string custom_dictionary,
-    std::string zero_shot_target_transcript)
+    std::string zero_shot_transcript)
 {
   // Parse command line arguments.
   nr_tts::SynthesizeSpeechRequest request;
@@ -160,8 +160,8 @@ synthesizeBatch(
     }
     zero_shot_data->set_sample_rate_hz(zero_shot_sample_rate);
     zero_shot_data->set_quality(zero_shot_quality);
-    if (not FLAGS_zero_shot_target_transcript.empty()) {
-      zero_shot_data->set_target_transcript(FLAGS_zero_shot_target_transcript);
+    if (not FLAGS_zero_shot_transcript.empty()) {
+      zero_shot_data->set_transcript(FLAGS_zero_shot_transcript);
     }
   }
 
@@ -354,7 +354,7 @@ main(int argc, char** argv)
   str_usage << "           --metadata=<key,value,...>" << std::endl;
   str_usage << "           --zero_shot_audio_prompt=<filename>" << std::endl;
   str_usage << "           --zero_shot_quality=<quality>" << std::endl;
-  str_usage << "           --zero_shot_target_transcript=<text>" << std::endl;
+  str_usage << "           --zero_shot_transcript=<text>" << std::endl;
   str_usage << "           --custom_dictionary=<filename> " << std::endl;
 
   gflags::SetUsageMessage(str_usage.str());
@@ -435,7 +435,7 @@ main(int argc, char** argv)
   std::vector<std::thread> workers;
 
   if (FLAGS_online) {
-    if (!FLAGS_zero_shot_target_transcript.empty()) {
+    if (!FLAGS_zero_shot_transcript.empty()) {
       LOG(ERROR) << "A2flow does not support online inference.";
       return -1;
     }
@@ -558,7 +558,7 @@ main(int argc, char** argv)
           size_t num_samples = synthesizeBatch(
               std::move(tts), sentences[i][s].second, FLAGS_language, rate, FLAGS_voice_name,
               std::to_string(sentences[i][s].first) + ".wav", FLAGS_zero_shot_audio_prompt,
-              FLAGS_zero_shot_quality, FLAGS_custom_dictionary, FLAGS_zero_shot_target_transcript);
+              FLAGS_zero_shot_quality, FLAGS_custom_dictionary, FLAGS_zero_shot_transcript);
           results_num_samples[i]->push_back(num_samples);
         }
       }));
