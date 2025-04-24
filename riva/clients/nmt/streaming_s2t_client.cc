@@ -253,14 +253,6 @@ void
 StreamingS2TClient::PostProcessResults(std::shared_ptr<S2TClientCall> call, bool audio_device)
 {
   std::lock_guard<std::mutex> lock(latencies_mutex_);
-
-  if (simulate_realtime_) {
-    double lat =
-        std::chrono::duration<double, std::milli>(call->recv_times[0] - call->send_times.back())
-            .count();
-    VLOG(1) << "Latency:" << lat << std::endl;
-    latencies_.push_back(lat);
-  }
   call->PrintResult(audio_device, output_file_);
 }
 
@@ -275,6 +267,11 @@ StreamingS2TClient::ReceiveResponses(std::shared_ptr<S2TClientCall> call, bool a
 
   while (call->streamer->Read(&call->response)) {  // Returns false when no more to read.
     call->recv_times.push_back(std::chrono::steady_clock::now());
+    if(simulate_realtime_){
+      double lat = std::chrono::duration<double, std::milli>(call->recv_times.back() - call->send_times.back()).count();
+      latencies_.push_back(lat);
+      VLOG(1) << "Latency of segment " << call->recv_times.size() << " is " << lat << std::endl;
+    }
     for (int r = 0; r < call->response.results_size(); ++r) {
       const auto& result = call->response.results(r);
 
@@ -376,7 +373,7 @@ StreamingS2TClient::PrintLatencies(std::vector<double>& latencies, const std::st
     double avg = std::accumulate(latencies.begin(), latencies.end(), 0.0) / latencies.size();
 
     std::cout << std::setprecision(5);
-    std::cout << name << " (ms):\n";
+    std::cout << name << " (ms) (Excluding ASR EOU):\n";
     std::cout << "\t\tMedian\t\t90th\t\t95th\t\t99th\t\tAvg\n";
     std::cout << "\t\t" << median << "\t\t" << lat_90 << "\t\t" << lat_95 << "\t\t" << lat_99
               << "\t\t" << avg << std::endl;
