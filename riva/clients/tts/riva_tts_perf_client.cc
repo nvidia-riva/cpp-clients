@@ -59,9 +59,10 @@ DEFINE_bool(
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 DEFINE_string(
     zero_shot_audio_prompt, "",
-    "Input audio file for Zero Shot Model. Audio length between 0-3 seconds.");
+    "Input audio prompt file for Zero Shot Model. Audio length should be between 3-10 seconds.");
 DEFINE_int32(zero_shot_quality, 20, "Required quality of output audio, ranges between 1-40.");
 DEFINE_string(custom_dictionary, "", " User dictionary containing graph-to-phone custom words");
+DEFINE_string(zero_shot_transcript, "", "Transcript corresponding to Zero shot audio prompt.");
 
 static const std::string LC_enUS = "en-US";
 
@@ -86,7 +87,7 @@ ReadUserDictionaryFile(const std::string& dictionary_file)
       while (std::getline(infile, line)) {
         // Trim leading and trailing whitespaces
         line = std::regex_replace(line, std::regex("^ +| +$"), "");
-        int pos = line.find("  ");
+        size_t pos = line.find("  ");
 
         if (pos != std::string::npos) {
           std::string key = line.substr(0, pos);
@@ -112,7 +113,8 @@ size_t
 synthesizeBatch(
     std::unique_ptr<nr_tts::RivaSpeechSynthesis::Stub> tts, std::string text, std::string language,
     uint32_t rate, std::string voice_name, std::string filepath,
-    std::string zero_shot_prompt_filename, int32_t zero_shot_quality, std::string custom_dictionary)
+    std::string zero_shot_prompt_filename, int32_t zero_shot_quality, std::string custom_dictionary,
+    std::string zero_shot_transcript)
 {
   // Parse command line arguments.
   nr_tts::SynthesizeSpeechRequest request;
@@ -158,6 +160,9 @@ synthesizeBatch(
     }
     zero_shot_data->set_sample_rate_hz(zero_shot_sample_rate);
     zero_shot_data->set_quality(zero_shot_quality);
+    if (not FLAGS_zero_shot_transcript.empty()) {
+      zero_shot_data->set_transcript(FLAGS_zero_shot_transcript);
+    }
   }
 
   // Send text content using Synthesize().
@@ -349,6 +354,7 @@ main(int argc, char** argv)
   str_usage << "           --metadata=<key,value,...>" << std::endl;
   str_usage << "           --zero_shot_audio_prompt=<filename>" << std::endl;
   str_usage << "           --zero_shot_quality=<quality>" << std::endl;
+  str_usage << "           --zero_shot_transcript=<text>" << std::endl;
   str_usage << "           --custom_dictionary=<filename> " << std::endl;
 
   gflags::SetUsageMessage(str_usage.str());
@@ -414,8 +420,9 @@ main(int argc, char** argv)
 
   std::shared_ptr<grpc::Channel> grpc_channel;
   try {
-    auto creds =
-        riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_root_cert, FLAGS_ssl_client_key, FLAGS_ssl_client_cert, FLAGS_metadata);
+    auto creds = riva::clients::CreateChannelCredentials(
+        FLAGS_use_ssl, FLAGS_ssl_root_cert, FLAGS_ssl_client_key, FLAGS_ssl_client_cert,
+        FLAGS_metadata);
     grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
   }
   catch (const std::exception& e) {
@@ -428,6 +435,10 @@ main(int argc, char** argv)
   std::vector<std::thread> workers;
 
   if (FLAGS_online) {
+    if (!FLAGS_zero_shot_transcript.empty()) {
+      LOG(ERROR) << "Zero shot transcript is not supported for streaming inference.";
+      return -1;
+    }
     std::vector<std::vector<double>*> latencies_first_chunk;
     std::vector<std::vector<double>*> latencies_next_chunks;
     std::vector<std::vector<size_t>*> lengths;
@@ -547,7 +558,7 @@ main(int argc, char** argv)
           size_t num_samples = synthesizeBatch(
               std::move(tts), sentences[i][s].second, FLAGS_language, rate, FLAGS_voice_name,
               std::to_string(sentences[i][s].first) + ".wav", FLAGS_zero_shot_audio_prompt,
-              FLAGS_zero_shot_quality, FLAGS_custom_dictionary);
+              FLAGS_zero_shot_quality, FLAGS_custom_dictionary, FLAGS_zero_shot_transcript);
           results_num_samples[i]->push_back(num_samples);
         }
       }));

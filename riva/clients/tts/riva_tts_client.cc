@@ -48,9 +48,10 @@ DEFINE_bool(
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 DEFINE_string(
     zero_shot_audio_prompt, "",
-    "Input audio file for Zero Shot Model. Audio length between 0-3 seconds.");
+    "Input audio prompt file for Zero Shot Model. Audio length should be between 3-10 seconds.");
 DEFINE_int32(zero_shot_quality, 20, "Required quality of output audio, ranges between 1-40.");
 DEFINE_string(custom_dictionary, "", " User dictionary containing graph-to-phone custom words");
+DEFINE_string(zero_shot_transcript, "", "Transcript corresponding to Zero shot audio prompt.");
 
 static const std::string LC_enUS = "en-US";
 
@@ -67,7 +68,7 @@ ReadUserDictionaryFile(const std::string& dictionary_file)
       while (std::getline(infile, line)) {
         // Trim leading and trailing whitespaces
         line = std::regex_replace(line, std::regex("^ +| +$"), "");
-        int pos = line.find("  ");
+        size_t pos = line.find("  ");
 
         if (pos != std::string::npos) {
           std::string key = line.substr(0, pos);
@@ -111,6 +112,7 @@ main(int argc, char** argv)
   str_usage << "           --metadata=<key,value,...>" << std::endl;
   str_usage << "           --zero_shot_audio_prompt=<filename>" << std::endl;
   str_usage << "           --zero_shot_quality=<quality>" << std::endl;
+  str_usage << "           --zero_shot_transcript=<text>" << std::endl;
   str_usage << "           --custom_dictionary=<filename> " << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
@@ -143,8 +145,9 @@ main(int argc, char** argv)
 
   std::shared_ptr<grpc::Channel> grpc_channel;
   try {
-    auto creds =
-        riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_root_cert, FLAGS_ssl_client_key, FLAGS_ssl_client_cert, FLAGS_metadata);
+    auto creds = riva::clients::CreateChannelCredentials(
+        FLAGS_use_ssl, FLAGS_ssl_root_cert, FLAGS_ssl_client_key, FLAGS_ssl_client_cert,
+        FLAGS_metadata);
     grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
   }
   catch (const std::exception& e) {
@@ -179,8 +182,8 @@ main(int argc, char** argv)
 
   request.set_sample_rate_hz(rate);
   request.set_voice_name(FLAGS_voice_name);
+  auto zero_shot_data = request.mutable_zero_shot_data();
   if (not FLAGS_zero_shot_audio_prompt.empty()) {
-    auto zero_shot_data = request.mutable_zero_shot_data();
     std::vector<std::shared_ptr<WaveData>> audio_prompt;
     try {
       LoadWavData(audio_prompt, FLAGS_zero_shot_audio_prompt);
@@ -215,6 +218,9 @@ main(int argc, char** argv)
   nr_tts::SynthesizeSpeechResponse response;
 
   if (!FLAGS_online) {  // batch inference
+    if (not FLAGS_zero_shot_audio_prompt.empty() and not FLAGS_zero_shot_transcript.empty()) {
+      zero_shot_data->set_transcript(FLAGS_zero_shot_transcript);
+    }
     auto start = std::chrono::steady_clock::now();
     grpc::Status rpc_status = tts->Synthesize(&context, request, &response);
     auto end = std::chrono::steady_clock::now();
@@ -242,6 +248,10 @@ main(int argc, char** argv)
       ::riva::utils::wav::Write(FLAGS_audio_file, rate, pcm.data(), pcm.size());
     }
   } else {  // online inference
+    if (!FLAGS_zero_shot_transcript.empty()) {
+      LOG(ERROR) << "Zero shot transcript is not supported for streaming inference.";
+      return -1;
+    }
     std::vector<int16_t> pcm_buffer;
     std::vector<unsigned char> opus_buffer;
     size_t audio_len = 0;
