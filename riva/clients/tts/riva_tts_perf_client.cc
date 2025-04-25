@@ -62,7 +62,7 @@ DEFINE_string(
     "Input audio file for Zero Shot Model. Audio length between 0-3 seconds.");
 DEFINE_int32(zero_shot_quality, 20, "Required quality of output audio, ranges between 1-40.");
 DEFINE_string(custom_dictionary, "", " User dictionary containing graph-to-phone custom words");
-DEFINE_string(zero_shot_transcript, "", "Target transcript for zero shot model.");
+DEFINE_string(zero_shot_transcript, "", "Transcript corresponding to Zero shot audio prompt.");
 
 static const std::string LC_enUS = "en-US";
 
