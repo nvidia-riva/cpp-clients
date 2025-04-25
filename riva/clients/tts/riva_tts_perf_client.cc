@@ -59,7 +59,7 @@ DEFINE_bool(
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 DEFINE_string(
     zero_shot_audio_prompt, "",
-    "Input audio file for Zero Shot Model. Audio length between 0-3 seconds.");
+    "Input audio prompt file for Zero Shot Model. Audio length should be between 3-10 seconds.");
 DEFINE_int32(zero_shot_quality, 20, "Required quality of output audio, ranges between 1-40.");
 DEFINE_string(custom_dictionary, "", " User dictionary containing graph-to-phone custom words");
 DEFINE_string(zero_shot_transcript, "", "Transcript corresponding to Zero shot audio prompt.");

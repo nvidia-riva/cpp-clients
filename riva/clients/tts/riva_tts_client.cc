@@ -48,7 +48,7 @@ DEFINE_bool(
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 DEFINE_string(
     zero_shot_audio_prompt, "",
-    "Input audio file for Zero Shot Model. Audio length between 0-3 seconds.");
+    "Input audio prompt file for Zero Shot Model. Audio length should be between 3-10 seconds.");
 DEFINE_int32(zero_shot_quality, 20, "Required quality of output audio, ranges between 1-40.");
 DEFINE_string(custom_dictionary, "", " User dictionary containing graph-to-phone custom words");
 DEFINE_string(zero_shot_transcript, "", "Transcript corresponding to Zero shot audio prompt.");
@@ -182,8 +182,8 @@ main(int argc, char** argv)
 
   request.set_sample_rate_hz(rate);
   request.set_voice_name(FLAGS_voice_name);
+  auto zero_shot_data = request.mutable_zero_shot_data();
   if (not FLAGS_zero_shot_audio_prompt.empty()) {
-    auto zero_shot_data = request.mutable_zero_shot_data();
     std::vector<std::shared_ptr<WaveData>> audio_prompt;
     try {
       LoadWavData(audio_prompt, FLAGS_zero_shot_audio_prompt);
@@ -211,9 +211,6 @@ main(int argc, char** argv)
     }
     zero_shot_data->set_sample_rate_hz(zero_shot_sample_rate);
     zero_shot_data->set_quality(FLAGS_zero_shot_quality);
-    if (not FLAGS_zero_shot_transcript.empty()) {
-      zero_shot_data->set_transcript(FLAGS_zero_shot_transcript);
-    }
   }
 
   // Send text content using Synthesize().
@@ -221,6 +218,9 @@ main(int argc, char** argv)
   nr_tts::SynthesizeSpeechResponse response;
 
   if (!FLAGS_online) {  // batch inference
+    if (not FLAGS_zero_shot_audio_prompt.empty() and not FLAGS_zero_shot_transcript.empty()) {
+      zero_shot_data->set_transcript(FLAGS_zero_shot_transcript);
+    }
     auto start = std::chrono::steady_clock::now();
     grpc::Status rpc_status = tts->Synthesize(&context, request, &response);
     auto end = std::chrono::steady_clock::now();
