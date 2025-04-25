@@ -211,7 +211,6 @@ main(int argc, char** argv)
     zero_shot_data->set_sample_rate_hz(zero_shot_sample_rate);
     zero_shot_data->set_quality(FLAGS_zero_shot_quality);
     if (not FLAGS_zero_shot_transcript.empty()) {
-      is_a2flow = true;
       zero_shot_data->set_transcript(FLAGS_zero_shot_transcript);
     }
   }
@@ -251,6 +250,10 @@ main(int argc, char** argv)
       ::riva::utils::wav::Write(FLAGS_audio_file, rate, pcm.data(), pcm.size());
     }
   } else {  // online inference
+    if (!FLAGS_zero_shot_transcript.empty()) {
+      LOG(ERROR) << "Zero shot transcript is not supported for streaming inference.";
+      return -1;
+    }
     std::vector<int16_t> pcm_buffer;
     std::vector<unsigned char> opus_buffer;
     size_t audio_len = 0;
