@@ -182,6 +182,7 @@ main(int argc, char** argv)
 
   request.set_sample_rate_hz(rate);
   request.set_voice_name(FLAGS_voice_name);
+  auto zero_shot_data = request.mutable_zero_shot_data();
   if (not FLAGS_zero_shot_audio_prompt.empty()) {
     std::vector<std::shared_ptr<WaveData>> audio_prompt;
     try {
@@ -210,9 +211,6 @@ main(int argc, char** argv)
     }
     zero_shot_data->set_sample_rate_hz(zero_shot_sample_rate);
     zero_shot_data->set_quality(FLAGS_zero_shot_quality);
-    if (not FLAGS_zero_shot_transcript.empty()) {
-      zero_shot_data->set_transcript(FLAGS_zero_shot_transcript);
-    }
   }
 
   // Send text content using Synthesize().
