@@ -436,7 +436,7 @@ main(int argc, char** argv)
 
   if (FLAGS_online) {
     if (!FLAGS_zero_shot_transcript.empty()) {
-      LOG(ERROR) << "A2flow does not support online inference.";
+      LOG(ERROR) << "Zero shot transcript is not supported for streaming inference.";
       return -1;
     }
     std::vector<std::vector<double>*> latencies_first_chunk;

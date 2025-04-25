@@ -182,7 +182,6 @@ main(int argc, char** argv)
 
   request.set_sample_rate_hz(rate);
   request.set_voice_name(FLAGS_voice_name);
-  bool is_a2flow = false;
   if (not FLAGS_zero_shot_audio_prompt.empty()) {
     auto zero_shot_data = request.mutable_zero_shot_data();
     std::vector<std::shared_ptr<WaveData>> audio_prompt;
@@ -213,7 +212,6 @@ main(int argc, char** argv)
     zero_shot_data->set_sample_rate_hz(zero_shot_sample_rate);
     zero_shot_data->set_quality(FLAGS_zero_shot_quality);
     if (not FLAGS_zero_shot_transcript.empty()) {
-      is_a2flow = true;
       zero_shot_data->set_transcript(FLAGS_zero_shot_transcript);
     }
   }
@@ -250,8 +248,8 @@ main(int argc, char** argv)
       ::riva::utils::wav::Write(FLAGS_audio_file, rate, pcm.data(), pcm.size());
     }
   } else {  // online inference
-    if (is_a2flow) {
-      LOG(ERROR) << "A2Flow model does not support online inferencing.";
+    if (!FLAGS_zero_shot_transcript.empty()) {
+      LOG(ERROR) << "Zero shot transcript is not supported for streaming inference.";
       return -1;
     }
     std::vector<int16_t> pcm_buffer;
