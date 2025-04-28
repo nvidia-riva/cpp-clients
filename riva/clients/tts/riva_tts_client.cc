@@ -211,7 +211,7 @@ main(int argc, char** argv)
     }
     zero_shot_data->set_sample_rate_hz(zero_shot_sample_rate);
     zero_shot_data->set_quality(FLAGS_zero_shot_quality);
-    if (not FLAGS_zero_shot_transcript.empty()) {
+    if (not FLAGS_online and not FLAGS_zero_shot_transcript.empty()) {
       zero_shot_data->set_transcript(FLAGS_zero_shot_transcript);
     }
   }
