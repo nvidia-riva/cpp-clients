@@ -68,9 +68,9 @@ load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
 grpc_extra_deps()
 
 git_repository(
-     name = "nvriva_common",
-     remote = "https://github.com/nvidia-riva/common.git",
-     commit = "1f78d154269d5a43d6514ffd274b4d24a90c285f"
+    name = "nvriva_common",
+    remote = "https://gitlab-master.nvidia.com/sarane/common.git",
+    commit = "451886d1d8876cb0310c6453b0eb445d7c64ba22"
 )
 
 http_archive(

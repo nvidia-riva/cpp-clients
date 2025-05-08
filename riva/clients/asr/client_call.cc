@@ -6,7 +6,8 @@
 #include "client_call.h"
 
 ClientCall::ClientCall(uint32_t corr_id, bool word_time_offsets, bool speaker_diarization)
-    : corr_id_(corr_id), word_time_offsets_(word_time_offsets), speaker_diarization_(speaker_diarization)
+    : corr_id_(corr_id), word_time_offsets_(word_time_offsets),
+      speaker_diarization_(speaker_diarization)
 {
   send_times.reserve(1000);
   recv_times.reserve(1000);
@@ -126,6 +127,7 @@ ClientCall::PrintResult(bool audio_device, std::ofstream& output_file)
           if (word_time_offsets_) {
             std::cout << std::setw(16) << std::left << word_info.start_time();
             std::cout << std::setw(16) << std::left << word_info.end_time();
+            std::cout << std::setw(16) << std::left << word_info.language_code();
           }
           std::cout << std::setw(16) << std::setprecision(4) << std::scientific
                     << word_info.confidence();
@@ -142,6 +144,7 @@ ClientCall::PrintResult(bool audio_device, std::ofstream& output_file)
           std::cout << std::setw(16) << std::left << word_info.end_time() << std::endl;
           std::cout << std::setw(16) << std::setprecision(4) << std::scientific
                     << word_info.confidence() << std::endl;
+          std::cout << std::setw(16) << std::left << word_info.language_code() << std::endl;
         }
       }
       std::cout << std::endl;
