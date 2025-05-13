@@ -50,6 +50,13 @@ ClientCall::AppendResult(const nr_asr::StreamingRecognitionResult& result)
         // Append to transcript
         latest_result_.final_transcripts[a] += result.alternatives(a).transcript();
         latest_result_.final_scores[a] += result.alternatives(a).confidence();
+        for (auto& lang_code : result.alternatives(a).language_code()) {
+          if (std::find(
+                  latest_result_.language_codes.begin(), latest_result_.language_codes.end(),
+                  lang_code) == latest_result_.language_codes.end()) {
+            latest_result_.language_codes.push_back(lang_code);
+          }
+        }
       }
       VLOG(1) << "Final transcript: " << result.alternatives(0).transcript();
 
@@ -67,6 +74,7 @@ ClientCall::AppendResult(const nr_asr::StreamingRecognitionResult& result)
         if (result.stability() == 1) {
           VLOG(1) << "Intermediate transcript: " << result.alternatives(0).transcript();
         } else {
+          VLOG(1) << "Partial transcript: " << result.alternatives(0).transcript();
           latest_result_.partial_transcript += result.alternatives(0).transcript();
           if (word_time_offsets_) {
             for (int w = 0; w < result.alternatives(0).words_size(); ++w) {
@@ -113,6 +121,9 @@ ClientCall::PrintResult(bool audio_device, std::ofstream& output_file)
           std::cout << std::setw(16) << std::left << "Start (ms)";
           std::cout << std::setw(16) << std::left << "End (ms)";
         }
+        if (latest_result_.language_codes.size() > 0) {
+          std::cout << std::setw(16) << std::left << "Language";
+        }
         std::cout << std::setw(16) << std::left << "Confidence";
         if (a == 0 && speaker_diarization_) {
           std::cout << std::setw(16) << std::left << "Speaker";
@@ -127,7 +138,9 @@ ClientCall::PrintResult(bool audio_device, std::ofstream& output_file)
           if (word_time_offsets_) {
             std::cout << std::setw(16) << std::left << word_info.start_time();
             std::cout << std::setw(16) << std::left << word_info.end_time();
-            std::cout << std::setw(16) << std::left << word_info.language_code();
+            if (latest_result_.language_codes.size() > 0) {
+              std::cout << std::setw(16) << std::left << word_info.language_code();
+            }
           }
           std::cout << std::setw(16) << std::setprecision(4) << std::scientific
                     << word_info.confidence();
@@ -144,8 +157,14 @@ ClientCall::PrintResult(bool audio_device, std::ofstream& output_file)
           std::cout << std::setw(16) << std::left << word_info.end_time() << std::endl;
           std::cout << std::setw(16) << std::setprecision(4) << std::scientific
                     << word_info.confidence() << std::endl;
-          std::cout << std::setw(16) << std::left << word_info.language_code() << std::endl;
         }
+      }
+      std::cout << std::endl;
+    }
+    if (latest_result_.language_codes.size() > 0) {
+      std::cout << "Language codes detected in the audio: " << std::endl;
+      for (auto& lang_code : latest_result_.language_codes) {
+        std::cout << lang_code << " ";
       }
       std::cout << std::endl;
     }
