@@ -131,6 +131,13 @@ AppendResult(
   for (int a = 0; a < num_alternatives; ++a) {
     // Append to transcript
     output_result.final_transcripts[a] += result.alternatives(a).transcript();
+    for (auto& lang : result.alternatives(a).language_code()) {
+      if (std::find(
+              output_result.language_codes.begin(), output_result.language_codes.end(), lang) ==
+          output_result.language_codes.end()) {
+        output_result.language_codes.push_back(lang);
+      }
+    }
     output_result.final_scores[a] += result.alternatives(a).confidence();
   }
   if (word_time_offsets || speaker_diarization) {
@@ -166,6 +173,9 @@ PrintResult(
           std::cout << std::setw(16) << std::left << "Start (ms)";
           std::cout << std::setw(16) << std::left << "End (ms)";
         }
+        if (output_result.language_codes.size() > 0) {
+          std::cout << std::setw(16) << std::left << "Language";
+        }
         std::cout << std::setw(16) << std::left << "Confidence";
         if (a == 0 && speaker_diarization) {
           std::cout << std::setw(16) << std::left << "Speaker";
@@ -180,6 +190,9 @@ PrintResult(
             std::cout << std::setw(16) << std::left << word_info.start_time();
             std::cout << std::setw(16) << std::left << word_info.end_time();
           }
+          if (output_result.language_codes.size() > 0) {
+            std::cout << std::setw(16) << std::left << word_info.language_code();
+          }
           std::cout << std::setw(16) << std::setprecision(4) << std::scientific
                     << word_info.confidence();
           if (a == 0 && speaker_diarization) {
@@ -190,6 +203,13 @@ PrintResult(
       }
       std::cout << std::endl;
     }
+  }
+  if (output_result.language_codes.size() > 0) {
+    std::cout << "Language codes detected in the audio: " << std::endl;
+    for (auto& lang : output_result.language_codes) {
+      std::cout << lang << " ";
+    }
+    std::cout << std::endl;
   }
   std::cout << "Audio processed: " << output_result.audio_processed << " sec." << std::endl;
   std::cout << "-----------------------------------------------------------" << std::endl;
