@@ -16,6 +16,8 @@
 #include "riva/utils/files/files.h"
 #include "riva/utils/string_processing.h"
 
+constexpr int MAX_GRPC_MESSAGE_SIZE = 64 * 1024 * 1024;
+
 using grpc::Status;
 using grpc::StatusCode;
 
@@ -58,7 +60,10 @@ CreateChannelBlocking(
     const std::string& uri, const std::shared_ptr<grpc::ChannelCredentials> credentials,
     uint64_t timeout_ms = 10000)
 {
-  auto channel = grpc::CreateChannel(uri, credentials);
+  grpc::ChannelArguments channel_args;
+  channel_args.SetMaxReceiveMessageSize(MAX_GRPC_MESSAGE_SIZE);
+  channel_args.SetMaxSendMessageSize(MAX_GRPC_MESSAGE_SIZE);
+  auto channel = grpc::CreateCustomChannel(uri, credentials, channel_args);
 
   auto deadline = std::chrono::system_clock::now() + std::chrono::milliseconds(timeout_ms);
   auto reached_required_state = channel->WaitForConnected(deadline);
@@ -78,7 +83,9 @@ CreateChannelBlocking(
 /// @param use_ssl Boolean flag that controls if ssl encryption should be used
 /// @param ssl_cert Path to the certificate file
 std::shared_ptr<grpc::ChannelCredentials>
-CreateChannelCredentials(bool use_ssl, const std::string& ssl_root_cert, const std::string& ssl_client_key, const std::string& ssl_client_cert, const std::string& metadata)
+CreateChannelCredentials(
+    bool use_ssl, const std::string& ssl_root_cert, const std::string& ssl_client_key,
+    const std::string& ssl_client_cert, const std::string& metadata)
 {
   std::shared_ptr<grpc::ChannelCredentials> creds;
 
@@ -113,3 +120,4 @@ CreateChannelCredentials(bool use_ssl, const std::string& ssl_root_cert, const s
 }
 
 }  // namespace riva::clients
+
