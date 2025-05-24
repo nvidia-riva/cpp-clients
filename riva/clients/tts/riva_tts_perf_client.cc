@@ -109,7 +109,7 @@ ReadUserDictionaryFile(const std::string& dictionary_file)
   return dictionary_string;
 }
 
-size_t
+int32_t
 synthesizeBatch(
     std::unique_ptr<nr_tts::RivaSpeechSynthesis::Stub> tts, std::string text, std::string language,
     uint32_t rate, std::string voice_name, std::string filepath,
@@ -180,6 +180,7 @@ synthesizeBatch(
     // Report the RPC failure.
     std::cerr << rpc_status.error_message() << std::endl;
     std::cerr << "Input was: \'" << text << "\'" << std::endl;
+    return -1;
   }
 
   auto audio = response.audio();
@@ -433,6 +434,7 @@ main(int argc, char** argv)
 
   // Create and start worker threads
   std::vector<std::thread> workers;
+  int STATUS = 0;
 
   if (FLAGS_online) {
     if (!FLAGS_zero_shot_transcript.empty()) {
@@ -547,15 +549,15 @@ main(int argc, char** argv)
       }
     }
   } else {
-    std::vector<std::vector<size_t>*> results_num_samples;
+    std::vector<std::vector<int32_t>*> results_num_samples;
     auto start = std::chrono::steady_clock::now();
     for (int i = 0; i < FLAGS_num_parallel_requests; i++) {
-      auto results_num_samples_thread = new std::vector<size_t>();
+      auto results_num_samples_thread = new std::vector<int32_t>();
       results_num_samples.push_back(results_num_samples_thread);
       workers.push_back(std::thread([&, i]() {
         for (size_t s = 0; s < sentences[i].size(); s++) {
           auto tts = CreateTTS(grpc_channel);
-          size_t num_samples = synthesizeBatch(
+          int32_t num_samples = synthesizeBatch(
               std::move(tts), sentences[i][s].second, FLAGS_language, rate, FLAGS_voice_name,
               std::to_string(sentences[i][s].first) + ".wav", FLAGS_zero_shot_audio_prompt,
               FLAGS_zero_shot_quality, FLAGS_custom_dictionary, FLAGS_zero_shot_transcript);
@@ -565,17 +567,25 @@ main(int argc, char** argv)
     }
     std::for_each(workers.begin(), workers.end(), [](std::thread& worker) { worker.join(); });
     auto end = std::chrono::steady_clock::now();
+    for (int i = 0; i < FLAGS_num_parallel_requests; ++i) {
+      if (results_num_samples[i]->front() == -1) {
+        STATUS = -1;
+        break;
+      }
+    }
     std::chrono::duration<double> elapsed = end - start;
-
     if (!FLAGS_write_output_audio) {
       double total_num_samples = 0;
       for (int i = 0; i < FLAGS_num_parallel_requests; i++) {
-        total_num_samples +=
-            std::accumulate(results_num_samples[i]->begin(), results_num_samples[i]->end(), 0.);
+        if (results_num_samples[i]->front() != -1) {
+          total_num_samples +=
+              std::accumulate(results_num_samples[i]->begin(), results_num_samples[i]->end(), 0.);
+        }
       }
       std::cout << "Average RTF: " << (total_num_samples / rate) / elapsed.count() << std::endl
                 << "Total samples: " << total_num_samples << std::endl;
     }
   }
-  return 0;
+  return STATUS;
 }
+
