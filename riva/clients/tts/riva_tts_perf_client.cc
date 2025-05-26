@@ -568,7 +568,7 @@ main(int argc, char** argv)
     std::for_each(workers.begin(), workers.end(), [](std::thread& worker) { worker.join(); });
     auto end = std::chrono::steady_clock::now();
     for (int i = 0; i < FLAGS_num_parallel_requests; ++i) {
-      if (results_num_samples[i]->front() == -1) {
+      if (results_num_samples[i]->front() < 0) {
         STATUS = -1;
         break;
       }
@@ -577,7 +577,7 @@ main(int argc, char** argv)
     if (!FLAGS_write_output_audio) {
       double total_num_samples = 0;
       for (int i = 0; i < FLAGS_num_parallel_requests; i++) {
-        if (results_num_samples[i]->front() != -1) {
+        if (results_num_samples[i]->front() >= 0) {
           total_num_samples +=
               std::accumulate(results_num_samples[i]->begin(), results_num_samples[i]->end(), 0.);
         }
