@@ -88,7 +88,7 @@ DEFINE_string(
     custom_configuration, "",
     "Custom configurations to be sent to the server as key value pairs <key:value,key:value,...>");
 DEFINE_uint64(timeout_ms, 10000, "Timeout for GRPC channel creation");
-DEFINE_uint64(max_grpc_message_size, 64 * 1024 * 1024, "Max GRPC message size");
+DEFINE_uint64(max_grpc_message_size, MAX_GRPC_MESSAGE_SIZE, "Max GRPC message size");
 
 class RecognizeClient {
  public:

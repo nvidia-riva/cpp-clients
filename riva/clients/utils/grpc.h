@@ -16,7 +16,7 @@
 #include "riva/utils/files/files.h"
 #include "riva/utils/string_processing.h"
 
-constexpr int MAX_GRPC_MESSAGE_SIZE = 64 * 1024 * 1024;
+constexpr int MAX_GRPC_MESSAGE_SIZE = 128 * 1024 * 1024;
 
 using grpc::Status;
 using grpc::StatusCode;

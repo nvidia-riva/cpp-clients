@@ -100,7 +100,7 @@ DEFINE_int32(
     diarization_max_speakers, 4,
     "Max number of speakers to detect when performing speaker diarization. Default is 4 (Max)");
 DEFINE_uint64(timeout_ms, 10000, "Timeout for GRPC channel creation");
-DEFINE_uint64(max_grpc_message_size, 64 * 1024 * 1024, "Max GRPC message size");
+DEFINE_uint64(max_grpc_message_size, MAX_GRPC_MESSAGE_SIZE, "Max GRPC message size");
 
 void
 signal_handler(int signal_num)
