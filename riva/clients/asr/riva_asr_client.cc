@@ -87,6 +87,8 @@ DEFINE_double(
 DEFINE_string(
     custom_configuration, "",
     "Custom configurations to be sent to the server as key value pairs <key:value,key:value,...>");
+DEFINE_uint64(timeout_ms, 10000, "Timeout for GRPC channel creation");
+DEFINE_uint64(max_grpc_message_size, 64 * 1024 * 1024, "Max GRPC message size");
 
 class RecognizeClient {
  public:
@@ -477,6 +479,8 @@ main(int argc, char** argv)
   str_usage << "           --stop_threshold=<float>" << std::endl;
   str_usage << "           --stop_threshold_eou=<float>" << std::endl;
   str_usage << "           --custom_configuration=<key:value,key:value,...>" << std::endl;
+  str_usage << "           --timeout_ms=<uint64_t>" << std::endl;
+  str_usage << "           --max_grpc_message_size=<uint64_t>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -507,9 +511,11 @@ main(int argc, char** argv)
 
   std::shared_ptr<grpc::Channel> grpc_channel;
   try {
-    auto creds =
-        riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_root_cert, FLAGS_ssl_client_key, FLAGS_ssl_client_cert, FLAGS_metadata);
-    grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
+    auto creds = riva::clients::CreateChannelCredentials(
+        FLAGS_use_ssl, FLAGS_ssl_root_cert, FLAGS_ssl_client_key, FLAGS_ssl_client_cert,
+        FLAGS_metadata);
+    grpc_channel = riva::clients::CreateChannelBlocking(
+        FLAGS_riva_uri, creds, FLAGS_timeout_ms, FLAGS_max_grpc_message_size);
   }
   catch (const std::exception& e) {
     std::cerr << "Error creating GRPC channel: " << e.what() << std::endl;

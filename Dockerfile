@@ -1,14 +1,15 @@
 # syntax = docker/dockerfile:1.2
-ARG BAZEL_VERSION=5.0.0
+ARG BAZEL_VERSION=6.2.1
 ARG TARGET_ARCH=x86_64 # valid values: x86_64, aarch64
 ARG TARGET_OS=linux    # valid values: linux, l4t
 
-FROM ubuntu:20.04 AS base
+FROM ubuntu:24.04 AS base
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
-    libasound2 \
+    libasound2t64 \
     libogg0 \
+    openssl \
     ca-certificates
 
 FROM base AS builddep
@@ -22,7 +23,8 @@ RUN apt-get update && apt-get install -y \
     unzip \
     build-essential \
     libasound2-dev \
-    libogg-dev
+    libogg-dev \
+    libssl-dev
 
 RUN if [ "$TARGET_ARCH" = "aarch64" ] && [ "$TARGET_OS" = "l4t" ]; then \
         apt-get update && apt-get install -y --no-install-recommends openjdk-11-jdk-headless; \
@@ -48,8 +50,8 @@ COPY scripts /work/scripts
 COPY third_party /work/third_party
 COPY riva /work/riva
 ARG BAZEL_CACHE_ARG=""
-RUN bazel test $BAZEL_CACHE_ARG --config=${TARGET_OS}/${TARGET_ARCH} //riva/clients/... --test_summary=detailed --test_output=all && \
-    bazel build --stamp --config=release --config=${TARGET_OS}/${TARGET_ARCH} $BAZEL_CACHE_ARG //... && \
+RUN bazel test $BAZEL_CACHE_ARG --config=${TARGET_OS}/${TARGET_ARCH} //riva/clients/... --test_summary=detailed --test_output=all
+RUN bazel build --stamp --config=release --config=${TARGET_OS}/${TARGET_ARCH} $BAZEL_CACHE_ARG //... && \
     cp -R /work/bazel-bin/riva /opt
 
 RUN ls -lah /work; ls -lah /work/.git; cat /work/.bazelrc

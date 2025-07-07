@@ -17,17 +17,24 @@ new_local_repository(
 
 http_archive(
   name = "com_google_absl",
-  urls = ["https://github.com/abseil/abseil-cpp/archive/c22c032a353b5dc16d86ddc879e628344e591e77.zip"],
-  strip_prefix = "abseil-cpp-c22c032a353b5dc16d86ddc879e628344e591e77",
-  sha256 = "88e79f5b7e3f92d3f19ad470cb38ef6becaf9bf195206ca9dba1a23d4017bc1a"
+  urls = ["https://github.com/abseil/abseil-cpp/archive/refs/tags/20220623.1.tar.gz"],
+  strip_prefix = "abseil-cpp-20220623.1",
+  sha256 = "91ac87d30cc6d79f9ab974c51874a704de9c2647c40f6932597329a282217ba8"
+)
+
+# hack to force grpc to use local openssl instead of boringssl (to avoid conflicts with libcurl)
+new_local_repository(
+    name = "boringssl",
+    path = "/usr/include/openssl",
+    build_file = "//third_party:BUILD.boringssl"
 )
 
 http_archive(
     name = "com_github_grpc_grpc",
-    sha256 = "8c05641b9f91cbc92f51cc4a5b3a226788d7a63f20af4ca7aaca50d92cc94a0d",
-    strip_prefix = "grpc-1.44.0",
+    sha256 = "fb1ed98eb3555877d55eb2b948caca44bc8601c6704896594de81558639709ef",
+    strip_prefix = "grpc-1.50.1",
     urls = [
-        "https://github.com/grpc/grpc/archive/v1.44.0.tar.gz",
+        "https://github.com/grpc/grpc/archive/refs/tags/v1.50.1.tar.gz",
     ],
 )
 
@@ -87,4 +94,11 @@ http_archive(
     sha256 = "a20a1dff1cdf0719d1e995112915e9966debf1470ee26bb31b2f510ccf00ef40",
     strip_prefix = "opusfile-0.12",
     build_file = "//third_party:BUILD.libopusfile"
+)
+
+http_archive(
+    name = "platforms",
+    urls = ["https://github.com/bazelbuild/platforms/archive/refs/tags/1.0.0.tar.gz"],
+    strip_prefix = "platforms-1.0.0",
+    sha256 = "852b71bfa15712cec124e4a57179b6bc95d59fdf5052945f5d550e072501a769",
 )

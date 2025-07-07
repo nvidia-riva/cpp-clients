@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 try-import %workspace%/user.bazelrc
-build --show_timestamps --keep_going --color=yes --cxxopt='-std=c++1z' --linkopt='-lstdc++fs'
+build --show_timestamps --keep_going --color=yes --cxxopt='-std=c++17' --linkopt='-lstdc++fs'
 build --workspace_status_command=scripts/workspace_status.sh
 
 build:debug --compilation_mode dbg

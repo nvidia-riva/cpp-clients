@@ -58,11 +58,11 @@ class CustomAuthenticator : public grpc::MetadataCredentialsPlugin {
 std::shared_ptr<grpc::Channel>
 CreateChannelBlocking(
     const std::string& uri, const std::shared_ptr<grpc::ChannelCredentials> credentials,
-    uint64_t timeout_ms = 10000)
+    uint64_t timeout_ms = 10000, uint64_t max_grpc_message_size = MAX_GRPC_MESSAGE_SIZE)
 {
   grpc::ChannelArguments channel_args;
-  channel_args.SetMaxReceiveMessageSize(MAX_GRPC_MESSAGE_SIZE);
-  channel_args.SetMaxSendMessageSize(MAX_GRPC_MESSAGE_SIZE);
+  channel_args.SetMaxReceiveMessageSize(max_grpc_message_size);
+  channel_args.SetMaxSendMessageSize(max_grpc_message_size);
   auto channel = grpc::CreateCustomChannel(uri, credentials, channel_args);
 
   auto deadline = std::chrono::system_clock::now() + std::chrono::milliseconds(timeout_ms);
@@ -120,4 +120,3 @@ CreateChannelCredentials(
 }
 
 }  // namespace riva::clients
-

@@ -95,12 +95,12 @@ DEFINE_double(
 DEFINE_string(
     custom_configuration, "",
     "Custom configurations to be sent to the server as key value pairs <key:value,key:value,...>");
-DEFINE_bool(
-    speaker_diarization, false, 
-    "Flag that controls if speaker diarization is requested");
+DEFINE_bool(speaker_diarization, false, "Flag that controls if speaker diarization is requested");
 DEFINE_int32(
     diarization_max_speakers, 4,
     "Max number of speakers to detect when performing speaker diarization. Default is 4 (Max)");
+DEFINE_uint64(timeout_ms, 10000, "Timeout for GRPC channel creation");
+DEFINE_uint64(max_grpc_message_size, 64 * 1024 * 1024, "Max GRPC message size");
 
 void
 signal_handler(int signal_num)
@@ -156,6 +156,8 @@ main(int argc, char** argv)
   str_usage << "           --custom_configuration=<key:value,key:value,...>" << std::endl;
   str_usage << "           --speaker_diarization=<true|false>" << std::endl;
   str_usage << "           --diarization_max_speakers=<int>" << std::endl;
+  str_usage << "           --timeout_ms=<uint64_t>" << std::endl;
+  str_usage << "           --max_grpc_message_size=<uint64_t>" << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -187,9 +189,11 @@ main(int argc, char** argv)
 
   std::shared_ptr<grpc::Channel> grpc_channel;
   try {
-    auto creds =
-        riva::clients::CreateChannelCredentials(FLAGS_use_ssl, FLAGS_ssl_root_cert, FLAGS_ssl_client_key, FLAGS_ssl_client_cert, FLAGS_metadata);
-    grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds);
+    auto creds = riva::clients::CreateChannelCredentials(
+        FLAGS_use_ssl, FLAGS_ssl_root_cert, FLAGS_ssl_client_key, FLAGS_ssl_client_cert,
+        FLAGS_metadata);
+    grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds, FLAGS_timeout_ms,
+                                                        FLAGS_max_grpc_message_size);
   }
   catch (const std::exception& e) {
     std::cerr << "Error creating GRPC channel: " << e.what() << std::endl;
@@ -222,8 +226,8 @@ main(int argc, char** argv)
       FLAGS_interim_results, FLAGS_output_filename, FLAGS_model_name, FLAGS_simulate_realtime,
       FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score,
       FLAGS_start_history, FLAGS_start_threshold, FLAGS_stop_history, FLAGS_stop_history_eou,
-      FLAGS_stop_threshold, FLAGS_stop_threshold_eou, FLAGS_custom_configuration, FLAGS_speaker_diarization,
-      FLAGS_diarization_max_speakers);
+      FLAGS_stop_threshold, FLAGS_stop_threshold_eou, FLAGS_custom_configuration,
+      FLAGS_speaker_diarization, FLAGS_diarization_max_speakers);
 
   if (FLAGS_audio_file.size()) {
     return recognize_client.DoStreamingFromFile(
