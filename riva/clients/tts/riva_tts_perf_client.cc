@@ -64,6 +64,7 @@ DEFINE_string(
 DEFINE_int32(zero_shot_quality, 20, "Required quality of output audio, ranges between 1-40.");
 DEFINE_string(custom_dictionary, "", " User dictionary containing graph-to-phone custom words");
 DEFINE_string(zero_shot_transcript, "", "Transcript corresponding to Zero shot audio prompt.");
+DEFINE_double(speed, 1.0, "Speed of generated audio, ranges between 0.5-2.0");
 
 static const std::string LC_enUS = "en-US";
 
@@ -115,7 +116,7 @@ synthesizeBatch(
     std::unique_ptr<nr_tts::RivaSpeechSynthesis::Stub> tts, std::string text, std::string language,
     uint32_t rate, std::string voice_name, std::string filepath,
     std::string zero_shot_prompt_filename, int32_t zero_shot_quality, std::string custom_dictionary,
-    std::string zero_shot_transcript)
+    std::string zero_shot_transcript, double speed)
 {
   // Parse command line arguments.
   nr_tts::SynthesizeSpeechRequest request;
@@ -123,7 +124,11 @@ synthesizeBatch(
   request.set_language_code(language);
   request.set_sample_rate_hz(rate);
   request.set_voice_name(voice_name);
-
+  if (speed < 0.5 || speed > 2.0) {
+    LOG(ERROR) << "Speed must be between 0.5 and 2.0" << std::endl;
+    return -1;
+  }
+  request.set_speed(speed);
   if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
     request.set_encoding(nr::LINEAR_PCM);
   } else if (FLAGS_audio_encoding == "opus") {
@@ -207,13 +212,17 @@ synthesizeOnline(
     std::unique_ptr<nr_tts::RivaSpeechSynthesis::Stub> tts, std::vector<std::string> text, std::string language,
     uint32_t rate, std::string voice_name, double* time_to_first_chunk,
     std::vector<double>* time_to_next_chunk, size_t* num_samples, std::string filepath,
-    std::string zero_shot_prompt_filename, int32_t zero_shot_quality)
+    std::string zero_shot_prompt_filename, int32_t zero_shot_quality, double speed)
 {
   nr_tts::SynthesizeSpeechRequest request;
   request.set_language_code(language);
   request.set_sample_rate_hz(rate);
   request.set_voice_name(voice_name);
-
+  if (speed < 0.5 || speed > 2.0) {
+    LOG(ERROR) << "Speed must be between 0.5 and 2.0" << std::endl;
+    return;
+  }
+  request.set_speed(speed);
   auto ae = nr::AudioEncoding::ENCODING_UNSPECIFIED;
   if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
     ae = nr::LINEAR_PCM;
@@ -366,6 +375,7 @@ main(int argc, char** argv)
   str_usage << "           --zero_shot_quality=<quality>" << std::endl;
   str_usage << "           --zero_shot_transcript=<text>" << std::endl;
   str_usage << "           --custom_dictionary=<filename> " << std::endl;
+  str_usage << "           --speed=<speed> " << std::endl;
 
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
@@ -507,7 +517,7 @@ main(int argc, char** argv)
               std::move(tts), texts, FLAGS_language, rate, FLAGS_voice_name,
               &time_to_first_chunk, time_to_next_chunk, &num_samples,
               std::to_string(count) + ".wav", FLAGS_zero_shot_audio_prompt,
-              FLAGS_zero_shot_quality);
+              FLAGS_zero_shot_quality, FLAGS_speed);
           latencies_first_chunk[i]->push_back(time_to_first_chunk);
           latencies_next_chunks[i]->insert(
               latencies_next_chunks[i]->end(), time_to_next_chunk->begin(),
@@ -585,7 +595,7 @@ main(int argc, char** argv)
           int32_t num_samples = synthesizeBatch(
               std::move(tts), sentences[i][s].second, FLAGS_language, rate, FLAGS_voice_name,
               std::to_string(count) + ".wav", FLAGS_zero_shot_audio_prompt,
-              FLAGS_zero_shot_quality, FLAGS_custom_dictionary, FLAGS_zero_shot_transcript);
+              FLAGS_zero_shot_quality, FLAGS_custom_dictionary, FLAGS_zero_shot_transcript, FLAGS_speed);
           results_num_samples[i]->push_back(num_samples);
           count++;
         }

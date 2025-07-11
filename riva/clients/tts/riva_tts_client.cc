@@ -56,6 +56,7 @@ DEFINE_string(custom_dictionary, "", " User dictionary containing graph-to-phone
 DEFINE_string(zero_shot_transcript, "", "Transcript corresponding to Zero shot audio prompt.");
 DEFINE_uint64(timeout_ms, 10000, "Timeout for GRPC channel creation");
 DEFINE_uint64(max_grpc_message_size, MAX_GRPC_MESSAGE_SIZE, "Max GRPC message size");
+DEFINE_double(speed, 1.0, "Speed of generated audio, ranges between 0.5-2.0");
 
 static const std::string LC_enUS = "en-US";
 
@@ -121,6 +122,7 @@ main(int argc, char** argv)
   str_usage << "           --custom_dictionary=<filename> " << std::endl;
   str_usage << "           --timeout_ms=<timeout_ms> " << std::endl;
   str_usage << "           --max_grpc_message_size=<max_grpc_message_size> " << std::endl;
+  str_usage << "           --speed=<speed> " << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -208,6 +210,11 @@ main(int argc, char** argv)
 
   request.set_sample_rate_hz(rate);
   request.set_voice_name(FLAGS_voice_name);
+  if (FLAGS_speed < 0.5 || FLAGS_speed > 2.0) {
+    LOG(ERROR) << "Speed must be between 0.5 and 2.0" << std::endl;
+    return -1;
+  }
+  request.set_speed(FLAGS_speed);
   if (not FLAGS_zero_shot_audio_prompt.empty()) {
     auto zero_shot_data = request.mutable_zero_shot_data();
     std::vector<std::shared_ptr<WaveData>> audio_prompt;
