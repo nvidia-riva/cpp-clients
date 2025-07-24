@@ -9,7 +9,230 @@
 #include <iomanip>
 #include <functional>
 #include <ratio>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <cstring>
+#include <sstream>
+#include <iostream>
+#include <fstream>
 
+// Helper method for HTTP requests using raw sockets
+std::string nvidia::riva::realtime::RecognitionClient::MakeHttpRequest(const std::string& host, int port, const std::string& path, const std::string& method, const std::string& body) {
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        std::cerr << "Failed to create socket" << std::endl;
+        return "";
+    }
+    
+    struct hostent* server = gethostbyname(host.c_str());
+    if (server == nullptr) {
+        std::cerr << "Failed to resolve host: " << host << std::endl;
+        close(sock);
+        return "";
+    }
+    
+    struct sockaddr_in serv_addr;
+    memset(&serv_addr, 0, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    memcpy(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
+    serv_addr.sin_port = htons(port);
+    
+    if (connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+        std::cerr << "Failed to connect to " << host << ":" << port << std::endl;
+        close(sock);
+        return "";
+    }
+    
+    // Build HTTP request
+    std::ostringstream request;
+    request << method << " " << path << " HTTP/1.1\r\n";
+    request << "Host: " << host << ":" << port << "\r\n";
+    request << "Content-Type: application/json\r\n";
+    request << "Content-Length: " << body.length() << "\r\n";
+    request << "Connection: close\r\n";
+    request << "\r\n";
+    request << body;
+    
+    std::string request_str = request.str();
+    
+    // Send request
+    if (send(sock, request_str.c_str(), request_str.length(), 0) < 0) {
+        std::cerr << "Failed to send HTTP request" << std::endl;
+        close(sock);
+        return "";
+    }
+    
+    // Receive response
+    std::string response;
+    char buffer[4096];
+    int bytes_received;
+    
+    while ((bytes_received = recv(sock, buffer, sizeof(buffer) - 1, 0)) > 0) {
+        buffer[bytes_received] = '\0';
+        response += buffer;
+    }
+    
+    close(sock);
+    
+    // Extract JSON body from HTTP response
+    size_t body_start = response.find("\r\n\r\n");
+    if (body_start != std::string::npos) {
+        return response.substr(body_start + 4);
+    }
+    
+    return response;
+}
+
+bool nvidia::riva::realtime::RecognitionClient::InitializeHttpSession() {
+    if (server_url_.empty()) {
+        std::cerr << "Server URL not set" << std::endl;
+        return false;
+    }
+    
+    // Parse server URL to extract host and port
+    std::string host = server_url_;
+    int port = 80; // Default HTTP port
+    
+    // Check if port is specified
+    size_t colon_pos = host.find(':');
+    if (colon_pos != std::string::npos) {
+        port = std::stoi(host.substr(colon_pos + 1));
+        host = host.substr(0, colon_pos);
+    }
+    
+    std::string path = "/v1/realtime/transcription_sessions";
+    std::string response_body = MakeHttpRequest(host, port, path, "POST", "{}");
+    
+    if (response_body.empty()) {
+        std::cerr << "HTTP request failed" << std::endl;
+        return false;
+    }
+    
+    try {
+        // Parse JSON response using rapidjson
+        rapidjson::Document session_data;
+        if (session_data.Parse(response_body.c_str()).HasParseError()) {
+            std::cerr << "Failed to parse JSON response" << std::endl;
+            return false;
+        }
+        
+        // Extract session ID
+        if (session_data.HasMember("id")) {
+            session_id_ = session_data["id"].GetString();
+        } else {
+            std::cerr << "No session ID found in response" << std::endl;
+            return false;
+        }
+        
+        // Store server defaults but don't overwrite user-provided values
+        SessionConfig serverDefaults;
+        
+        if (session_data.HasMember("input_audio_transcription")) {
+            const auto& transcription = session_data["input_audio_transcription"];
+            if (transcription.HasMember("language")) {
+                serverDefaults.language_code_ = transcription["language"].GetString();
+            }
+            if (transcription.HasMember("model")) {
+                serverDefaults.model_name_ = transcription["model"].GetString();
+            }
+        }
+        
+        if (session_data.HasMember("recognition_config")) {
+            const auto& recognition = session_data["recognition_config"];
+            if (recognition.HasMember("max_alternatives")) {
+                serverDefaults.max_alternatives_ = recognition["max_alternatives"].GetInt();
+            }
+            if (recognition.HasMember("enable_automatic_punctuation")) {
+                serverDefaults.automatic_punctuation_ = recognition["enable_automatic_punctuation"].GetBool();
+            }
+            if (recognition.HasMember("enable_word_time_offsets")) {
+                serverDefaults.word_time_offsets_ = recognition["enable_word_time_offsets"].GetBool();
+            }
+            if (recognition.HasMember("enable_profanity_filter")) {
+                serverDefaults.profanity_filter_ = recognition["enable_profanity_filter"].GetBool();
+            }
+            if (recognition.HasMember("enable_verbatim_transcripts")) {
+                serverDefaults.verbatim_transcripts_ = recognition["enable_verbatim_transcripts"].GetBool();
+            }
+        }
+        
+        if (session_data.HasMember("speaker_diarization")) {
+            const auto& diarization = session_data["speaker_diarization"];
+            if (diarization.HasMember("enable_speaker_diarization")) {
+                serverDefaults.speaker_diarization_ = diarization["enable_speaker_diarization"].GetBool();
+            }
+            if (diarization.HasMember("max_speaker_count")) {
+                serverDefaults.diarization_max_speakers_ = diarization["max_speaker_count"].GetInt();
+            }
+        }
+        
+        if (session_data.HasMember("endpointing_config")) {
+            const auto& endpointing = session_data["endpointing_config"];
+            if (endpointing.HasMember("start_history")) {
+                serverDefaults.start_history_ = endpointing["start_history"].GetInt();
+            }
+            if (endpointing.HasMember("start_threshold")) {
+                serverDefaults.start_threshold_ = endpointing["start_threshold"].GetDouble();
+            }
+            if (endpointing.HasMember("stop_history")) {
+                serverDefaults.stop_history_ = endpointing["stop_history"].GetInt();
+            }
+            if (endpointing.HasMember("stop_threshold")) {
+                serverDefaults.stop_threshold_ = endpointing["stop_threshold"].GetDouble();
+            }
+            if (endpointing.HasMember("stop_history_eou")) {
+                serverDefaults.stop_history_eou_ = endpointing["stop_history_eou"].GetInt();
+            }
+            if (endpointing.HasMember("stop_threshold_eou")) {
+                serverDefaults.stop_threshold_eou_ = endpointing["stop_threshold_eou"].GetDouble();
+            }
+        }
+        
+        // Only use server defaults for values that haven't been set by user
+        if (sessionConfig_.language_code_.empty()) {
+            sessionConfig_.language_code_ = serverDefaults.language_code_;
+        }
+        if (sessionConfig_.model_name_.empty()) {
+            sessionConfig_.model_name_ = serverDefaults.model_name_;
+        }
+        if (sessionConfig_.max_alternatives_ == 0) {
+            sessionConfig_.max_alternatives_ = serverDefaults.max_alternatives_;
+        }
+        if (sessionConfig_.start_history_ == -1) {
+            sessionConfig_.start_history_ = serverDefaults.start_history_;
+        }
+        if (sessionConfig_.start_threshold_ == -1.0) {
+            sessionConfig_.start_threshold_ = serverDefaults.start_threshold_;
+        }
+        if (sessionConfig_.stop_history_ == -1) {
+            sessionConfig_.stop_history_ = serverDefaults.stop_history_;
+        }
+        if (sessionConfig_.stop_threshold_ == -1.0) {
+            sessionConfig_.stop_threshold_ = serverDefaults.stop_threshold_;
+        }
+        if (sessionConfig_.stop_history_eou_ == -1) {
+            sessionConfig_.stop_history_eou_ = serverDefaults.stop_history_eou_;
+        }
+        if (sessionConfig_.stop_threshold_eou_ == -1.0) {
+            sessionConfig_.stop_threshold_eou_ = serverDefaults.stop_threshold_eou_;
+        }
+        
+        // Convert rapidjson document to string for logging
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        session_data.Accept(writer);
+        
+        std::cout << "[" << objectName_ << "] Session initialized with defaults: " << buffer.GetString() << std::endl;
+        return true;
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to parse session response: " << e.what() << std::endl;
+        return false;
+    }
+}
 
 nvidia::riva::realtime::RecognitionClient::RecognitionClient( 
     const std::string& objectName,
@@ -30,6 +253,17 @@ nvidia::riva::realtime::RecognitionClient::RecognitionClient(
       perfCounter_(perfCounter) {
 
     nvidia::riva::realtime::WebSocketClientBase::SetConnectionTimeout(connectionTimeoutInMs_);
+    
+    // Initialize default session config
+    sessionConfig_.language_code_ = "en-US";
+    sessionConfig_.model_name_ = "parakeet-1.1b-en-US-asr-streaming-silero-vad-asr-bls-ensemble";
+    sessionConfig_.max_alternatives_ = 1;
+    sessionConfig_.automatic_punctuation_ = true;
+    sessionConfig_.word_time_offsets_ = true;
+    sessionConfig_.profanity_filter_ = false;
+    sessionConfig_.verbatim_transcripts_ = true;
+    sessionConfig_.speaker_diarization_ = false;
+    sessionConfig_.diarization_max_speakers_ = 4;
 }
 
 
@@ -189,19 +423,26 @@ void nvidia::riva::realtime::RecognitionClient::SendAudioDone() {
     }
 }
 
-// Session initialization (inspired by Python realtime.py)
+// Modify the InitializeSession method to call HTTP initialization first
 bool nvidia::riva::realtime::RecognitionClient::InitializeSession() {
     std::cout << "[" << objectName_ << "]" <<  " Initializing session..." << std::endl;
     
-    // Wait for the initial connection and session creation (increased from 1000ms to 3000ms)
+    // Step 1: Initialize HTTP session
+    if (!InitializeHttpSession()) {
+        std::cerr << "Failed to initialize HTTP session" << std::endl;
+        return false;
+    }
+    
+    // Step 2: Wait for the initial connection and session creation
     std::this_thread::sleep_for(std::chrono::milliseconds(3000));
     
-    // Check if we're still connected
+    // Step 3: Check if we're still connected
     if (IsConnectionClosed()) {
         std::cerr << "Connection lost during session initialization" << std::endl;
         return false;
     }
     
+    // Step 4: Update session configuration
     return UpdateSessionConfig();
 }
 
@@ -213,7 +454,7 @@ bool nvidia::riva::realtime::RecognitionClient::UpdateSessionConfig() {
     std::cout << "Using WAV file parameters - Sample rate: " << sampleRateHz 
               << " Hz, Channels: " << numChannels << std::endl;
     
-    // Create session configuration similar to Python client
+    // Create session configuration using sessionConfig_ (which now has defaults + user overrides)
     rapidjson::Document doc;
     doc.SetObject();
     rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
@@ -221,11 +462,19 @@ bool nvidia::riva::realtime::RecognitionClient::UpdateSessionConfig() {
     // Create session config
     rapidjson::Value session_config(rapidjson::kObjectType);
     
+    // Add modalities
+    rapidjson::Value modalities(rapidjson::kArrayType);
+    modalities.PushBack(rapidjson::Value("text", allocator), allocator);
+    session_config.AddMember("modalities", modalities, allocator);
+    
+    // Add input audio format
+    session_config.AddMember("input_audio_format", rapidjson::Value("pcm16", allocator), allocator);
+    
     // Input audio transcription config
     rapidjson::Value transcription_config(rapidjson::kObjectType);
-    transcription_config.AddMember("language", "en-US", allocator);
-    transcription_config.AddMember("model", "parakeet-1.1b-en-US-asr-streaming-silero-vad-asr-bls-ensemble", allocator);
-    transcription_config.AddMember("prompt", "", allocator);
+    transcription_config.AddMember("language", rapidjson::Value(sessionConfig_.language_code_.c_str(), allocator), allocator);
+    transcription_config.AddMember("model", rapidjson::Value(sessionConfig_.model_name_.c_str(), allocator), allocator);
+    transcription_config.AddMember("prompt", rapidjson::Value(rapidjson::kNullType), allocator);
     session_config.AddMember("input_audio_transcription", transcription_config, allocator);
     
     // Input audio params - use actual WAV file parameters
@@ -234,18 +483,56 @@ bool nvidia::riva::realtime::RecognitionClient::UpdateSessionConfig() {
     audio_params.AddMember("num_channels", numChannels, allocator);
     session_config.AddMember("input_audio_params", audio_params, allocator);
     
-    // Recognition config
+    // Recognition config - use session configuration
     rapidjson::Value recognition_config(rapidjson::kObjectType);
-    recognition_config.AddMember("max_alternatives", 1, allocator);
-    recognition_config.AddMember("enable_automatic_punctuation", false, allocator);
-    recognition_config.AddMember("enable_word_time_offsets", false, allocator);
-    recognition_config.AddMember("enable_profanity_filter", false, allocator);
-    recognition_config.AddMember("enable_verbatim_transcripts", false, allocator);
+    recognition_config.AddMember("max_alternatives", sessionConfig_.max_alternatives_, allocator);
+    recognition_config.AddMember("enable_automatic_punctuation", sessionConfig_.automatic_punctuation_, allocator);
+    recognition_config.AddMember("enable_word_time_offsets", sessionConfig_.word_time_offsets_, allocator);
+    recognition_config.AddMember("enable_profanity_filter", sessionConfig_.profanity_filter_, allocator);
+    recognition_config.AddMember("enable_verbatim_transcripts", sessionConfig_.verbatim_transcripts_, allocator);
+    recognition_config.AddMember("custom_configuration", rapidjson::Value(sessionConfig_.custom_configuration_.c_str(), allocator), allocator);
     session_config.AddMember("recognition_config", recognition_config, allocator);
+    
+    // Speaker diarization config
+    rapidjson::Value diarization_config(rapidjson::kObjectType);
+    diarization_config.AddMember("enable_speaker_diarization", sessionConfig_.speaker_diarization_, allocator);
+    diarization_config.AddMember("max_speaker_count", sessionConfig_.diarization_max_speakers_, allocator);
+    session_config.AddMember("speaker_diarization", diarization_config, allocator);
+    
+    // Word boosting config
+    rapidjson::Value word_boosting_config(rapidjson::kObjectType);
+    bool enable_word_boosting = !sessionConfig_.boosted_words_file_.empty();
+    word_boosting_config.AddMember("enable_word_boosting", enable_word_boosting, allocator);
+    
+    if (enable_word_boosting) {
+        rapidjson::Value word_list(rapidjson::kArrayType);
+        std::ifstream file(sessionConfig_.boosted_words_file_);
+        std::string word;
+        while (std::getline(file, word)) {
+            if (!word.empty()) {
+                word_list.PushBack(rapidjson::Value(word.c_str(), allocator), allocator);
+            }
+        }
+        word_boosting_config.AddMember("word_boosting_list", word_list, allocator);
+    } else {
+        rapidjson::Value empty_list(rapidjson::kArrayType);
+        word_boosting_config.AddMember("word_boosting_list", empty_list, allocator);
+    }
+    session_config.AddMember("word_boosting", word_boosting_config, allocator);
+    
+    // Endpointing config
+    rapidjson::Value endpointing_config(rapidjson::kObjectType);
+    endpointing_config.AddMember("start_history", sessionConfig_.start_history_, allocator);
+    endpointing_config.AddMember("start_threshold", sessionConfig_.start_threshold_, allocator);
+    endpointing_config.AddMember("stop_history", sessionConfig_.stop_history_, allocator);
+    endpointing_config.AddMember("stop_threshold", sessionConfig_.stop_threshold_, allocator);
+    endpointing_config.AddMember("stop_history_eou", sessionConfig_.stop_history_eou_, allocator);
+    endpointing_config.AddMember("stop_threshold_eou", sessionConfig_.stop_threshold_eou_, allocator);
+    session_config.AddMember("endpointing_config", endpointing_config, allocator);
     
     // Create update request
     rapidjson::Value update_request(rapidjson::kObjectType);
-    update_request.AddMember("type", "transcription_session.update", allocator);
+    update_request.AddMember("type", rapidjson::Value("transcription_session.update", allocator), allocator);
     update_request.AddMember("session", session_config, allocator);
     
     // Send the update request
@@ -265,6 +552,8 @@ bool nvidia::riva::realtime::RecognitionClient::UpdateSessionConfig() {
             std::cout << "Session update request sent" << std::endl;
         }
     }
+
+    
 
     WaitForSessionUpdate();
     return true;

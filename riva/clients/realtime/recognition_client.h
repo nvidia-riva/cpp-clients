@@ -25,7 +25,48 @@
 #include "base_client.h"
 #include "riva/utils/stats_builder/stats_builder.h"
 
+// Add these includes for HTTP functionality
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <cstring>
+
 namespace nvidia::riva::realtime {
+    class SessionConfig {
+        public:
+            std::size_t connectionTimeoutInMs_;
+            std::size_t sessionInitTimeoutInMs_;
+            std::size_t sessionUpdateTimeoutInMs_;
+            std::size_t transcriptionTimeoutInMs_;
+            std::size_t chunkDelayTimeInMs_;
+            
+            // Add session configuration parameters
+            std::string language_code_;
+            std::string model_name_;
+            int max_alternatives_;
+            bool automatic_punctuation_;
+            bool word_time_offsets_;
+            bool profanity_filter_;
+            bool verbatim_transcripts_;
+            std::string boosted_words_file_;
+            double boosted_words_score_;
+            bool speaker_diarization_;
+            int diarization_max_speakers_;
+            int start_history_;
+            double start_threshold_;
+            int stop_history_;
+            double stop_threshold_;
+            int stop_history_eou_;
+            double stop_threshold_eou_;
+            std::string custom_configuration_;
+            
+            // Add HTTP session data
+            std::string session_id_;
+            std::string server_url_;
+    };
+    
     class RecognitionClient : public WebSocketClientBase {
         private:
             
@@ -56,6 +97,19 @@ namespace nvidia::riva::realtime {
             // Audio processing
             std::shared_ptr<AudioChunks> audioChunksPtr_;
 
+            // Add session configuration
+            SessionConfig sessionConfig_;
+
+            // Add HTTP session data
+            std::string session_id_;
+            std::string server_url_;
+            
+            // HTTP session initialization method
+            bool InitializeHttpSession();
+            
+            // Helper method for HTTP requests
+            std::string MakeHttpRequest(const std::string& host, int port, const std::string& path, const std::string& method, const std::string& body);
+
             // Audio streaming methods
             void SendAudioAppend(const std::string& audioBase64);
             void SendAudioCommit();
@@ -79,6 +133,9 @@ namespace nvidia::riva::realtime {
                                     const std::size_t transcriptionTimeoutInMs,
                                     const std::size_t chunkDelayTimeInMs);
 
+            // Session configuration
+            void SetSessionConfig(const SessionConfig& config) { sessionConfig_ = config; }
+
             // Session management methods
             bool InitializeSession();
             bool UpdateSessionConfig();
@@ -91,6 +148,10 @@ namespace nvidia::riva::realtime {
             
             // WAV file processing methods
             void SendAudioChunks(const bool simulateRealtime = false);
+            
+            // Add method to set server URL
+            void SetServerUrl(const std::string& server_url) { server_url_ = server_url; }
+            std::string GetSessionId() const { return session_id_; }
     };
 
 } // namespace nvidia::riva::realtime
