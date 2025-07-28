@@ -61,7 +61,6 @@ FROM base as riva-clients
 
 WORKDIR /work
 COPY --from=builder /opt/riva/clients/asr/riva_asr_client /usr/local/bin/
-COPY --from=builder /opt/riva/clients/asr/riva_realtime_asr_client /usr/local/bin/
 COPY --from=builder /opt/riva/clients/asr/riva_streaming_asr_client /usr/local/bin/
 COPY --from=builder /opt/riva/clients/tts/riva_tts_client /usr/local/bin/
 COPY --from=builder /opt/riva/clients/tts/riva_tts_perf_client /usr/local/bin/
@@ -69,4 +68,5 @@ COPY --from=builder /opt/riva/clients/nlp/riva_nlp_punct /usr/local/bin/
 COPY --from=builder /opt/riva/clients/nmt/riva_nmt_t2t_client /usr/local/bin/
 COPY --from=builder /opt/riva/clients/nmt/riva_nmt_streaming_s2t_client /usr/local/bin/
 COPY --from=builder /opt/riva/clients/nmt/riva_nmt_streaming_s2s_client /usr/local/bin/
+COPY --from=builder /opt/riva/clients/realtime/riva_realtime_asr_client /usr/local/bin/
 COPY examples /work/examples

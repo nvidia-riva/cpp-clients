@@ -32,3 +32,28 @@ cc_library(
         "@com_github_gflags_gflags//:gflags",
     ],
 ) 
+
+cc_binary(
+    name = "riva_realtime_asr_client",
+    srcs = ["riva_realtime_asr_client.cc"],
+    includes = ["-Irealtime"],
+    deps = [
+        ":realtime_audio_client_lib",
+        "@websocketpp//:websocketpp",
+        "@rapidjson//:rapidjson",
+        "//riva/utils/stats_builder:stats_builder_lib",
+        "//riva/utils/wav:reader",
+    ] + select({
+        "@platforms//cpu:aarch64": [
+            "@alsa_aarch64//:libasound"
+        ],
+        "//conditions:default": [
+            "@alsa//:libasound"
+        ],
+    }),
+    linkopts = [
+        "-lssl",
+        "-lcrypto",
+        "-lboost_system",
+    ]
+)
