@@ -18,7 +18,7 @@
 #include <vector>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-#include "riva/clients/realtime/recognition_client.h"
+#include "riva/clients/realtime/realtime_client.h"
 #include "riva/utils/stats_builder/stats_builder.h"
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
@@ -85,7 +85,7 @@ DEFINE_bool(show_detailed_stats, true, "Show detailed statistics");
 DEFINE_bool(show_tabular_stats, true, "Show tabular statistics");
 
 // Global client pointer for signal handling
-std::vector<nvidia::riva::realtime::RecognitionClient*> g_clients;
+std::vector<nvidia::riva::realtime::RealtimeClient*> g_clients;
 std::mutex g_clients_mutex;
 
 // Signal handler for graceful shutdown
@@ -117,7 +117,7 @@ void client_runner( const std::string& uri,
                     const std::size_t chunkDelayTimeInMs, 
                     const bool simulateRealtime = false) 
 {
-    nvidia::riva::realtime::RecognitionClient client(perfCounter.GetObjectName(), audio_chunks, perfCounter); 
+    nvidia::riva::realtime::RealtimeClient client(perfCounter.GetObjectName(), audio_chunks, perfCounter); 
     
     // Extract server URL from URI (remove ws:// and path)
     std::string server_url = uri;

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "recognition_client.h"
+#include "realtime_client.h"
 #include "base_client.h"
 #include <chrono>
 #include <iomanip>
@@ -20,7 +20,7 @@
 #include <fstream>
 
 // Helper method for HTTP requests using raw sockets
-std::string nvidia::riva::realtime::RecognitionClient::MakeHttpRequest(const std::string& host, int port, const std::string& path, const std::string& method, const std::string& body) {
+std::string nvidia::riva::realtime::RealtimeClient::MakeHttpRequest(const std::string& host, int port, const std::string& path, const std::string& method, const std::string& body) {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
         std::cerr << "Failed to create socket" << std::endl;
@@ -86,7 +86,7 @@ std::string nvidia::riva::realtime::RecognitionClient::MakeHttpRequest(const std
     return response;
 }
 
-bool nvidia::riva::realtime::RecognitionClient::InitializeHttpSession() {
+bool nvidia::riva::realtime::RealtimeClient::InitializeHttpSession() {
     if (server_url_.empty()) {
         std::cerr << "Server URL not set" << std::endl;
         return false;
@@ -234,7 +234,7 @@ bool nvidia::riva::realtime::RecognitionClient::InitializeHttpSession() {
     }
 }
 
-nvidia::riva::realtime::RecognitionClient::RecognitionClient( 
+nvidia::riva::realtime::RealtimeClient::RealtimeClient( 
     const std::string& objectName,
     const std::shared_ptr<AudioChunks> audioChunksPtr,
     nvidia::riva::utils::PerformanceStats& perfCounter)
@@ -267,7 +267,7 @@ nvidia::riva::realtime::RecognitionClient::RecognitionClient(
 }
 
 
-void nvidia::riva::realtime::RecognitionClient::SetTimingConfig(  const std::size_t connectionTimeoutInMs, 
+void nvidia::riva::realtime::RealtimeClient::SetTimingConfig(  const std::size_t connectionTimeoutInMs, 
                                                     const std::size_t sessionInitTimeoutInMs,
                                                     const std::size_t sessionUpdateTimeoutInMs, 
                                                     const std::size_t transcriptionTimeoutInMs,
@@ -280,11 +280,11 @@ void nvidia::riva::realtime::RecognitionClient::SetTimingConfig(  const std::siz
     nvidia::riva::realtime::WebSocketClientBase::SetConnectionTimeout(connectionTimeoutInMs_);
 }
 
-void nvidia::riva::realtime::RecognitionClient::Log(const std::string& message) {
+void nvidia::riva::realtime::RealtimeClient::Log(const std::string& message) {
     std::cout << "[" << objectName_ << "]" <<  message << std::endl;
 }
 
-bool nvidia::riva::realtime::RecognitionClient::WaitForTranscriptionCompletion() {
+bool nvidia::riva::realtime::RealtimeClient::WaitForTranscriptionCompletion() {
     std::unique_lock<std::mutex> lock(transcriptionMutex_);
     
     // Reset completion flag
@@ -306,7 +306,7 @@ bool nvidia::riva::realtime::RecognitionClient::WaitForTranscriptionCompletion()
     return completed;
 }
 
-bool nvidia::riva::realtime::RecognitionClient::WaitForSessionUpdate() {
+bool nvidia::riva::realtime::RealtimeClient::WaitForSessionUpdate() {
     std::unique_lock<std::mutex> lock(sessionMutex_);
     
     if (sessionUpdated_) {
@@ -328,7 +328,7 @@ bool nvidia::riva::realtime::RecognitionClient::WaitForSessionUpdate() {
 }
 
 // Send audio buffer append message (inspired by Python realtime.py)
-void nvidia::riva::realtime::RecognitionClient::SendAudioAppend(const std::string& audioBase64) 
+void nvidia::riva::realtime::RealtimeClient::SendAudioAppend(const std::string& audioBase64) 
 {
     std::lock_guard<std::mutex> lock(connectionMutex_);
     if (IsConnectionOpen()) 
@@ -360,7 +360,7 @@ void nvidia::riva::realtime::RecognitionClient::SendAudioAppend(const std::strin
 }
 
 // Send audio buffer commit message (inspired by Python realtime.py)
-void nvidia::riva::realtime::RecognitionClient::SendAudioCommit() {
+void nvidia::riva::realtime::RealtimeClient::SendAudioCommit() {
     std::lock_guard<std::mutex> lock(connectionMutex_);
     if (IsConnectionOpen()) 
     {
@@ -391,7 +391,7 @@ void nvidia::riva::realtime::RecognitionClient::SendAudioCommit() {
 }
 
 // Send audio buffer done message (inspired by Python realtime.py)
-void nvidia::riva::realtime::RecognitionClient::SendAudioDone() {
+void nvidia::riva::realtime::RealtimeClient::SendAudioDone() {
     std::lock_guard<std::mutex> lock(connectionMutex_);
     if (IsConnectionOpen()) 
     {
@@ -424,7 +424,7 @@ void nvidia::riva::realtime::RecognitionClient::SendAudioDone() {
 }
 
 // Modify the InitializeSession method to call HTTP initialization first
-bool nvidia::riva::realtime::RecognitionClient::InitializeSession() {
+bool nvidia::riva::realtime::RealtimeClient::InitializeSession() {
     std::cout << "[" << objectName_ << "]" <<  " Initializing session..." << std::endl;
     
     // Step 1: Initialize HTTP session
@@ -446,7 +446,7 @@ bool nvidia::riva::realtime::RecognitionClient::InitializeSession() {
     return UpdateSessionConfig();
 }
 
-bool nvidia::riva::realtime::RecognitionClient::UpdateSessionConfig() {
+bool nvidia::riva::realtime::RealtimeClient::UpdateSessionConfig() {
     int sampleRateHz = audioChunksPtr_->GetSampleRateHz();
     int numChannels = audioChunksPtr_->GetNumChannels();
     
@@ -560,7 +560,7 @@ bool nvidia::riva::realtime::RecognitionClient::UpdateSessionConfig() {
 }
 
 // Send audio chunks
-void nvidia::riva::realtime::RecognitionClient::SendAudioChunks(const bool simulateRealtime) {
+void nvidia::riva::realtime::RealtimeClient::SendAudioChunks(const bool simulateRealtime) {
     if (audioChunksPtr_ == nullptr) {
         std::cerr << "Audio chunks pointer is null. Please call InitializeSession first." << std::endl;
         return;
@@ -624,7 +624,7 @@ void nvidia::riva::realtime::RecognitionClient::SendAudioChunks(const bool simul
     SendAudioDone();
 }
 
-void nvidia::riva::realtime::RecognitionClient::HandleMessage(const std::string& message) {
+void nvidia::riva::realtime::RealtimeClient::HandleMessage(const std::string& message) {
     bool is_last_result = false;
     rapidjson::Document doc;
     

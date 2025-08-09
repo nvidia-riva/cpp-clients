@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#ifndef REALTIME_CLIENT_H
-#define REALTIME_CLIENT_H
+#ifndef BASE_REALTIME_CLIENT_H
+#define BASE_REALTIME_CLIENT_H
 
 #include <websocketpp/config/asio_client.hpp>
 #include <websocketpp/client.hpp>
@@ -83,4 +83,4 @@ namespace nvidia::riva::realtime {
             virtual void HandleMessage(const std::string& message) = 0;
     };
 } // namespace nvidia::riva::realtime
-#endif // REALTIME_CLIENT_H 
+#endif // BASE_REALTIME_CLIENT_H 

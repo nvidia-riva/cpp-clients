@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#ifndef RECOGNITION_CLIENT_H
-#define RECOGNITION_CLIENT_H
+#ifndef REALTIME_CLIENT_H
+#define REALTIME_CLIENT_H
 
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
@@ -67,7 +67,7 @@ namespace nvidia::riva::realtime {
             std::string server_url_;
     };
     
-    class RecognitionClient : public WebSocketClientBase {
+    class RealtimeClient : public WebSocketClientBase {
         private:
             
             // Session tracking
@@ -119,10 +119,10 @@ namespace nvidia::riva::realtime {
             void HandleMessage(const std::string& message) override;
 
         public:
-            RecognitionClient(  const std::string& objectName,
+            RealtimeClient(  const std::string& objectName,
                                 const std::shared_ptr<AudioChunks> audioChunksPtr, 
                                 nvidia::riva::utils::PerformanceStats& perfCounter);
-            ~RecognitionClient() = default;
+            ~RealtimeClient() = default;
             
             void Log(const std::string& message);
             
@@ -156,4 +156,4 @@ namespace nvidia::riva::realtime {
 
 } // namespace nvidia::riva::realtime
 
-#endif // RECOGNITION_CLIENT_H
+#endif // REALTIME_CLIENT_H

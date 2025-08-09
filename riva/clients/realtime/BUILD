@@ -16,12 +16,12 @@ cc_library(
     srcs = [
         "audio_chunks.cpp",
         "base_client.cpp", 
-        "recognition_client.cpp",
+        "realtime_client.cpp",
     ],
     hdrs = [
         "audio_chunks.h",
         "base_client.h",
-        "recognition_client.h",
+        "realtime_client.h",
     ],
     deps = [
         "//riva/utils/wav:reader",
