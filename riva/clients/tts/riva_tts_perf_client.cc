@@ -47,6 +47,7 @@ DEFINE_string(
 DEFINE_string(voice_name, "", "Desired voice name");
 DEFINE_int32(num_iterations, 1, "Number of times to loop over audio files");
 DEFINE_int32(num_parallel_requests, 1, "Number of parallel requests to keep in flight");
+DEFINE_int32(num_sentences, 1, "Number of sentences to send");
 DEFINE_int32(throttle_milliseconds, 0, "Number of milliseconds to sleep for between TTS requests");
 DEFINE_int32(offset_milliseconds, 0, "Number of milliseconds to offset each parallel TTS requests");
 DEFINE_string(ssl_root_cert, "", "Path to SSL root certificates file");
@@ -203,13 +204,12 @@ synthesizeBatch(
 
 void
 synthesizeOnline(
-    std::unique_ptr<nr_tts::RivaSpeechSynthesis::Stub> tts, std::string text, std::string language,
+    std::unique_ptr<nr_tts::RivaSpeechSynthesis::Stub> tts, std::vector<std::string> text, std::string language,
     uint32_t rate, std::string voice_name, double* time_to_first_chunk,
     std::vector<double>* time_to_next_chunk, size_t* num_samples, std::string filepath,
     std::string zero_shot_prompt_filename, int32_t zero_shot_quality)
 {
   nr_tts::SynthesizeSpeechRequest request;
-  request.set_text(text);
   request.set_language_code(language);
   request.set_sample_rate_hz(rate);
   request.set_voice_name(voice_name);
@@ -260,9 +260,17 @@ synthesizeOnline(
   nr_tts::SynthesizeSpeechResponse chunk;
 
   auto start = std::chrono::steady_clock::now();
-  std::unique_ptr<grpc::ClientReader<nr_tts::SynthesizeSpeechResponse>> reader(
-      tts->SynthesizeOnline(&context, request));
-  DLOG(INFO) << "Sending request for input \"" << text << "\".";
+  std::unique_ptr<
+      grpc::ClientReaderWriter<nr_tts::SynthesizeSpeechRequest, nr_tts::SynthesizeSpeechResponse>>
+      reader(tts->SynthesizeOnline(&context));
+  std::string text_complete = "";
+  for (const auto& text_line : text) {
+    request.set_text(text_line);
+    text_complete += text_line + " ";
+    reader->Write(request);
+  }
+  reader->WritesDone();
+  DLOG(INFO) << "Sending request for input \"" << text[0] << "\".";
 
   std::vector<int16_t> buffer;
   size_t audio_len = 0;
@@ -292,7 +300,7 @@ synthesizeOnline(
       // std::cerr << "Time to first chunk: " << elapsed_first_audio.count() << " s" << std::endl;
       *time_to_first_chunk = elapsed_first_audio.count();
       start = t_next_audio;
-      DLOG(INFO) << "Received first chunk for input \"" << text << "\".";
+      DLOG(INFO) << "Received first chunk for input \"" << text[0] << "\".";
     } else {
       auto t_next_audio = std::chrono::steady_clock::now();
       std::chrono::duration<double> elapsed_next_audio = t_next_audio - start;
@@ -302,12 +310,12 @@ synthesizeOnline(
     audio_len += len;
   }
   grpc::Status rpc_status = reader->Finish();
-  DLOG(INFO) << "Received all chunks for input \"" << text << "\".";
+  DLOG(INFO) << "Received all chunks for input \"" << text_complete << "\".";
 
   if (!rpc_status.ok()) {
     // Report the RPC failure.
     std::cerr << rpc_status.error_message() << std::endl;
-    std::cerr << "Input was: \'" << text << "\'" << std::endl;
+    std::cerr << "Input was: \'" << text_complete << "\'" << std::endl;
   } else {
     *num_samples = audio_len;
     if (FLAGS_write_output_audio) {
@@ -347,6 +355,7 @@ main(int argc, char** argv)
   str_usage << "           --audio_encoding=<pcm|opus> " << std::endl;
   str_usage << "           --num_parallel_requests=<num-parallel-reqs> " << std::endl;
   str_usage << "           --num_iterations=<num-iterations> " << std::endl;
+  str_usage << "           --num_sentences=<num-sentences> " << std::endl;
   str_usage << "           --throttle_milliseconds=<throttle-milliseconds> " << std::endl;
   str_usage << "           --offset_milliseconds=<offset-milliseconds> " << std::endl;
   str_usage << "           --ssl_root_cert=<filename>" << std::endl;
@@ -404,7 +413,7 @@ main(int argc, char** argv)
 
   // open text file, load sentences as a vector
   int count = 0;
-  for (int i = 0; i < FLAGS_num_iterations; i++) {
+  for (int i = 0; i < FLAGS_num_iterations * FLAGS_num_sentences; i++) {
     std::ifstream file(text_file);
     while (std::getline(file, sentence)) {
       if (sentence.find("|") != std::string::npos) {
@@ -446,6 +455,7 @@ main(int argc, char** argv)
     std::vector<std::vector<size_t>*> lengths;
 
     auto start = std::chrono::steady_clock::now();
+    std::vector<int> worker_sentence_idx(FLAGS_num_parallel_requests, 0);
 
     for (int i = 0; i < FLAGS_num_parallel_requests; i++) {
       auto time_to_first_chunks = new std::vector<double>();
@@ -458,11 +468,12 @@ main(int argc, char** argv)
         usleep(i * FLAGS_offset_milliseconds * 1000);
         auto start_time = std::chrono::steady_clock::now();
 
-        for (size_t s = 0; s < sentences[i].size(); s++) {
+        int batch_count = 0;
+        while (worker_sentence_idx[i] < sentences[i].size()) {
           auto current_time = std::chrono::steady_clock::now();
           double diff_time =
               std::chrono::duration<double, std::milli>(current_time - start_time).count();
-          double wait_time = (s + 1) * FLAGS_throttle_milliseconds - diff_time;
+          double wait_time = (batch_count + 1) * FLAGS_throttle_milliseconds - diff_time;
 
           // To nanoseconds
           wait_time *= 1.e3;
@@ -479,17 +490,30 @@ main(int argc, char** argv)
           auto tts = CreateTTS(grpc_channel);
           double time_to_first_chunk = 0.;
           auto time_to_next_chunk = new std::vector<double>();
+
+          std::vector<std::string> texts;
+          std::string text_complete = "";
+          int count = sentences[i][worker_sentence_idx[i]].first;
+          for (int j = 0; j < FLAGS_num_sentences; j++) {
+            if (worker_sentence_idx[i] >= sentences[i].size()) {
+              break;
+            }
+            texts.push_back(sentences[i][worker_sentence_idx[i]].second);
+            text_complete += sentences[i][worker_sentence_idx[i]].second + " ";
+            worker_sentence_idx[i]++;
+          }
           size_t num_samples = 0;
           synthesizeOnline(
-              std::move(tts), sentences[i][s].second, FLAGS_language, rate, FLAGS_voice_name,
+              std::move(tts), texts, FLAGS_language, rate, FLAGS_voice_name,
               &time_to_first_chunk, time_to_next_chunk, &num_samples,
-              std::to_string(sentences[i][s].first) + ".wav", FLAGS_zero_shot_audio_prompt,
+              std::to_string(count) + ".wav", FLAGS_zero_shot_audio_prompt,
               FLAGS_zero_shot_quality);
           latencies_first_chunk[i]->push_back(time_to_first_chunk);
           latencies_next_chunks[i]->insert(
               latencies_next_chunks[i]->end(), time_to_next_chunk->begin(),
               time_to_next_chunk->end());
           lengths[i]->push_back(num_samples);
+          batch_count++;
         }
       }));
     }
@@ -555,13 +579,15 @@ main(int argc, char** argv)
       auto results_num_samples_thread = new std::vector<int32_t>();
       results_num_samples.push_back(results_num_samples_thread);
       workers.push_back(std::thread([&, i]() {
+        int count = 0;
         for (size_t s = 0; s < sentences[i].size(); s++) {
           auto tts = CreateTTS(grpc_channel);
           int32_t num_samples = synthesizeBatch(
               std::move(tts), sentences[i][s].second, FLAGS_language, rate, FLAGS_voice_name,
-              std::to_string(sentences[i][s].first) + ".wav", FLAGS_zero_shot_audio_prompt,
+              std::to_string(count) + ".wav", FLAGS_zero_shot_audio_prompt,
               FLAGS_zero_shot_quality, FLAGS_custom_dictionary, FLAGS_zero_shot_transcript);
           results_num_samples[i]->push_back(num_samples);
+          count++;
         }
       }));
     }
@@ -588,4 +614,3 @@ main(int argc, char** argv)
   }
   return STATUS;
 }
-
