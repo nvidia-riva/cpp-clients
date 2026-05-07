@@ -56,7 +56,7 @@ DEFINE_string(custom_dictionary, "", " User dictionary containing graph-to-phone
 DEFINE_string(zero_shot_transcript, "", "Transcript corresponding to Zero shot audio prompt.");
 DEFINE_uint64(timeout_ms, 10000, "Timeout for GRPC channel creation");
 DEFINE_uint64(max_grpc_message_size, MAX_GRPC_MESSAGE_SIZE, "Max GRPC message size");
-DEFINE_double(speed, 1.0, "Speed of generated audio, ranges between 0.5-2.0");
+DEFINE_double(exaggeration_factor, 1.0, "Exaggeration factor for generated audio, ranges between 0.0-2.0");
 
 static const std::string LC_enUS = "en-US";
 
@@ -122,7 +122,7 @@ main(int argc, char** argv)
   str_usage << "           --custom_dictionary=<filename> " << std::endl;
   str_usage << "           --timeout_ms=<timeout_ms> " << std::endl;
   str_usage << "           --max_grpc_message_size=<max_grpc_message_size> " << std::endl;
-  str_usage << "           --speed=<speed> " << std::endl;
+  str_usage << "           --exaggeration_factor=<exaggeration_factor> " << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -175,8 +175,7 @@ main(int argc, char** argv)
     auto creds = riva::clients::CreateChannelCredentials(
         FLAGS_use_ssl, FLAGS_ssl_root_cert, FLAGS_ssl_client_key, FLAGS_ssl_client_cert,
         FLAGS_metadata);
-    grpc_channel = riva::clients::CreateChannelBlocking(
-        FLAGS_riva_uri, creds, FLAGS_timeout_ms, FLAGS_max_grpc_message_size);
+    grpc_channel = riva::clients::CreateChannelBlocking(FLAGS_riva_uri, creds, FLAGS_timeout_ms, FLAGS_max_grpc_message_size);
   }
   catch (const std::exception& e) {
     std::cerr << "Error creating GRPC channel: " << e.what() << std::endl;
@@ -247,6 +246,11 @@ main(int argc, char** argv)
     if (not FLAGS_online and not FLAGS_zero_shot_transcript.empty()) {
       zero_shot_data->set_transcript(FLAGS_zero_shot_transcript);
     }
+    if (FLAGS_exaggeration_factor < 0.0 || FLAGS_exaggeration_factor > 2.0) {
+      LOG(ERROR) << "Exaggeration factor must be between 0.0 and 2.0" << std::endl;
+      return -1;
+    }
+    zero_shot_data->set_exaggeration_factor(FLAGS_exaggeration_factor);
   }
 
   // Send text content using Synthesize().
