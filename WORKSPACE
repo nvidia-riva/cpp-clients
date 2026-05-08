@@ -102,3 +102,11 @@ http_archive(
     strip_prefix = "platforms-1.0.0",
     sha256 = "852b71bfa15712cec124e4a57179b6bc95d59fdf5052945f5d550e072501a769",
 )
+
+http_archive(
+    name = "websocketpp",
+    urls = ["https://github.com/zaphoyd/websocketpp/archive/refs/tags/0.8.2.tar.gz"],
+    sha256 = "6ce889d85ecdc2d8fa07408d6787e7352510750daa66b5ad44aacb47bea76755",
+    strip_prefix = "websocketpp-0.8.2",
+    build_file = "//third_party:BUILD.websocketpp"
+)
