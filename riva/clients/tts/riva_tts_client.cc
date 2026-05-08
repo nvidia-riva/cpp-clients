@@ -250,7 +250,8 @@ main(int argc, char** argv)
       LOG(ERROR) << "Exaggeration factor must be between 0.0 and 2.0" << std::endl;
       return -1;
     }
-    zero_shot_data->set_exaggeration_factor(FLAGS_exaggeration_factor);
+    (*request.mutable_custom_configuration())["exaggeration_factor"] =
+        std::to_string(FLAGS_exaggeration_factor);
   }
 
   // Send text content using Synthesize().

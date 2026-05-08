@@ -168,7 +168,8 @@ synthesizeBatch(
       LOG(ERROR) << "Exaggeration factor must be between 0.0 and 2.0" << std::endl;
       return -1;
     }
-    zero_shot_data->set_exaggeration_factor(exaggeration_factor);
+    (*request.mutable_custom_configuration())["exaggeration_factor"] =
+        std::to_string(exaggeration_factor);
   }
 
   // Send text content using Synthesize().
@@ -259,7 +260,8 @@ synthesizeOnline(
       LOG(ERROR) << "Exaggeration factor must be between 0.0 and 2.0" << std::endl;
       return;
     }
-    zero_shot_data->set_exaggeration_factor(exaggeration_factor);
+    (*request.mutable_custom_configuration())["exaggeration_factor"] =
+        std::to_string(exaggeration_factor);
   }
 
 
