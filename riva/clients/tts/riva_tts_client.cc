@@ -209,11 +209,6 @@ main(int argc, char** argv)
 
   request.set_sample_rate_hz(rate);
   request.set_voice_name(FLAGS_voice_name);
-  if (FLAGS_speed < 0.5 || FLAGS_speed > 2.0) {
-    LOG(ERROR) << "Speed must be between 0.5 and 2.0" << std::endl;
-    return -1;
-  }
-  request.set_speed(FLAGS_speed);
   if (not FLAGS_zero_shot_audio_prompt.empty()) {
     auto zero_shot_data = request.mutable_zero_shot_data();
     std::vector<std::shared_ptr<WaveData>> audio_prompt;
