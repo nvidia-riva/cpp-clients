@@ -9,6 +9,7 @@
 #include <strings.h>
 
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -64,7 +65,10 @@ DEFINE_string(
 DEFINE_int32(zero_shot_quality, 20, "Required quality of output audio, ranges between 1-40.");
 DEFINE_string(custom_dictionary, "", " User dictionary containing graph-to-phone custom words");
 DEFINE_string(zero_shot_transcript, "", "Transcript corresponding to Zero shot audio prompt.");
-DEFINE_double(exaggeration_factor, 1.0, "Exaggeration factor for generated audio, ranges between 0.0-2.0");
+DEFINE_string(
+    custom_configuration, "",
+    "Custom configurations to be sent to the server as key value pairs "
+    "<key:value,key:value,...>");
 
 static const std::string LC_enUS = "en-US";
 
@@ -111,12 +115,37 @@ ReadUserDictionaryFile(const std::string& dictionary_file)
   return dictionary_string;
 }
 
+void
+AddCustomConfiguration(
+    nr_tts::SynthesizeSpeechRequest& request, const std::string& custom_configuration)
+{
+  if (custom_configuration.empty()) {
+    return;
+  }
+  std::string config_str = custom_configuration;
+  config_str.erase(
+      std::remove_if(config_str.begin(), config_str.end(), ::isspace), config_str.end());
+  if (config_str.empty()) {
+    return;
+  }
+  auto pairs = split(config_str, ',');
+  for (const auto& pair : pairs) {
+    auto colon_pos = pair.find(':');
+    if (colon_pos == std::string::npos) {
+      throw std::runtime_error(
+          "Invalid custom_configuration entry '" + pair + "' (expected key:value)");
+    }
+    (*request.mutable_custom_configuration())[pair.substr(0, colon_pos)] =
+        pair.substr(colon_pos + 1);
+  }
+}
+
 int32_t
 synthesizeBatch(
     std::unique_ptr<nr_tts::RivaSpeechSynthesis::Stub> tts, std::string text, std::string language,
     uint32_t rate, std::string voice_name, std::string filepath,
     std::string zero_shot_prompt_filename, int32_t zero_shot_quality, std::string custom_dictionary,
-    std::string zero_shot_transcript, double exaggeration_factor)
+    std::string zero_shot_transcript, const std::string& custom_configuration)
 {
   // Parse command line arguments.
   nr_tts::SynthesizeSpeechRequest request;
@@ -164,12 +193,14 @@ synthesizeBatch(
     if (not FLAGS_zero_shot_transcript.empty()) {
       zero_shot_data->set_transcript(FLAGS_zero_shot_transcript);
     }
-    if (exaggeration_factor < 0.0 || exaggeration_factor > 2.0) {
-      LOG(ERROR) << "Exaggeration factor must be between 0.0 and 2.0" << std::endl;
-      return -1;
-    }
-    (*request.mutable_custom_configuration())["exaggeration_factor"] =
-        std::to_string(exaggeration_factor);
+  }
+
+  try {
+    AddCustomConfiguration(request, custom_configuration);
+  }
+  catch (const std::exception& e) {
+    LOG(ERROR) << e.what() << std::endl;
+    return -1;
   }
 
   // Send text content using Synthesize().
@@ -213,7 +244,8 @@ synthesizeOnline(
     std::unique_ptr<nr_tts::RivaSpeechSynthesis::Stub> tts, std::vector<std::string> text, std::string language,
     uint32_t rate, std::string voice_name, double* time_to_first_chunk,
     std::vector<double>* time_to_next_chunk, size_t* num_samples, std::string filepath,
-    std::string zero_shot_prompt_filename, int32_t zero_shot_quality, double exaggeration_factor)
+    std::string zero_shot_prompt_filename, int32_t zero_shot_quality,
+    const std::string& custom_configuration)
 {
   nr_tts::SynthesizeSpeechRequest request;
   request.set_language_code(language);
@@ -256,12 +288,14 @@ synthesizeOnline(
     }
     zero_shot_data->set_sample_rate_hz(zero_shot_sample_rate);
     zero_shot_data->set_quality(zero_shot_quality);
-    if (exaggeration_factor < 0.0 || exaggeration_factor > 2.0) {
-      LOG(ERROR) << "Exaggeration factor must be between 0.0 and 2.0" << std::endl;
-      return;
-    }
-    (*request.mutable_custom_configuration())["exaggeration_factor"] =
-        std::to_string(exaggeration_factor);
+  }
+
+  try {
+    AddCustomConfiguration(request, custom_configuration);
+  }
+  catch (const std::exception& e) {
+    LOG(ERROR) << e.what() << std::endl;
+    return;
   }
 
 
@@ -377,7 +411,7 @@ main(int argc, char** argv)
   str_usage << "           --zero_shot_quality=<quality>" << std::endl;
   str_usage << "           --zero_shot_transcript=<text>" << std::endl;
   str_usage << "           --custom_dictionary=<filename> " << std::endl;
-  str_usage << "           --exaggeration_factor=<exaggeration_factor> " << std::endl;
+  str_usage << "           --custom_configuration=<key:value,key:value,...> " << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
@@ -518,7 +552,7 @@ main(int argc, char** argv)
               std::move(tts), texts, FLAGS_language, rate, FLAGS_voice_name,
               &time_to_first_chunk, time_to_next_chunk, &num_samples,
               std::to_string(count) + ".wav", FLAGS_zero_shot_audio_prompt,
-              FLAGS_zero_shot_quality, FLAGS_exaggeration_factor);
+              FLAGS_zero_shot_quality, FLAGS_custom_configuration);
           latencies_first_chunk[i]->push_back(time_to_first_chunk);
           latencies_next_chunks[i]->insert(
               latencies_next_chunks[i]->end(), time_to_next_chunk->begin(),
@@ -596,7 +630,8 @@ main(int argc, char** argv)
           int32_t num_samples = synthesizeBatch(
               std::move(tts), sentences[i][s].second, FLAGS_language, rate, FLAGS_voice_name,
               std::to_string(count) + ".wav", FLAGS_zero_shot_audio_prompt,
-              FLAGS_zero_shot_quality, FLAGS_custom_dictionary, FLAGS_zero_shot_transcript, FLAGS_exaggeration_factor);
+              FLAGS_zero_shot_quality, FLAGS_custom_dictionary, FLAGS_zero_shot_transcript,
+              FLAGS_custom_configuration);
           results_num_samples[i]->push_back(num_samples);
           count++;
         }
