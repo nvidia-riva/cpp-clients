@@ -64,7 +64,7 @@ DEFINE_string(
     "Filename of .json file containing output transcripts");
 DEFINE_string(model_name, "", "Name of the TRTIS model to use");
 DEFINE_bool(list_models, false, "List available models on server");
-DEFINE_string(language_code, "en-US", "Language code of the model to use");
+DEFINE_string(language_code, "", "Language code of the model to use");
 DEFINE_string(boosted_words_file, "", "File with a list of words to boost. One line per word.");
 DEFINE_double(boosted_words_score, 10., "Score by which to boost the boosted words");
 DEFINE_bool(
@@ -138,7 +138,7 @@ main(int argc, char** argv)
   str_usage << "           --print_transcripts=<true|false> " << std::endl;
   str_usage << "           --output_filename=<string>" << std::endl;
   str_usage << "           --verbatim_transcripts=<true|false>" << std::endl;
-  str_usage << "           --language_code=<bcp 47 language code (such as en-US)>" << std::endl;
+  str_usage << "           --language_code=<bcp 47 language code (such as en-US), optional>" << std::endl;
   str_usage << "           --boosted_words_file=<string>" << std::endl;
   str_usage << "           --boosted_words_score=<float>" << std::endl;
   str_usage << "           --ssl_root_cert=<filename>" << std::endl;
