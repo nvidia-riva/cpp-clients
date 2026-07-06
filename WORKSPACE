@@ -1,4 +1,4 @@
-workspace(name = "com_nvidia_riva_api")
+workspace(name = "com_nvidia_nemotronspeech_api")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_repository")
 
@@ -76,8 +76,8 @@ grpc_extra_deps()
 
 git_repository(
     name = "nvriva_common",
-    remote = "https://github.com/nvidia-riva/common.git",
-    commit = "71df98266725320a6b6b3a9f32a6da832dc93691"
+    remote = "https://github.com/sarane22/common.git",
+    commit = "7ad51159e7489ccc8c8341894999ec7142160702"
 )
 
 http_archive(

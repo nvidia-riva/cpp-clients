@@ -40,10 +40,10 @@ jobs:
           name: "Collect artifacts"
           command: |
             mkdir /tmp/artifacts;
-            cp bazel-bin/riva/clients/asr/riva_asr_client /tmp/artifacts/riva_asr_client-linux-amd64;
-            cp bazel-bin/riva/clients/asr/riva_streaming_asr_client /tmp/artifacts/riva_streaming_asr_client-linux-amd64;
-            cp bazel-bin/riva/clients/tts/riva_tts_client /tmp/artifacts/riva_tts_client-linux-amd64;
-            cp bazel-bin/riva/clients/tts/riva_tts_perf_client /tmp/artifacts/riva_tts_perf_client-linux-amd64;
+            cp bazel-bin/nemotronspeech/clients/asr/nemotron_asr_client /tmp/artifacts/nemotron_asr_client-linux-amd64;
+            cp bazel-bin/nemotronspeech/clients/asr/nemotron_streaming_asr_client /tmp/artifacts/nemotron_streaming_asr_client-linux-amd64;
+            cp bazel-bin/nemotronspeech/clients/tts/nemotron_tts_client /tmp/artifacts/nemotron_tts_client-linux-amd64;
+            cp bazel-bin/nemotronspeech/clients/tts/nemotron_tts_perf_client /tmp/artifacts/nemotron_tts_perf_client-linux-amd64;
       - store_artifacts:
           path: /tmp/artifacts
 
