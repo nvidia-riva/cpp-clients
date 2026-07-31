@@ -61,7 +61,10 @@ DEFINE_bool(print_transcripts, true, "Print final transcripts");
 DEFINE_bool(interim_results, true, "Print intermediate transcripts");
 DEFINE_string(
     output_filename, "final_transcripts.json",
-    "Filename of .json file containing output transcripts");
+    "Filename containing output transcripts");
+DEFINE_string(
+    output_format, "",
+    "Transcript output format: json, srt, or vtt. By default, infer from output_filename");
 DEFINE_string(model_name, "", "Name of the TRTIS model to use");
 DEFINE_bool(list_models, false, "List available models on server");
 DEFINE_string(language_code, "", "Language code of the model to use");
@@ -137,6 +140,7 @@ main(int argc, char** argv)
   str_usage << "           --num_parallel_requests=<integer> " << std::endl;
   str_usage << "           --print_transcripts=<true|false> " << std::endl;
   str_usage << "           --output_filename=<string>" << std::endl;
+  str_usage << "           --output_format=<json|srt|vtt>" << std::endl;
   str_usage << "           --verbatim_transcripts=<true|false>" << std::endl;
   str_usage << "           --language_code=<bcp 47 language code (such as en-US), optional>" << std::endl;
   str_usage << "           --boosted_words_file=<string>" << std::endl;
@@ -177,6 +181,21 @@ main(int argc, char** argv)
   if (FLAGS_max_alternatives < 1) {
     std::cerr << "max_alternatives must be greater than or equal to 1." << std::endl;
     return 1;
+  }
+
+  TranscriptOutputFormat output_format;
+  std::string output_error;
+  if (!ParseTranscriptOutputFormat(
+          FLAGS_output_filename, FLAGS_output_format, &output_format, &output_error)) {
+    std::cerr << output_error << std::endl;
+    return 1;
+  }
+  if (TranscriptOutputRequiresWordTimeOffsets(output_format)) {
+    FLAGS_word_time_offsets = true;
+    if (!FLAGS_audio_device.empty()) {
+      std::cerr << "SRT and VTT export currently support audio_file input only." << std::endl;
+      return 1;
+    }
   }
 
   bool flag_set = gflags::GetCommandLineFlagInfoOrDie("riva_uri").is_default;
@@ -227,7 +246,7 @@ main(int argc, char** argv)
       FLAGS_verbatim_transcripts, FLAGS_boosted_words_file, FLAGS_boosted_words_score,
       FLAGS_start_history, FLAGS_start_threshold, FLAGS_stop_history, FLAGS_stop_history_eou,
       FLAGS_stop_threshold, FLAGS_stop_threshold_eou, FLAGS_custom_configuration,
-      FLAGS_speaker_diarization, FLAGS_diarization_max_speakers);
+      FLAGS_speaker_diarization, FLAGS_diarization_max_speakers, output_format);
 
   if (FLAGS_audio_file.size()) {
     return recognize_client.DoStreamingFromFile(

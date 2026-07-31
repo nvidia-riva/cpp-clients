@@ -28,6 +28,16 @@ cc_library(
 )
 
 cc_library(
+    name = "transcript_exporter",
+    srcs = ["transcript_exporter.cc"],
+    hdrs = ["transcript_exporter.h"],
+    deps = [
+        ":asr_client_helper",
+        "@nvriva_common//riva/proto:riva_grpc_asr",
+    ],
+)
+
+cc_library(
     name = "client_call",
     srcs = ["client_call.h", "client_call.cc"],
     deps = select({
@@ -39,6 +49,7 @@ cc_library(
         ],
     }) + [
         ":asr_client_helper",
+        ":transcript_exporter",
         "@com_github_grpc_grpc//:grpc++",
         "@nvriva_common//riva/proto:riva_grpc_asr",
         "@glog//:glog",
@@ -54,6 +65,7 @@ cc_library(
     deps = [
         ":asr_client_helper",
         ":client_call",
+        ":transcript_exporter",
         "//riva/utils/wav:reader",
         "//riva/utils/opus",
         "@glog//:glog",
@@ -79,6 +91,7 @@ cc_binary(
     deps = [
         ":asr_client_helper",
         ":client_call",
+        ":transcript_exporter",
         "@nvriva_common//riva/proto:riva_grpc_asr",
         "//riva/utils:stamping",
         "//riva/utils/files:files",
@@ -97,6 +110,7 @@ cc_binary(
         ":asr_client_helper",
         ":client_call",
         ":streaming_recognize_client",
+        ":transcript_exporter",
         "@nvriva_common//riva/proto:riva_grpc_asr",
         "//riva/utils/files:files",
         "//riva/utils/wav:reader",
@@ -125,4 +139,14 @@ cc_test(
         "@nvriva_common//riva/proto:riva_grpc_asr",
     ],
     tags = ["needs_alsa"]
+)
+
+cc_test(
+    name = "transcript_exporter_test",
+    srcs = ["transcript_exporter_test.cc"],
+    deps = [
+        ":transcript_exporter",
+        "@googletest//:gtest_main",
+        "@nvriva_common//riva/proto:riva_grpc_asr",
+    ],
 )

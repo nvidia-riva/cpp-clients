@@ -60,7 +60,8 @@ StreamingRecognizeClient::StreamingRecognizeClient(
     bool verbatim_transcripts, const std::string& boosted_phrases_file, float boosted_phrases_score,
     int32_t start_history, float start_threshold, int32_t stop_history, int32_t stop_history_eou,
     float stop_threshold, float stop_threshold_eou, std::string custom_configuration,
-    bool speaker_diarization, int32_t diarization_max_speakers)
+    bool speaker_diarization, int32_t diarization_max_speakers,
+    TranscriptOutputFormat output_format)
     : print_latency_stats_(true), stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)),
       language_code_(language_code), max_alternatives_(max_alternatives),
       profanity_filter_(profanity_filter), word_time_offsets_(word_time_offsets),
@@ -68,19 +69,27 @@ StreamingRecognizeClient::StreamingRecognizeClient(
       separate_recognition_per_channel_(separate_recognition_per_channel),
       print_transcripts_(print_transcripts), chunk_duration_ms_(chunk_duration_ms),
       interim_results_(interim_results), total_audio_processed_(0.), num_streams_started_(0),
-      model_name_(model_name), simulate_realtime_(simulate_realtime),
+      write_transcripts_(!output_filename.empty()), model_name_(model_name),
+      simulate_realtime_(simulate_realtime),
       verbatim_transcripts_(verbatim_transcripts), boosted_phrases_score_(boosted_phrases_score),
       start_history_(start_history), start_threshold_(start_threshold), stop_history_(stop_history),
       stop_history_eou_(stop_history_eou), stop_threshold_(stop_threshold),
       stop_threshold_eou_(stop_threshold_eou), custom_configuration_(custom_configuration),
-      speaker_diarization_(speaker_diarization), diarization_max_speakers_(diarization_max_speakers)
+      speaker_diarization_(speaker_diarization), diarization_max_speakers_(diarization_max_speakers),
+      output_format_(output_format), cue_index_(1), export_failed_(false)
 {
   num_active_streams_.store(0);
   num_streams_finished_.store(0);
   thread_pool_.reset(new ThreadPool(4 * num_parallel_requests));
 
-  if (print_transcripts_) {
+  if (write_transcripts_) {
     output_file_.open(output_filename);
+    if (!output_file_.is_open()) {
+      std::cerr << "Unable to open transcript output file: " << output_filename << std::endl;
+      export_failed_.store(true);
+    } else {
+      InitializeTranscriptOutput(output_file_, output_format_);
+    }
   }
 
   boosted_phrases_ = ReadPhrasesFromFile(boosted_phrases_file);
@@ -88,7 +97,7 @@ StreamingRecognizeClient::StreamingRecognizeClient(
 
 StreamingRecognizeClient::~StreamingRecognizeClient()
 {
-  if (print_transcripts_) {
+  if (write_transcripts_) {
     output_file_.close();
   }
 }
@@ -264,6 +273,11 @@ StreamingRecognizeClient::DoStreamingFromFile(
     std::cout << "No audio files specified. Exiting." << std::endl;
     return 1;
   }
+  if (TranscriptOutputRequiresWordTimeOffsets(output_format_) &&
+      (all_wav.size() != 1 || num_iterations != 1)) {
+    std::cerr << "SRT and VTT export require one audio file and num_iterations=1." << std::endl;
+    return 1;
+  }
 
   uint32_t all_wav_max = all_wav.size() * num_iterations;
   std::vector<std::shared_ptr<WaveData>> all_wav_repeated;
@@ -315,7 +329,7 @@ StreamingRecognizeClient::DoStreamingFromFile(
     std::cout << "Throughput: " << total_processed * 1000. / diff_time << " RTFX" << std::endl;
   }
 
-  return 0;
+  return export_failed_.load() ? 1 : 0;
 }
 
 void
@@ -340,8 +354,17 @@ StreamingRecognizeClient::PostProcessResults(std::shared_ptr<ClientCall> call, b
       latencies_.push_back(lat);
     }
   }
+  if (write_transcripts_) {
+    const std::string filename = audio_device ? "microphone" : call->stream->wav->filename;
+    std::string error;
+    if (!WriteTranscriptOutput(
+            output_file_, output_format_, call->latest_result_, filename, &cue_index_, &error)) {
+      std::cerr << "Unable to export transcript: " << error << std::endl;
+      export_failed_.store(true);
+    }
+  }
   if (print_transcripts_) {
-    call->PrintResult(audio_device, output_file_);
+    call->PrintResult(audio_device);
   }
 }
 
@@ -376,7 +399,7 @@ StreamingRecognizeClient::ReceiveResponses(std::shared_ptr<ClientCall> call, boo
 
 
       call->latest_result_.audio_processed = result.audio_processed();
-      if (print_transcripts_) {
+      if (print_transcripts_ || write_transcripts_) {
         call->AppendResult(result);
       }
     }
@@ -454,7 +477,7 @@ StreamingRecognizeClient::DoStreamingFromMicrophone(
   CloseAudioDevice(&alsa_handle);
 
   std::cout << "\nExiting with 0" << std::flush << std::endl;
-  return 0;
+  return export_failed_.load() ? 1 : 0;
 }
 
 void

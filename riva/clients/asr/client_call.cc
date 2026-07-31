@@ -43,6 +43,13 @@ ClientCall::AppendResult(const nr_asr::StreamingRecognitionResult& result)
     bool is_final = result.is_final();
     if (is_final) {
       int num_alternatives = result.alternatives_size();
+      if (num_alternatives > 0) {
+        Results::Segment segment;
+        for (int a = 0; a < num_alternatives; ++a) {
+          segment.alternatives.push_back(result.alternatives(a));
+        }
+        latest_result_.segments.push_back(std::move(segment));
+      }
       latest_result_.final_transcripts.resize(num_alternatives);
       latest_result_.final_scores.resize(num_alternatives);
       latest_result_.final_time_stamps.resize(num_alternatives);
@@ -88,7 +95,7 @@ ClientCall::AppendResult(const nr_asr::StreamingRecognitionResult& result)
 }
 
 void
-ClientCall::PrintResult(bool audio_device, std::ofstream& output_file)
+ClientCall::PrintResult(bool audio_device)
 {
   std::cout << "-----------------------------------------------------------" << std::endl;
 
@@ -100,16 +107,8 @@ ClientCall::PrintResult(bool audio_device, std::ofstream& output_file)
 
   std::cout << std::endl;
   std::cout << "Final transcripts: " << std::endl;
-  if (latest_result_.final_transcripts.size() == 0) {
-    output_file << "{\"audio_filepath\": \"" << filename << "\",";
-    output_file << "\"text\": \"\"}" << std::endl;
-  } else {
+  if (latest_result_.final_transcripts.size() > 0) {
     for (uint32_t a = 0; a < latest_result_.final_transcripts.size(); ++a) {
-      if (a == 0) {
-        output_file << "{\"audio_filepath\": \"" << filename << "\",";
-        output_file << "\"text\": \"" << EscapeTranscript(latest_result_.final_transcripts[a])
-                    << "\"}" << std::endl;
-      }
       std::cout << a << " : " << latest_result_.final_transcripts[a]
                 << latest_result_.partial_transcript << std::endl;
       std::cout << std::endl;

@@ -41,7 +41,7 @@ class ClientCall {
 
   void AppendResult(const nr_asr::StreamingRecognitionResult& result);
 
-  void PrintResult(bool audio_device, std::ofstream& output_file);
+  void PrintResult(bool audio_device);
 
   // Container for the data we expect from the server.
   nr_asr::StreamingRecognizeResponse response;

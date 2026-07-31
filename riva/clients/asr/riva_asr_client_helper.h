@@ -37,6 +37,10 @@ std::string static inline EscapeTranscript(const std::string& input_str)
 }
 
 struct Results {
+  struct Segment {
+    std::vector<nr_asr::SpeechRecognitionAlternative> alternatives;
+  };
+
   std::vector<std::string> final_transcripts;
   std::vector<float> final_scores;
   std::string partial_transcript;
@@ -45,6 +49,7 @@ struct Results {
   std::vector<nr_asr::WordInfo> partial_time_stamps;
   int request_cnt;
   float audio_processed;
+  std::vector<Segment> segments;
 };
 
 void AppendResult(
