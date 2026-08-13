@@ -46,6 +46,9 @@ DEFINE_string(
     language, "en-US",
     "Language code as per [BCP-47](https://www.rfc-editor.org/rfc/bcp/bcp47.txt) language tag.");
 DEFINE_string(voice_name, "", "Desired voice name");
+DEFINE_bool(
+    word_time_offsets, false,
+    "If true, request per-word start/end timestamps (returned in response metadata).");
 DEFINE_int32(num_iterations, 1, "Number of times to loop over audio files");
 DEFINE_int32(num_parallel_requests, 1, "Number of parallel requests to keep in flight");
 DEFINE_int32(num_sentences, 1, "Number of sentences to send");
@@ -153,6 +156,7 @@ synthesizeBatch(
   request.set_language_code(language);
   request.set_sample_rate_hz(rate);
   request.set_voice_name(voice_name);
+  request.set_enable_word_time_offsets(FLAGS_word_time_offsets);
   if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
     request.set_encoding(nr::LINEAR_PCM);
   } else if (FLAGS_audio_encoding == "opus") {
@@ -251,6 +255,7 @@ synthesizeOnline(
   request.set_language_code(language);
   request.set_sample_rate_hz(rate);
   request.set_voice_name(voice_name);
+  request.set_enable_word_time_offsets(FLAGS_word_time_offsets);
   auto ae = nr::AudioEncoding::ENCODING_UNSPECIFIED;
   if (FLAGS_audio_encoding.empty() || FLAGS_audio_encoding == "pcm") {
     ae = nr::LINEAR_PCM;
@@ -412,6 +417,7 @@ main(int argc, char** argv)
   str_usage << "           --zero_shot_transcript=<text>" << std::endl;
   str_usage << "           --custom_dictionary=<filename> " << std::endl;
   str_usage << "           --custom_configuration=<key:value,key:value,...> " << std::endl;
+  str_usage << "           --word_time_offsets=<true|false> " << std::endl;
   gflags::SetUsageMessage(str_usage.str());
   gflags::SetVersionString(::riva::utils::kBuildScmRevision);
 
