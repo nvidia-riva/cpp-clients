@@ -85,6 +85,19 @@ $ riva_asr_client --audio_file audio_folder
  
 Note that only single-channel audio files in the `.wav` format are currently supported.
 
+Final transcripts can be exported as structured JSON, SubRip, or WebVTT by choosing the
+corresponding extension for `--output_filename`:
+```
+$ riva_asr_client --audio_file audio.wav --output_filename transcript.json
+$ riva_asr_client --audio_file audio.wav --output_filename transcript.srt
+$ riva_streaming_asr_client --audio_file audio.wav --output_filename transcript.vtt
+```
+The format can also be selected explicitly with `--output_format=json|srt|vtt`. JSON output uses
+one object per recognition request (JSON Lines when processing multiple requests). SRT and VTT
+automatically request word timestamps and currently require one audio file with
+`--num_iterations=1`; microphone input is not supported for subtitle export. Each final recognition
+result becomes one subtitle cue.
+
 Other options and information can be found by running the clients with `-help`
 
 ### Speech Synthesis (TTS) Client

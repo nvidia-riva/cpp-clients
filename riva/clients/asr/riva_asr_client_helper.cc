@@ -125,6 +125,13 @@ AppendResult(
   }
 
   int num_alternatives = result.alternatives_size();
+  if (num_alternatives > 0) {
+    Results::Segment segment;
+    for (int a = 0; a < num_alternatives; ++a) {
+      segment.alternatives.push_back(result.alternatives(a));
+    }
+    output_result.segments.push_back(std::move(segment));
+  }
   output_result.final_transcripts.resize(num_alternatives);
   output_result.final_scores.resize(num_alternatives);
   output_result.final_time_stamps.resize(num_alternatives);

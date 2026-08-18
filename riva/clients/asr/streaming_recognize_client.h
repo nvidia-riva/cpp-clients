@@ -31,6 +31,7 @@
 #include "riva/utils/thread_pool.h"
 #include "riva/utils/wav/wav_reader.h"
 #include "riva_asr_client_helper.h"
+#include "transcript_exporter.h"
 
 using grpc::Status;
 using grpc::StatusCode;
@@ -50,7 +51,8 @@ class StreamingRecognizeClient {
       float boosted_phrases_score, int32_t start_history, float start_threshold,
       int32_t stop_history, int32_t stop_history_eou, float stop_threshold,
       float stop_threshold_eou, std::string custom_configuration,
-      bool speaker_diarization, int32_t diarization_max_speakers);
+      bool speaker_diarization, int32_t diarization_max_speakers,
+      TranscriptOutputFormat output_format);
 
   ~StreamingRecognizeClient();
 
@@ -114,6 +116,7 @@ class StreamingRecognizeClient {
   std::unique_ptr<ThreadPool> thread_pool_;
 
   std::ofstream output_file_;
+  bool write_transcripts_;
 
   std::string model_name_;
   bool simulate_realtime_;
@@ -131,4 +134,7 @@ class StreamingRecognizeClient {
   std::string custom_configuration_;
   bool speaker_diarization_;
   int32_t diarization_max_speakers_;
+  TranscriptOutputFormat output_format_;
+  size_t cue_index_;
+  std::atomic<bool> export_failed_;
 };

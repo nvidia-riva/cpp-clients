@@ -28,6 +28,7 @@
 #include "riva/utils/stamping.h"
 #include "riva/utils/wav/wav_reader.h"
 #include "riva_asr_client_helper.h"
+#include "transcript_exporter.h"
 
 using grpc::Status;
 using grpc::StatusCode;
@@ -51,6 +52,9 @@ DEFINE_int32(num_iterations, 1, "Number of times to loop over audio files");
 DEFINE_int32(num_parallel_requests, 10, "Number of parallel requests to keep in flight");
 DEFINE_bool(print_transcripts, true, "Print final transcripts");
 DEFINE_string(output_filename, "", "Filename to write output transcripts");
+DEFINE_string(
+    output_format, "",
+    "Transcript output format: json, srt, or vtt. By default, infer from output_filename");
 DEFINE_string(model_name, "", "Name of the TRTIS model to use");
 DEFINE_bool(list_models, false, "List available models on server");
 DEFINE_bool(output_ctm, false, "If true, output format should be NIST CTM");
@@ -100,7 +104,8 @@ class RecognizeClient {
       const std::string& boosted_phrases_file, float boosted_phrases_score,
       bool speaker_diarization, int32_t diarization_max_speakers, int32_t start_history,
       float start_threshold, int32_t stop_history, int32_t stop_history_eou, float stop_threshold,
-      float stop_threshold_eou, std::string custom_configuration)
+      float stop_threshold_eou, std::string custom_configuration,
+      TranscriptOutputFormat output_format)
       : stub_(nr_asr::RivaSpeechRecognition::NewStub(channel)), language_code_(language_code),
         max_alternatives_(max_alternatives), profanity_filter_(profanity_filter),
         word_time_offsets_(word_time_offsets), automatic_punctuation_(automatic_punctuation),
@@ -113,14 +118,15 @@ class RecognizeClient {
         start_history_(start_history), start_threshold_(start_threshold),
         stop_history_(stop_history), stop_history_eou_(stop_history_eou),
         stop_threshold_(stop_threshold), stop_threshold_eou_(stop_threshold_eou),
-        custom_configuration_(custom_configuration)
+        custom_configuration_(custom_configuration), output_format_(output_format), cue_index_(1)
   {
     if (!output_filename.empty()) {
       output_file_.open(output_filename);
       if (ctm) {
         write_fn_ = &RecognizeClient::WriteCTM;
       } else {
-        write_fn_ = &RecognizeClient::WriteJSON;
+        write_fn_ = &RecognizeClient::WriteTranscript;
+        InitializeTranscriptOutput(output_file_, output_format_);
       }
     }
 
@@ -164,19 +170,13 @@ class RecognizeClient {
     }
   }
 
-  void WriteJSON(const Results& result, const std::string& filename)
+  void WriteTranscript(const Results& result, const std::string& filename)
   {
-    if (result.final_transcripts.size() == 0) {
-      output_file_ << "{\"audio_filepath\": \"" << filename << "\",";
-      output_file_ << "\"text\": \"\"}" << std::endl;
-    } else {
-      for (size_t a = 0; a < result.final_transcripts.size(); ++a) {
-        if (a == 0) {
-          output_file_ << "{\"audio_filepath\": \"" << filename << "\",";
-          output_file_ << "\"text\": \"" << EscapeTranscript(result.final_transcripts.at(a))
-                       << "\"}" << std::endl;
-        }
-      }
+    std::string error;
+    if (!WriteTranscriptOutput(
+            output_file_, output_format_, result, filename, &cue_index_, &error)) {
+      std::cerr << "Unable to export transcript: " << error << std::endl;
+      num_failed_requests_++;
     }
   }
 
@@ -439,6 +439,8 @@ class RecognizeClient {
   float stop_threshold_;
   float stop_threshold_eou_;
   std::string custom_configuration_;
+  TranscriptOutputFormat output_format_;
+  size_t cue_index_;
 };
 
 int
@@ -459,6 +461,7 @@ main(int argc, char** argv)
   str_usage << "           --num_parallel_requests=<integer> " << std::endl;
   str_usage << "           --print_transcripts=<true|false> " << std::endl;
   str_usage << "           --output_filename=<string>" << std::endl;
+  str_usage << "           --output_format=<json|srt|vtt>" << std::endl;
   str_usage << "           --output-ctm=<true|false>" << std::endl;
   str_usage << "           --verbatim_transcripts=<true|false>" << std::endl;
   str_usage << "           --language_code=<bcp 47 language code (such as en-US), optional>" << std::endl;
@@ -501,6 +504,23 @@ main(int argc, char** argv)
     return 1;
   }
 
+  if (FLAGS_output_ctm && !FLAGS_output_format.empty()) {
+    std::cerr << "output_ctm and output_format cannot be used together." << std::endl;
+    return 1;
+  }
+  TranscriptOutputFormat output_format = TranscriptOutputFormat::kJson;
+  if (!FLAGS_output_filename.empty() && !FLAGS_output_ctm) {
+    std::string error;
+    if (!ParseTranscriptOutputFormat(
+            FLAGS_output_filename, FLAGS_output_format, &output_format, &error)) {
+      std::cerr << error << std::endl;
+      return 1;
+    }
+    if (TranscriptOutputRequiresWordTimeOffsets(output_format)) {
+      FLAGS_word_time_offsets = true;
+    }
+  }
+
   bool flag_set = gflags::GetCommandLineFlagInfoOrDie("riva_uri").is_default;
   const char* riva_uri = getenv("RIVA_URI");
 
@@ -541,15 +561,6 @@ main(int argc, char** argv)
     return 0;
   }
 
-  RecognizeClient recognize_client(
-      grpc_channel, FLAGS_language_code, FLAGS_max_alternatives, FLAGS_profanity_filter,
-      FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
-      /* separate_recognition_per_channel*/ false, FLAGS_print_transcripts, FLAGS_output_filename,
-      FLAGS_model_name, FLAGS_output_ctm, FLAGS_verbatim_transcripts, FLAGS_boosted_words_file,
-      (float)FLAGS_boosted_words_score, FLAGS_speaker_diarization, FLAGS_diarization_max_speakers,
-      FLAGS_start_history, FLAGS_start_threshold, FLAGS_stop_history, FLAGS_stop_history_eou,
-      FLAGS_stop_threshold, FLAGS_stop_threshold_eou, FLAGS_custom_configuration);
-
   // Preload all wav files, sort by size to reduce tail effects
   std::vector<std::shared_ptr<WaveData>> all_wav;
   try {
@@ -563,6 +574,20 @@ main(int argc, char** argv)
     std::cout << "No audio files specified. Exiting." << std::endl;
     return 1;
   }
+  if (TranscriptOutputRequiresWordTimeOffsets(output_format) &&
+      (all_wav.size() != 1 || FLAGS_num_iterations != 1)) {
+    std::cerr << "SRT and VTT export require one audio file and num_iterations=1." << std::endl;
+    return 1;
+  }
+
+  RecognizeClient recognize_client(
+      grpc_channel, FLAGS_language_code, FLAGS_max_alternatives, FLAGS_profanity_filter,
+      FLAGS_word_time_offsets, FLAGS_automatic_punctuation,
+      /* separate_recognition_per_channel*/ false, FLAGS_print_transcripts, FLAGS_output_filename,
+      FLAGS_model_name, FLAGS_output_ctm, FLAGS_verbatim_transcripts, FLAGS_boosted_words_file,
+      (float)FLAGS_boosted_words_score, FLAGS_speaker_diarization, FLAGS_diarization_max_speakers,
+      FLAGS_start_history, FLAGS_start_threshold, FLAGS_stop_history, FLAGS_stop_history_eou,
+      FLAGS_stop_threshold, FLAGS_stop_threshold_eou, FLAGS_custom_configuration, output_format);
 
   uint32_t all_wav_max = all_wav.size() * FLAGS_num_iterations;
   std::vector<std::shared_ptr<WaveData>> all_wav_repeated;
@@ -614,5 +639,5 @@ main(int argc, char** argv)
     }
   }
 
-  return 0;
+  return recognize_client.NumFailedRequests() ? 1 : 0;
 }
