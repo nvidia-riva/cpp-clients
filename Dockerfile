@@ -10,7 +10,8 @@ RUN apt-get update && apt-get install -y \
     libasound2t64 \
     libogg0 \
     openssl \
-    ca-certificates
+    ca-certificates \
+    libboost-all-dev
 
 FROM base AS builddep
 ARG BAZEL_VERSION
@@ -67,4 +68,5 @@ COPY --from=builder /opt/riva/clients/nlp/riva_nlp_punct /usr/local/bin/
 COPY --from=builder /opt/riva/clients/nmt/riva_nmt_t2t_client /usr/local/bin/
 COPY --from=builder /opt/riva/clients/nmt/riva_nmt_streaming_s2t_client /usr/local/bin/
 COPY --from=builder /opt/riva/clients/nmt/riva_nmt_streaming_s2s_client /usr/local/bin/
+COPY --from=builder /opt/riva/clients/realtime/riva_realtime_asr_client /usr/local/bin/
 COPY examples /work/examples

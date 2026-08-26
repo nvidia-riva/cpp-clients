@@ -1,0 +1,20 @@
+"""
+SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
+
+package(
+    default_visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "websocketpp",
+    hdrs = glob([
+        "websocketpp/*.hpp",
+        "websocketpp/**/*.hpp"
+    ]),
+    strip_include_prefix = ".",
+    deps = [
+        "@com_google_absl//absl/strings",
+    ],
+) 

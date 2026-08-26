@@ -8,6 +8,7 @@ NVIDIA Riva is a GPU-accelerated SDK for building Speech AI applications that ar
 - **Automatic Speech Recognition (ASR)**
     - `riva_streaming_asr_client`
     - `riva_asr_client`
+    - `riva_realtime_asr_client`
 - **Speech Synthesis (TTS)**
     - `riva_tts_client`
     - `riva_tts_perf_client`
@@ -73,6 +74,7 @@ You can find the built binaries in `bazel-bin/riva/clients`
 Riva comes with 2 ASR clients:
 1. `riva_asr_client` for offline usage. Using this client, the server will wait until it receives the full audio file before transcribing it and sending it back to the client.
 2. `riva_streaming_asr_client` for online usage. Using this client, the server will start transcribing after it receives a sufficient amount of audio data, "streaming" intermediate transcripts as it goes on back to the client. By default, it is set to transcribe after every `100ms`, this can be changed using the `--chunk_duration_ms` command line flag.
+3. `riva_realtime_asr_client` for realtime (websocket) usage. This client establishes a persistent websocket connection to the server, allowing for bidirectional real-time communication. The server will start transcribing after it receives a sufficient amount of audio data and continuously stream intermediate transcripts back to the client as it processes the audio. By default, it is set to transcribe after every `100ms`, which can be changed using the `--chunk_duration_ms` command line flag.
 
 To use the clients, simply pass in a folder containing audio files or an individual audio file name with the `audio_file` flag:
 ```
@@ -81,6 +83,10 @@ $ riva_streaming_asr_client --audio_file individual_audio_file.wav
 or
 ```
 $ riva_asr_client --audio_file audio_folder
+```
+or
+```
+$ riva_realtime_asr_client --audio_file individual_audio_file.wav
 ```
  
 Note that only single-channel audio files in the `.wav` format are currently supported.
