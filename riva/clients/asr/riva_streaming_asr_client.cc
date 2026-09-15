@@ -97,8 +97,9 @@ DEFINE_string(
     "Custom configurations to be sent to the server as key value pairs <key:value,key:value,...>");
 DEFINE_bool(speaker_diarization, false, "Flag that controls if speaker diarization is requested");
 DEFINE_int32(
-    diarization_max_speakers, 4,
-    "Max number of speakers to detect when performing speaker diarization. Default is 4 (Max)");
+    diarization_max_speakers, 0,
+    "Max number of speakers to detect when performing speaker diarization; 0 uses the server "
+    "default");
 DEFINE_uint64(timeout_ms, 10000, "Timeout for GRPC channel creation");
 DEFINE_uint64(max_grpc_message_size, MAX_GRPC_MESSAGE_SIZE, "Max GRPC message size");
 
