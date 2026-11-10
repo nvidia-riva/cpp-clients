@@ -70,8 +70,9 @@ DEFINE_bool(
     "this is assumed to be true");
 DEFINE_bool(speaker_diarization, false, "Flag that controls if speaker diarization is requested");
 DEFINE_int32(
-    diarization_max_speakers, 3,
-    "Max number of speakers to detect when performing speaker diarization");
+    diarization_max_speakers, 0,
+    "Max number of speakers to detect when performing speaker diarization; 0 uses the server "
+    "default");
 DEFINE_string(metadata, "", "Comma separated key-value pair(s) of metadata to be sent to server");
 DEFINE_int32(start_history, -1, "Value to detect and initiate start of speech utterance");
 DEFINE_double(
@@ -237,7 +238,9 @@ class RecognizeClient {
 
     auto speaker_diarization_config = config->mutable_diarization_config();
     speaker_diarization_config->set_enable_speaker_diarization(speaker_diarization_);
-    speaker_diarization_config->set_max_speaker_count(diarization_max_speakers_);
+    if (diarization_max_speakers_ > 0) {
+      speaker_diarization_config->set_max_speaker_count(diarization_max_speakers_);
+    }
 
     if (model_name_ != "") {
       config->set_model(model_name_);

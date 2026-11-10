@@ -148,7 +148,9 @@ StreamingRecognizeClient::UpdateSpeakerDiarizationConfig(nr_asr::RecognitionConf
 {
   auto speaker_diarization_config = config->mutable_diarization_config();
   speaker_diarization_config->set_enable_speaker_diarization(speaker_diarization_);
-  speaker_diarization_config->set_max_speaker_count(diarization_max_speakers_);
+  if (diarization_max_speakers_ > 0) {
+    speaker_diarization_config->set_max_speaker_count(diarization_max_speakers_);
+  }
 }
 
 void
